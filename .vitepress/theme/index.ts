@@ -21,7 +21,8 @@ import ChallengeLayout from './layouts/ChallengeLayout.vue'
 import SourceViewer from './components/SourceViewer.vue'
 import ChallengeList from './components/ChallengeList.vue'
 import HomeContent from './components/HomeContent.vue'
-import { i18n } from './i18n'
+import LocaleSwitcher from './components/LocaleSwitcher.vue'
+import { i18n, detectInitialLocale, persistLocale } from './i18n'
 
 export default {
   ...DefaultTheme,
@@ -41,7 +42,9 @@ export default {
 
       return () => {
         if (isChallenge.value) return h(ChallengeLayout)
-        return h(DefaultTheme.Layout)
+        return h(DefaultTheme.Layout, null, {
+          'nav-bar-content-after': () => h(LocaleSwitcher),
+        })
       }
     },
   }),
@@ -54,6 +57,15 @@ export default {
     app.use(createPinia())
 
     app.use(i18n)
+
+    // Client-only init: detect the locale from localStorage / URL prefix and
+    // persist the resolved value. Guarded so VitePress SSR rendering (which
+    // has no `window`) keeps the createI18n default ('en').
+    if (typeof window !== 'undefined') {
+      const detected = detectInitialLocale()
+      i18n.global.locale.value = detected
+      persistLocale(detected)
+    }
 
     // SourceViewer is used in challenge pages via markdown
     app.component('SourceViewer', SourceViewer)
