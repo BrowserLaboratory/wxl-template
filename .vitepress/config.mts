@@ -14,6 +14,14 @@ export default defineConfig({
     optimizeDeps: {
       exclude: ['php-wasm'],
     },
+    build: {
+      // Required: vite-plugin-top-level-await emits a destructuring pattern that
+      // esbuild cannot lower to the default browserslist target. Do NOT relax
+      // this without first upgrading vite-plugin-top-level-await OR removing
+      // TLA usage OR confirming the esbuild transformer now supports it.
+      // See AUDIT.md A.2.2 for the full rationale and the forbidden-revert rules.
+      target: 'esnext',
+    },
   },
 
   title: "Web eXploitation Laboratory",

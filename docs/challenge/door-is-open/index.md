@@ -6,7 +6,7 @@ category: web
 backend: fastapi
 app: app.py
 packages: []
-tools: [browser, network, repeater, code]
+tools: [ browser, network, repeater, code ]
 source_visible: false
 date: 2026-04-02T08:54:17.674Z
 tags: [ idor, access-control, fastapi, sqlite ]
