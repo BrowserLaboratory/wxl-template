@@ -28,8 +28,8 @@
 
 實作 proposal 之 What Changes「撰寫 `docs/guide/index.md` 真實英文 Getting Started 內容」，並完成 Change 2 留下之 placeholder 清理。
 
-- [ ] 3.1 以 `docs/zh-TW/guide/index.md`（76 行）為結構藍本，重寫 `docs/guide/index.md` 為自然英文 Getting Started 文件。標題層級、code block、列表項與 zh-TW 來源 1:1 對應；技術術語英文原文（VitePress、WebAssembly、Pyodide）保留；刪除原 placeholder 之 `<!-- TODO: full content migration in change content-i18n-migration -->` 與「The English version of this page is a placeholder」說明。交付行為：英文 `/guide/` 路由顯示完整英文 Getting Started 文件，與 zh-TW 對應頁面結構齊備。Verification：`rg '[一-鿿]' docs/guide/index.md` exit 1；`rg 'TODO\|placeholder' docs/guide/index.md` exit 1；`pnpm docs:build` 後 `dist/guide/index.html` 不含 placeholder 字串、行數 ≥ 60。
-- [ ] 3.2 Stage 3 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze content-i18n-migration --json` Critical+High = 0；commit 訊息符合台灣繁中慣例。
+- [x] 3.1 以 `docs/zh-TW/guide/index.md`（76 行）為結構藍本，重寫 `docs/guide/index.md` 為自然英文 Getting Started 文件。標題層級、code block、列表項與 zh-TW 來源 1:1 對應；技術術語英文原文（VitePress、WebAssembly、Pyodide）保留；刪除原 placeholder 之 `<!-- TODO: full content migration in change content-i18n-migration -->` 與「The English version of this page is a placeholder」說明。交付行為：英文 `/guide/` 路由顯示完整英文 Getting Started 文件，與 zh-TW 對應頁面結構齊備。Verification：`rg '[一-鿿]' docs/guide/index.md` exit 1；`rg 'TODO\|placeholder' docs/guide/index.md` exit 1；`pnpm docs:build` 後 `dist/guide/index.html` 不含 placeholder 字串、行數 ≥ 60。
+- [x] 3.2 Stage 3 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze content-i18n-migration --json` Critical+High = 0；commit 訊息符合台灣繁中慣例。
 
 ## 4. 撰寫其餘三個 guide 頁的真實英文內容（[P]）
 
