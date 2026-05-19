@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { withBase } from 'vitepress'
+import { useI18n } from 'vue-i18n'
 import type { ChallengeData } from '../../../docs/shared/challenges.data'
+
+const { locale } = useI18n()
 
 const props = defineProps<{
   challenges: ChallengeData[]
@@ -99,7 +102,7 @@ function paddedId(id: number | string | undefined): string {
 
 function formatDate(d: string | null | undefined): string {
   if (!d) return ''
-  return new Date(d).toLocaleDateString('zh-TW', { year: 'numeric', month: 'short', day: 'numeric' })
+  return new Date(d).toLocaleDateString(locale.value === 'zh-TW' ? 'zh-TW' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 function toggleSortDir(): void {
