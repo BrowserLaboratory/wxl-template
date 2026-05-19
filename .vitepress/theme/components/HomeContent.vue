@@ -43,19 +43,19 @@ function formatDate(d: string | null | undefined): string {
   <div class="home-content-wrapper px-6 pb-20">
     <!-- Platform intro -->
     <section class="max-w-screen-lg mx-auto mb-16 text-center">
-      <h2 class="text-2xl font-bold mb-4 color-[var(--ch-text-1)]">關於 WXL</h2>
+      <h2 class="text-2xl font-bold mb-4 color-[var(--ch-text-1)]">{{ $t('home_content.about_heading') }}</h2>
       <p class="text-base color-[var(--ch-text-2)] leading-loose text-justify">
-        WXL（網站滲透實驗室）是完全基於前端 WebAssembly 技術的 Web 資安挑戰平台。所有挑戰後端（Flask、FastAPI、PHP）均在瀏覽器中執行，無需任何伺服器即可進行真實的滲透測試練習。內建 HTTP Repeater、Python Code Editor、終端機模擬器等工具，提供完整的攻擊工具鏈。
+        {{ $t('home_content.about_paragraph') }}
       </p>
     </section>
 
     <!-- Stats -->
     <section class="max-w-screen-lg mx-auto mb-16">
-      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">平台統計</h2>
+      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">{{ $t('home_content.stats_heading') }}</h2>
       <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div class="bg-[var(--ch-bg-soft)] rounded-xl p-5 text-center border border-[var(--ch-border)]">
           <div class="text-3xl font-bold color-[var(--ch-accent)] mb-1">{{ totalCount }}</div>
-          <div class="text-sm color-[var(--ch-text-2)]">題目總數</div>
+          <div class="text-sm color-[var(--ch-text-2)]">{{ $t('home_content.stats_total_label') }}</div>
         </div>
         <div class="bg-[var(--ch-bg-soft)] rounded-xl p-5 text-center border border-[var(--ch-border)]">
           <div class="text-3xl font-bold color-[var(--ch-easy-fg)] mb-1">{{ easyCount }}</div>
@@ -78,7 +78,7 @@ function formatDate(d: string | null | undefined): string {
 
     <!-- Latest challenges -->
     <section v-if="latestChallenges.length > 0" class="max-w-screen-lg mx-auto mb-16">
-      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">最新題目</h2>
+      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">{{ $t('home_content.latest_heading') }}</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <a
           v-for="c in latestChallenges"
@@ -102,22 +102,22 @@ function formatDate(d: string | null | undefined): string {
 
     <!-- Quick start -->
     <section class="max-w-screen-lg mx-auto">
-      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">三步驟快速開始</h2>
+      <h2 class="text-2xl font-bold mb-8 text-center color-[var(--ch-text-1)]">{{ $t('home_content.quick_start_heading') }}</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="text-center">
           <div class="w-12 h-12 rounded-full bg-[var(--ch-accent-soft)] flex items-center justify-center text-xl font-bold color-[var(--ch-accent)] mx-auto mb-4">1</div>
-          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">選擇挑戰</h3>
-          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">前往題目總覽，依難度或類別選擇適合的挑戰題目。</p>
+          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">{{ $t('home_content.step1_title') }}</h3>
+          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">{{ $t('home_content.step1_desc') }}</p>
         </div>
         <div class="text-center">
           <div class="w-12 h-12 rounded-full bg-[var(--ch-accent-soft)] flex items-center justify-center text-xl font-bold color-[var(--ch-accent)] mx-auto mb-4">2</div>
-          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">使用工具</h3>
-          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">使用內建的 Browser、Terminal、Code Editor、Repeater 分析並利用漏洞。</p>
+          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">{{ $t('home_content.step2_title') }}</h3>
+          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">{{ $t('home_content.step2_desc') }}</p>
         </div>
         <div class="text-center">
           <div class="w-12 h-12 rounded-full bg-[var(--ch-accent-soft)] flex items-center justify-center text-xl font-bold color-[var(--ch-accent)] mx-auto mb-4">3</div>
-          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">提交 Flag</h3>
-          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">找到 Flag 後，輸入到題目頁面的提交框並確認答案是否正確。</p>
+          <h3 class="font-semibold mb-2 color-[var(--ch-text-1)]">{{ $t('home_content.step3_title') }}</h3>
+          <p class="text-sm color-[var(--ch-text-2)] leading-relaxed">{{ $t('home_content.step3_desc') }}</p>
         </div>
       </div>
     </section>

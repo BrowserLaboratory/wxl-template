@@ -3,5 +3,73 @@
     "english_label": "English",
     "tw_label": "繁體中文",
     "button_aria": "切換語系"
+  },
+  "flag_submit": {
+    "export_attack_log": "下載攻擊紀錄",
+    "export_pentest_notes": "下載滲透筆記"
+  },
+  "home_content": {
+    "about_heading": "關於 WXL",
+    "about_paragraph": "WXL（網站滲透實驗室）是完全基於前端 WebAssembly 技術的 Web 資安挑戰平台。所有挑戰後端（Flask、FastAPI、PHP）均在瀏覽器中執行，無需任何伺服器即可進行真實的滲透測試練習。內建 HTTP Repeater、Python Code Editor、終端機模擬器等工具，提供完整的攻擊工具鏈。",
+    "stats_heading": "平台統計",
+    "stats_total_label": "題目總數",
+    "latest_heading": "最新題目",
+    "quick_start_heading": "三步驟快速開始",
+    "step1_title": "選擇挑戰",
+    "step1_desc": "前往題目總覽，依難度或類別選擇適合的挑戰題目。",
+    "step2_title": "使用工具",
+    "step2_desc": "使用內建的 Browser、Terminal、Code Editor、Repeater 分析並利用漏洞。",
+    "step3_title": "提交 Flag",
+    "step3_desc": "找到 Flag 後，輸入到題目頁面的提交框並確認答案是否正確。"
+  },
+  "challenge_list": {
+    "search_placeholder": "搜尋題目、描述、標籤…",
+    "all_difficulties": "所有難度",
+    "all_categories": "所有類別",
+    "sort_by_id": "排序：ID",
+    "sort_by_difficulty": "排序：難度",
+    "sort_by_category": "排序：類別",
+    "sort_by_date": "排序：日期",
+    "sort_dir_asc": "升冪",
+    "sort_dir_desc": "降冪",
+    "view_mode_grid": "格線模式",
+    "view_mode_list": "列表模式",
+    "count_suffix": "道挑戰",
+    "empty_state": "找不到符合條件的題目，請調整搜尋或篩選條件。"
+  },
+  "merged_nav": {
+    "description_toggle_label": "題目",
+    "darkmode_to_light": "切換至淺色模式",
+    "darkmode_to_dark": "切換至深色模式"
+  },
+  "notes_button": {
+    "label": "滲透筆記"
+  },
+  "notes_modal": {
+    "open_aria": "開啟滲透筆記",
+    "header_label": "滲透筆記",
+    "search_placeholder": "搜尋筆記...",
+    "sort_title_newest_first": "目前：新→舊（點擊切換為舊→新）",
+    "sort_title_oldest_first": "目前：舊→新（點擊切換為新→舊）",
+    "action_new": "新增筆記",
+    "action_maximize": "最大化",
+    "action_restore": "還原",
+    "action_minimize": "最小化",
+    "action_close": "關閉",
+    "empty_state_no_notes": "還沒有筆記，按 + 新增",
+    "empty_state_no_search_match": "沒有符合搜尋的筆記",
+    "editor_placeholder_hint": "選取一篇筆記進行編輯，或按 + 新增"
+  },
+  "note_card": {
+    "edit_title": "編輯筆記",
+    "delete_title": "刪除筆記",
+    "empty_preview": "（空筆記）",
+    "edited_marker": "(已編輯)"
+  },
+  "note_editor": {
+    "textarea_placeholder": "寫下你的滲透筆記...",
+    "preview_placeholder": "（預覽將在此顯示）",
+    "cancel_button": "取消",
+    "save_button": "儲存"
   }
 }

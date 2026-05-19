@@ -62,13 +62,15 @@ function handleSave() {
         v-show="activeTab === 'edit'"
         v-model="content"
         class="absolute inset-0 w-full h-full resize-none p-3 font-mono text-[0.875em] bg-[var(--ch-bg-soft)] color-[var(--ch-text-1)] border-none outline-none leading-relaxed"
-        placeholder="寫下你的滲透筆記..."
+        :placeholder="$t('note_editor.textarea_placeholder')"
       />
       <div
         v-show="activeTab === 'preview'"
         class="vp-doc absolute inset-0 overflow-y-auto p-3 text-[0.875em]"
-        v-html="previewHtml || '<p class=\'color-[var(--ch-text-3)]\'>（預覽將在此顯示）</p>'"
-      />
+      >
+        <div v-if="previewHtml" v-html="previewHtml"></div>
+        <p v-else class="color-[var(--ch-text-3)]">{{ $t('note_editor.preview_placeholder') }}</p>
+      </div>
     </div>
 
     <!-- Action buttons -->
@@ -76,11 +78,11 @@ function handleSave() {
       <button
         class="px-3 py-1.5 rounded text-[0.85em] border border-[var(--ch-border)] bg-[var(--ch-bg-soft)] color-[var(--ch-text-2)] cursor-pointer hover:border-[var(--ch-accent)] transition-colors"
         @click="$emit('cancel')"
-      >取消</button>
+      >{{ $t('note_editor.cancel_button') }}</button>
       <button
         class="px-3 py-1.5 rounded text-[0.85em] bg-[var(--ch-accent)] color-white cursor-pointer border-none hover:opacity-90 transition-opacity"
         @click="handleSave"
-      >儲存</button>
+      >{{ $t('note_editor.save_button') }}</button>
     </div>
   </div>
 </template>

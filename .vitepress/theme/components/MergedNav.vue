@@ -105,7 +105,7 @@ const categoryBadge: Record<string, string> = {
           data-desc-toggle
           class="ch-nav-pill-btn text-[0.75em] hidden md:flex"
           @click="$emit('toggle-description')"
-        >📖 題目</button>
+        >📖 {{ $t('merged_nav.description_toggle_label') }}</button>
 
         <!-- Notes button -->
         <button
@@ -128,7 +128,7 @@ const categoryBadge: Record<string, string> = {
         <button
           data-darkmode-toggle
           class="ch-nav-icon-btn"
-          :title="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          :title="$t(isDark ? 'merged_nav.darkmode_to_light' : 'merged_nav.darkmode_to_dark')"
           @click="toggleDark"
         >
           <svg v-if="isDark" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -184,7 +184,7 @@ const categoryBadge: Record<string, string> = {
         data-desc-toggle
         class="ch-nav-pill-btn text-[0.75em] md:hidden"
         @click="$emit('toggle-description')"
-      >📖 題目</button>
+      >📖 {{ $t('merged_nav.description_toggle_label') }}</button>
     </div>
 
     <!-- Hamburger dropdown (mobile only) -->

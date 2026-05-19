@@ -44,13 +44,13 @@ async function submit() {
         data-export
         class="px-3 py-1 rounded text-[0.85em] border border-[var(--ch-border)] bg-[var(--ch-bg-soft)] color-[var(--ch-text-1)] cursor-pointer hover:border-[var(--ch-accent)]"
         @click="props.onExport?.()"
-      >下載攻擊紀錄</button>
+      >{{ $t('flag_submit.export_attack_log') }}</button>
       <button
         v-if="props.onExportNotes"
         data-export-notes
         class="px-3 py-1 rounded text-[0.85em] border border-[var(--ch-border)] bg-[var(--ch-bg-soft)] color-[var(--ch-text-1)] cursor-pointer hover:border-[var(--ch-accent)]"
         @click="props.onExportNotes?.()"
-      >下載滲透筆記</button>
+      >{{ $t('flag_submit.export_pentest_notes') }}</button>
     </div>
     <div
       v-if="state === 'failure'"

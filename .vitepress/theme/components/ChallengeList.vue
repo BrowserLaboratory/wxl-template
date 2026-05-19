@@ -120,13 +120,13 @@ function toggleSortDir(): void {
       <input
         v-model="searchQuery"
         type="text"
-        placeholder="搜尋題目、描述、標籤…"
+        :placeholder="$t('challenge_list.search_placeholder')"
         class="ch-input flex-1 min-w-[180px]"
       />
 
       <!-- Difficulty filter -->
       <select v-model="difficultyFilter" class="ch-select">
-        <option value="">所有難度</option>
+        <option value="">{{ $t('challenge_list.all_difficulties') }}</option>
         <option value="easy">Easy</option>
         <option value="medium">Medium</option>
         <option value="hard">Hard</option>
@@ -135,22 +135,22 @@ function toggleSortDir(): void {
 
       <!-- Category filter -->
       <select v-model="categoryFilter" class="ch-select">
-        <option value="">所有類別</option>
+        <option value="">{{ $t('challenge_list.all_categories') }}</option>
         <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
       </select>
 
       <!-- Sort field -->
       <select v-model="sortField" class="ch-select">
-        <option value="id">排序：ID</option>
-        <option value="difficulty">排序：難度</option>
-        <option value="category">排序：類別</option>
-        <option value="date">排序：日期</option>
+        <option value="id">{{ $t('challenge_list.sort_by_id') }}</option>
+        <option value="difficulty">{{ $t('challenge_list.sort_by_difficulty') }}</option>
+        <option value="category">{{ $t('challenge_list.sort_by_category') }}</option>
+        <option value="date">{{ $t('challenge_list.sort_by_date') }}</option>
       </select>
 
       <!-- Sort direction toggle -->
       <button
         :class="['ch-view-btn', 'text-sm font-mono']"
-        :title="sortDir === 'asc' ? '升冪' : '降冪'"
+        :title="$t(sortDir === 'asc' ? 'challenge_list.sort_dir_asc' : 'challenge_list.sort_dir_desc')"
         @click="toggleSortDir"
       >{{ sortDir === 'asc' ? '↑' : '↓' }}</button>
 
@@ -158,7 +158,7 @@ function toggleSortDir(): void {
       <div class="flex gap-1 ml-auto">
         <button
           :class="viewMode === 'grid' ? 'ch-view-btn-active' : 'ch-view-btn'"
-          title="格線模式"
+          :title="$t('challenge_list.view_mode_grid')"
           @click="viewMode = 'grid'"
         >
           <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
@@ -168,7 +168,7 @@ function toggleSortDir(): void {
         </button>
         <button
           :class="viewMode === 'list' ? 'ch-view-btn-active' : 'ch-view-btn'"
-          title="列表模式"
+          :title="$t('challenge_list.view_mode_list')"
           @click="viewMode = 'list'"
         >
           <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor">
@@ -179,7 +179,7 @@ function toggleSortDir(): void {
       </div>
 
       <!-- Result count -->
-      <span class="text-sm color-[var(--ch-text-3)] whitespace-nowrap">{{ filteredChallenges.length }} 道挑戰</span>
+      <span class="text-sm color-[var(--ch-text-3)] whitespace-nowrap">{{ filteredChallenges.length }} {{ $t('challenge_list.count_suffix') }}</span>
     </div>
 
     <!-- Empty state -->
@@ -188,7 +188,7 @@ function toggleSortDir(): void {
       class="py-20 text-center color-[var(--ch-text-3)]"
     >
       <div class="text-4xl mb-4">🔍</div>
-      <p class="text-base">找不到符合條件的題目，請調整搜尋或篩選條件。</p>
+      <p class="text-base">{{ $t('challenge_list.empty_state') }}</p>
     </div>
 
     <!-- Grid view -->

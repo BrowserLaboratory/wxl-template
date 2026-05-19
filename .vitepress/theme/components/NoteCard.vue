@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
 import type { NoteEntry } from '../composables/usePentestNotes'
 
 const props = defineProps<{
@@ -12,6 +13,8 @@ defineEmits<{
   delete: []
 }>()
 
+const { t } = useI18n()
+
 function formatTime(ts: number): string {
   const d = new Date(ts)
   const pad = (n: number) => String(n).padStart(2, '0')
@@ -19,7 +22,7 @@ function formatTime(ts: number): string {
 }
 
 function previewLines(content: string): string {
-  return content.split('\n').filter(l => l.trim()).slice(0, 2).join(' ') || '（空筆記）'
+  return content.split('\n').filter(l => l.trim()).slice(0, 2).join(' ') || t('note_card.empty_preview')
 }
 </script>
 
@@ -36,7 +39,7 @@ function previewLines(content: string): string {
       <div class="hidden group-hover:flex items-center gap-1 flex-shrink-0">
         <button
           class="p-1 rounded color-[var(--ch-text-2)] hover:color-[var(--ch-accent)] hover:bg-[var(--ch-accent-soft)] transition-colors"
-          title="編輯筆記"
+          :title="$t('note_card.edit_title')"
           @click.stop="$emit('edit')"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -45,7 +48,7 @@ function previewLines(content: string): string {
         </button>
         <button
           class="p-1 rounded color-[var(--ch-text-2)] hover:color-[var(--ch-hard-fg)] hover:bg-[var(--ch-hard-bg)] transition-colors"
-          title="刪除筆記"
+          :title="$t('note_card.delete_title')"
           @click.stop="$emit('delete')"
         >
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -56,7 +59,7 @@ function previewLines(content: string): string {
     </div>
     <div class="mt-1.5 text-[0.75em] color-[var(--ch-text-3)]">
       {{ formatTime(note.createdAt) }}
-      <span v-if="note.updatedAt" class="ml-1">(已編輯)</span>
+      <span v-if="note.updatedAt" class="ml-1">{{ $t('note_card.edited_marker') }}</span>
     </div>
   </div>
 </template>

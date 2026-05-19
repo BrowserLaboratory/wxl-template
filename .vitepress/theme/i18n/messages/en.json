@@ -3,5 +3,73 @@
     "english_label": "English",
     "tw_label": "Traditional Chinese",
     "button_aria": "Switch language"
+  },
+  "flag_submit": {
+    "export_attack_log": "Export Attack Log",
+    "export_pentest_notes": "Export Pentest Notes"
+  },
+  "home_content": {
+    "about_heading": "About WXL",
+    "about_paragraph": "WXL (Web Exploitation Laboratory) is a fully front-end Web security challenge platform powered by WebAssembly. Every challenge backend — Flask, FastAPI, PHP — runs entirely inside the browser, so realistic pentest practice needs zero server. Built-in HTTP Repeater, Python Code Editor, and a terminal emulator together provide a complete attack toolchain.",
+    "stats_heading": "Platform Statistics",
+    "stats_total_label": "Total challenges",
+    "latest_heading": "Latest Challenges",
+    "quick_start_heading": "Three Steps to Get Started",
+    "step1_title": "Pick a challenge",
+    "step1_desc": "Open the challenges page and pick one by difficulty or category.",
+    "step2_title": "Use the tools",
+    "step2_desc": "Use the built-in Browser, Terminal, Code Editor, and Repeater to analyse and exploit the vulnerability.",
+    "step3_title": "Submit the flag",
+    "step3_desc": "Once you find the flag, paste it into the submit box on the challenge page to confirm your answer."
+  },
+  "challenge_list": {
+    "search_placeholder": "Search challenges, descriptions, tags…",
+    "all_difficulties": "All difficulties",
+    "all_categories": "All categories",
+    "sort_by_id": "Sort: ID",
+    "sort_by_difficulty": "Sort: Difficulty",
+    "sort_by_category": "Sort: Category",
+    "sort_by_date": "Sort: Date",
+    "sort_dir_asc": "Ascending",
+    "sort_dir_desc": "Descending",
+    "view_mode_grid": "Grid mode",
+    "view_mode_list": "List mode",
+    "count_suffix": "challenges",
+    "empty_state": "No challenges match your filters. Try adjusting your search or filters."
+  },
+  "merged_nav": {
+    "description_toggle_label": "Description",
+    "darkmode_to_light": "Switch to light mode",
+    "darkmode_to_dark": "Switch to dark mode"
+  },
+  "notes_button": {
+    "label": "Pentest Notes"
+  },
+  "notes_modal": {
+    "open_aria": "Open pentest notes",
+    "header_label": "Pentest Notes",
+    "search_placeholder": "Search notes…",
+    "sort_title_newest_first": "Currently: newest first (click to switch to oldest first)",
+    "sort_title_oldest_first": "Currently: oldest first (click to switch to newest first)",
+    "action_new": "New note",
+    "action_maximize": "Maximise",
+    "action_restore": "Restore",
+    "action_minimize": "Minimise",
+    "action_close": "Close",
+    "empty_state_no_notes": "No notes yet. Press + to add one.",
+    "empty_state_no_search_match": "No notes match your search.",
+    "editor_placeholder_hint": "Select a note to edit, or press + to add a new one."
+  },
+  "note_card": {
+    "edit_title": "Edit note",
+    "delete_title": "Delete note",
+    "empty_preview": "(empty note)",
+    "edited_marker": "(edited)"
+  },
+  "note_editor": {
+    "textarea_placeholder": "Write your pentest notes…",
+    "preview_placeholder": "(Preview will appear here)",
+    "cancel_button": "Cancel",
+    "save_button": "Save"
   }
 }
