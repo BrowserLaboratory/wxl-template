@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "chall-wasm/virtual-fs",
+    "chall-wasm/asgi-bridge",
+    "chall-wasm/wxlsh-parser",
+]
+resolver = "2"

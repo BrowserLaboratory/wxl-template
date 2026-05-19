@@ -1,0 +1,1 @@
+FLAG{php_file_inclusion_demo_placeholder}

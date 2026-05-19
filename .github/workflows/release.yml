@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+
+      - name: Install binaryen (wasm-opt)
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build WASM modules
+        run: pnpm wasm:build
+
+      - name: Generate challenge keys
+        run: pnpm challenge:keygen
+
+      - name: Run Rust/WASM tests
+        run: pnpm wasm:test
+
+      - name: Run tests
+        run: pnpm test --run
+
+      - name: Validate challenge frontmatter
+        run: pnpm challenge:validate
+
+      - name: Build VitePress site
+        run: pnpm docs:build
+
+      - name: Package dist as zip
+        run: |
+          cd .vitepress/dist
+          zip -r "../../wxl-${GITHUB_REF_NAME}.zip" .
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Release ${{ github.ref_name }}"
+          generate_release_notes: true
+          files: "wxl-${{ github.ref_name }}.zip"

@@ -1,0 +1,1 @@
+FLAG{sql_injection_demo_placeholder}

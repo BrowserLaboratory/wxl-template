@@ -1,0 +1,103 @@
+# ===========================
+# Dependencies
+# ===========================
+node_modules/
+
+# ===========================
+# Build Output
+# ===========================
+dist/
+.vitepress/dist/
+.vitepress/cache/
+.vitepress/wasm/
+
+# ===========================
+# Environment & Secrets
+# ===========================
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+
+# ===========================
+# Logs
+# ===========================
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ===========================
+# OS
+# ===========================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ===========================
+# Editor & IDE
+# ===========================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ===========================
+# TypeScript
+# ===========================
+*.tsbuildinfo
+
+# ===========================
+# Vitest / Testing
+# ===========================
+coverage/
+.vitest-results/
+
+# ===========================
+# Rust / WASM / wasm-pack
+# ===========================
+target/
+# wasm-pack 標準輸出目錄
+pkg/
+chall-wasm/*/pkg/
+# 自訂 wasm-pack 輸出目錄（根目錄的隱藏資料夾）
+.wasm-fs-pkg/
+.wasm-asgi-pkg/
+# wasm-pack 生成至 .vitepress/wasm/（含 JS bindings，已移出 public/）
+docs/public/wasm/
+# WASM 二進位檔（由 wasm-pack 產生）
+**/*.wasm
+
+# ===========================
+# Pyodide / PHP-WASM Cache
+# ===========================
+pyodide-cache/
+*.pyc
+__pycache__/
+
+# ===========================
+# Spectra / Tooling
+# ===========================
+.spectra/
+openspec/.vector-search.db*
+
+# ===========================
+# Superpowers
+# ===========================
+.superpowers/
+
+# ===========================
+# Misc
+# ===========================
+*.local
+.cache/
+tmp/
+temp/
+.worktree/
