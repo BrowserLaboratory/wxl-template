@@ -22,6 +22,14 @@ export default defineConfig({
       // See AUDIT.md A.2.2 for the full rationale and the forbidden-revert rules.
       target: 'esnext',
     },
+    define: {
+      // vue-i18n reads these Vue build flags at runtime; not defining them
+      // causes "ReferenceError: __VUE_PROD_DEVTOOLS__ is not defined" during SSR.
+      __VUE_PROD_DEVTOOLS__: 'false',
+      __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: 'false',
+      __VUE_OPTIONS_API__: 'true',
+      __INTLIFY_PROD_DEVTOOLS__: 'false',
+    },
   },
 
   title: "Web eXploitation Laboratory",

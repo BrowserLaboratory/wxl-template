@@ -1,4 +1,15 @@
 // https://vitepress.dev/guide/custom-theme
+
+// vue-i18n's prebuilt ESM (loaded externally by VitePress SSR) references
+// Vue build-time flags as bare globals. Define them on globalThis before any
+// `app.use(i18n)` runs to prevent ReferenceError during `pnpm docs:build`.
+// Unconditional assignment (not `??=`) — any prior value would be a hijack
+// surface for re-enabling devtools in a production bundle.
+;(globalThis as any).__VUE_PROD_DEVTOOLS__ = false
+;(globalThis as any).__VUE_PROD_HYDRATION_MISMATCH_DETAILS__ = false
+;(globalThis as any).__VUE_OPTIONS_API__ = true
+;(globalThis as any).__INTLIFY_PROD_DEVTOOLS__ = false
+
 import { computed, defineComponent, h, onMounted, onUnmounted } from 'vue'
 import type { Theme } from 'vitepress'
 import { useData } from 'vitepress'
@@ -10,6 +21,7 @@ import ChallengeLayout from './layouts/ChallengeLayout.vue'
 import SourceViewer from './components/SourceViewer.vue'
 import ChallengeList from './components/ChallengeList.vue'
 import HomeContent from './components/HomeContent.vue'
+import { i18n } from './i18n'
 
 export default {
   ...DefaultTheme,
@@ -40,6 +52,8 @@ export default {
     // Pinia — installed once at app level; pyodide and php-wasm are lazy-loaded
     // per-challenge page to avoid loading heavy WASM on every page
     app.use(createPinia())
+
+    app.use(i18n)
 
     // SourceViewer is used in challenge pages via markdown
     app.component('SourceViewer', SourceViewer)
