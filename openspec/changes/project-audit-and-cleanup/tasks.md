@@ -11,12 +11,12 @@
 - [x] 1.1 端到端跑完整建構與測試管線並擷取結果：依序執行 `pnpm install`、`pnpm wasm:build`、`pnpm challenge:keygen`、`pnpm docs:build`、`pnpm test`、`cargo test`，把每個指令的 exit code、耗時、最後 20 行 stdout 暫存於工作筆記，作為下一 task 寫入 AUDIT.md 的素材。**驗收**：六個指令全部 exit 0；六筆紀錄齊全。
 - [x] 1.2 產出 `AUDIT.md` 作為 **Decision: Three durable audit report files** 的第一份；內容須涵蓋 (a) 上一 task 的 build+test 結果摘要、(b) `openspec/specs/` 下 39 個 spec 的 `@trace` 區段盤點（標註指向不存在檔案的 dead link）、(c) i18n surface 統計（依檔案分類 CJK 字元出現的位置與行數，並標註 UI / content / dev-doc / comment 四類）、(d) 既有 commit 慣例與 pre-commit hook 行為紀錄。**驗收**：`AUDIT.md` 存在於專案根目錄；四個 section 標題齊全；spec dead-link 清單非空時須明確列出對應 spec 與 trace 行號。
 - [x] 1.3 對 stage 1 產出執行 **Decision: Per-stage /spectra-audit gating** 的首次基準跑，要求 Critical/High 嚴重度 finding 為 0；若有 Critical/High，必須在本 task 內修正並重跑 audit 直到清空。**驗收**：保存 audit 輸出於工作筆記；最終 finding 計數 Critical=0、High=0。
-- [ ] 1.4 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 1 commit，訊息開頭為 `📝 docs:` 且台灣繁中（嚴禁簡體與大陸用語）。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `📝 docs:` 開頭；diff 含 `AUDIT.md` 與 tasks.md 進度勾選變更。
+- [x] 1.4 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 1 commit，訊息開頭為 `📝 docs:` 且台灣繁中（嚴禁簡體與大陸用語）。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `📝 docs:` 開頭；diff 含 `AUDIT.md` 與 tasks.md 進度勾選變更。
 
 ## 2. 刪除計畫（Deletion Plan）
 
-- [ ] 2.1 產出 `DELETION-PLAN.md` 作為 **Decision: Three durable audit report files** 的第二份；內容須包含 (a) 三個 demo（sqli-demo / php-demo / fastapi-demo）在 specs、scripts、tests、`.claude/skills/*` 內被引用的完整位置清單、(b) **Decision: Switch wxl-creator canonical reference from sqli-demo to door-is-open** 之具體執行步驟（要替換的字串、要更新的 @trace 條目、要保留的引用）、(c) 預期執行後仍可運作之 invariant 列表（如：door-is-open 仍可被 build 與 dev server 載入）。**驗收**：`DELETION-PLAN.md` 存在於專案根目錄；每個被引用位置都標註絕對路徑 + 行號；wxl-creator 更新步驟可逐條對照執行。
-- [ ] 2.2 對 stage 2 產出執行 **Decision: Per-stage /spectra-audit gating**，Critical/High 嚴重度 finding 為 0。**驗收**：audit 輸出保存；finding 計數 Critical=0、High=0。
+- [x] 2.1 產出 `DELETION-PLAN.md` 作為 **Decision: Three durable audit report files** 的第二份；內容須包含 (a) 三個 demo（sqli-demo / php-demo / fastapi-demo）在 specs、scripts、tests、`.claude/skills/*` 內被引用的完整位置清單、(b) **Decision: Switch wxl-creator canonical reference from sqli-demo to door-is-open** 之具體執行步驟（要替換的字串、要更新的 @trace 條目、要保留的引用）、(c) 預期執行後仍可運作之 invariant 列表（如：door-is-open 仍可被 build 與 dev server 載入）。**驗收**：`DELETION-PLAN.md` 存在於專案根目錄；每個被引用位置都標註絕對路徑 + 行號；wxl-creator 更新步驟可逐條對照執行。
+- [x] 2.2 對 stage 2 產出執行 **Decision: Per-stage /spectra-audit gating**，Critical/High 嚴重度 finding 為 0。**驗收**：audit 輸出保存；finding 計數 Critical=0、High=0。
 - [ ] 2.3 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 2 commit，訊息開頭為 `📋 plan:`。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `📋 plan:` 開頭。
 
 ## 3. 歸檔與移除（Archive & Remove）
