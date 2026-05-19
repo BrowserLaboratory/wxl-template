@@ -33,27 +33,53 @@ export default defineConfig({
   },
 
   title: "Web eXploitation Laboratory",
-  description: "完全基於前端 WASM 的挑戰平台",
-  themeConfig: {
-    // https://vitepress.dev/reference/default-theme-config
-    nav: [
-      { text: 'Home', link: '/' },
-      { text: 'Challenges', link: '/challenges/' },
-      { text: 'Docs', link: '/guide/' },
-    ],
-
-    sidebar: {
-      '/guide/': [
-        { text: '快速開始', link: '/guide/' },
-        { text: 'Python 程式碼指南', link: '/guide/python' },
-        { text: 'Terminal 使用指南', link: '/guide/terminal' },
-        { text: 'Network & Repeater', link: '/guide/network' },
-      ],
+  description: "Browser-based web exploitation challenge platform powered by WASM",
+  locales: {
+    root: {
+      label: 'English',
+      lang: 'en-US',
+      themeConfig: {
+        nav: [
+          { text: 'Home', link: '/' },
+          { text: 'Challenges', link: '/challenges/' },
+          { text: 'Docs', link: '/guide/' },
+        ],
+        sidebar: {
+          '/guide/': [
+            { text: 'Getting Started', link: '/guide/' },
+            { text: 'Python Code Guide', link: '/guide/python' },
+            { text: 'Terminal Usage Guide', link: '/guide/terminal' },
+            { text: 'Network & Repeater', link: '/guide/network' },
+          ],
+        },
+        socialLinks: [
+          { icon: 'github', link: 'https://github.com/CXPhoenix/wxl' }
+        ],
+      },
     },
-
-    socialLinks: [
-      { icon: 'github', link: 'https://github.com/CXPhoenix/wxl' }
-    ]
+    'zh-TW': {
+      label: '繁體中文',
+      lang: 'zh-TW',
+      link: '/zh-TW/',
+      themeConfig: {
+        nav: [
+          { text: '首頁', link: '/zh-TW/' },
+          { text: '挑戰', link: '/zh-TW/challenges/' },
+          { text: '指南', link: '/zh-TW/guide/' },
+        ],
+        sidebar: {
+          '/zh-TW/guide/': [
+            { text: '快速開始', link: '/zh-TW/guide/' },
+            { text: 'Python 程式碼指南', link: '/zh-TW/guide/python' },
+            { text: 'Terminal 使用指南', link: '/zh-TW/guide/terminal' },
+            { text: 'Network & Repeater', link: '/zh-TW/guide/network' },
+          ],
+        },
+        socialLinks: [
+          { icon: 'github', link: 'https://github.com/CXPhoenix/wxl' }
+        ],
+      },
+    },
   },
 
   transformPageData(pageData, ctx) {

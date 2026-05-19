@@ -1,1 +1,7 @@
-{}
+{
+  "locale_switcher": {
+    "english_label": "English",
+    "tw_label": "繁體中文",
+    "button_aria": "切換語系"
+  }
+}

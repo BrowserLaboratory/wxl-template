@@ -3,47 +3,47 @@ layout: home
 
 hero:
   name: "WXL"
-  text: "網站滲透實驗室"
-  tagline: 完全基於前端 WASM 的 Web 資安挑戰平台 — 無需後端、即開即練
+  text: "Web Exploitation Laboratory"
+  tagline: Browser-based web exploitation challenge platform powered by WASM — no backend required, ready to run instantly
   actions:
     - theme: brand
-      text: 開始挑戰
+      text: Start Challenge
       link: /challenges/
     - theme: alt
-      text: 使用指南
+      text: User Guide
       link: /guide/
 
 features:
   - icon:
       src: /icons/browser.svg
       wrap: true
-    title: 瀏覽器模擬器
-    details: 內建 iframe sandbox，直接與挑戰應用程式互動
+    title: Browser Emulator
+    details: Built-in iframe sandbox for direct interaction with the challenge application
   - icon:
       src: /icons/terminal.svg
       wrap: true
     title: Terminal (wxlsh)
-    details: 內建終端機，支援 curl、base64、hex 等滲透測試常用工具
+    details: Built-in terminal with common pentest utilities such as curl, base64, and hex
   - icon:
       src: /icons/code.svg
       wrap: true
     title: Code Editor (Pyodide)
-    details: Python 攻擊腳本編輯器，支援 requests 模組與自動化攻擊
+    details: Python attack-script editor supporting the requests module and automated attacks
   - icon:
       src: /icons/repeater.svg
       wrap: true
     title: HTTP Repeater
-    details: 攔截並重放 HTTP 請求，自由修改參數測試漏洞
+    details: Intercept and replay HTTP requests, freely modifying parameters to probe vulnerabilities
   - icon:
       src: /icons/network.svg
       wrap: true
     title: Network Traffic Log
-    details: 完整記錄所有工具面板的 HTTP 請求與回應，含狀態碼與計時
+    details: Full HTTP request and response log for all tool panels, including status codes and timing
   - icon:
       src: /icons/notes.svg
       wrap: true
-    title: 滲透測試筆記
-    details: Markdown 筆記系統，自動記錄操作歷程，可匯出完整攻擊記錄
+    title: Pentest Notes
+    details: Markdown note system that records your operations and can export a full attack log
 ---
 
 <script setup>
