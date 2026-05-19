@@ -223,6 +223,7 @@ claude_slash_commands: true
 | **Medium** | `.vitepress/config.mts` `target: 'esnext'` 無 inline 註解，未來 contributor 可能誤刪 | **Stage 1 已修**：加入 inline 註解明確指向 AUDIT.md A.2.2 |
 | **Medium** | keygen 自動排版 door-is-open `tools:` 陣列導致工作樹 dirty，與 pre-commit stash 行為交互可能反覆 churn | 觀察，Stage 4 須在 VERIFICATION.md 記錄行為；後續 change 決定 normalization 策略 |
 | **Medium** | tasks.md 3.1 之 `.gitignore` 守門 regex `^\.archive(/\|$)` 漏 `/.archive/` 與 `**/.archive` 形式 | 觀察。由 `git mv` 自身拒絕進入 ignored 路徑的內建行為兜底；後續 change 可考慮把 regex 改為 ripgrep `--ignore-file` 完整解析或調用 `git check-ignore` |
+| **Medium** | Stage 3 後仍有 ~16 條 normative scenario 例示性 slug 引用殘留於 `challenge-precommit-hook/spec.md`（多 slug 場景）、`challenge-framework/spec.md`、`wasm-challenge-payload/spec.md`、`challenge-file-structure/spec.md`，皆為 WHEN/THEN 語意例示而非檔案存在主張；door-is-open 為 FastAPI 題目，無 Flask 之 `templates/index.html` 結構，無法 1:1 替代所有例示 | 觀察。後續 hygiene change 可擇期改寫為更通用之 placeholder slug（如 `example-challenge`）；此 stage 不在 scope，因會擴大改動範圍且觸及多 slug 場景之語意 |
 | **Medium** | AUDIT.md A.3 早期版本未列 5 個失敗 test 之 `it()` 完整名稱，可能讓 4.2 驗收接受模糊 proposal | **Stage 1 已修**：A.3 已列出五個 `it()` 完整路徑，4.2 驗收可比對 |
 | **Low** | @vueuse/core 內 `/* #__PURE__ */` 註解位置警告 | 上游問題，無需處理 |
 | **Low** | php-wasm 使用 `eval` 之 rollup 警告 | 上游問題，無需處理 |

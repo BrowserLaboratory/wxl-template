@@ -8,18 +8,18 @@ Provides a working FastAPI-based demo challenge that demonstrates the `backend: 
 
 ### Requirement: FastAPI demo challenge is available as a working example
 
-A FastAPI-based challenge SHALL be provided at `docs/challenge/fastapi-demo.md` to demonstrate the `backend: fastapi` configuration and the `packages` frontmatter field. The challenge SHALL use a realistic vulnerability pattern suitable for a CTF context.
+A FastAPI-based challenge SHALL be provided at `docs/challenge/door-is-open/index.md` to demonstrate the `backend: fastapi` configuration and the `packages` frontmatter field. The challenge SHALL use a realistic vulnerability pattern suitable for a CTF context.
 
 The `packages` frontmatter field is optional, not required. `ChallengeLayout.vue` SHALL provide `BASE_PACKAGES` defaults (for fastapi: `['fastapi', 'anyio', 'sqlite3']`) that are always included when the backend is `fastapi`. If a `packages` field is present in frontmatter, its entries SHALL be added on top of the `BASE_PACKAGES` defaults.
 
 #### Scenario: FastAPI challenge page loads and renders correctly
 
 - **WHEN** a user navigates to the FastAPI demo challenge page
-- **THEN** the page SHALL display the challenge title, description, difficulty badge, and an interactive BrowserPanel with the default URL set to `https://challenge-fastapi-demo.localhost/`
+- **THEN** the page SHALL display the challenge title, description, difficulty badge, and an interactive BrowserPanel with the default URL set to `https://challenge-door-is-open.localhost/`
 
 #### Scenario: FastAPI challenge responds to HTTP requests
 
-- **WHEN** a user sends a GET request to `https://challenge-fastapi-demo.localhost/`
+- **WHEN** a user sends a GET request to `https://challenge-door-is-open.localhost/`
 - **THEN** the runtime SHALL return an HTTP response from the FastAPI app with status 200 and `Content-Type: application/json` or `text/html`
 
 #### Scenario: FastAPI challenge uses BASE_PACKAGES defaults without packages frontmatter
@@ -39,24 +39,15 @@ code:
   - scripts/challenge-keygen.ts
   - .vitepress/theme/components/TerminalPanel.vue
   - .vitepress/challenge/config.ts
-  - docs/challenge/sqli-demo/flag.txt
   - package.json
   - tests/__mocks__/virtual-fs.ts
-  - docs/challenge/php-demo/flag.txt
-  - docs/challenge/sqli-demo/app.py
-  - docs/challenge/fastapi-demo/app.py
-  - docs/challenge/php-demo.md
   - vitest.config.ts
-  - docs/challenge/sqli-demo.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/php-demo/index.php
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - .vitepress/workers/router.ts
   - .vitepress/theme/composables/usePythonRuntime.ts
-  - docs/challenge/fastapi-demo/flag.txt
   - docs/public/challenge-sw.js
-  - docs/challenge/fastapi-demo.md
   - .vitepress/challenge/plugin.ts
 tests:
   - tests/unit/challenge/plugin.test.ts

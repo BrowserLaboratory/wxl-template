@@ -48,14 +48,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -84,14 +81,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -131,14 +125,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -172,14 +163,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -213,14 +201,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -261,14 +246,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 
@@ -290,14 +272,11 @@ code:
   - docs/challenge/door-is-open/index.md
   - .vitepress/theme/composables/useChallengePersistence.ts
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/sqli-demo/index.md
   - .vitepress/theme/components/BrowserPanel.vue
-  - docs/challenge/fastapi-demo/index.md
   - .wxl-creator/config.yaml
   - .vitepress/theme/components/RepeatPanel.vue
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/useTrafficLog.ts
-  - docs/challenge/php-demo/index.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
 -->
 

@@ -44,20 +44,11 @@ The script SHALL exit with a non-zero code and a descriptive error message if `-
 source: create-challenge-script
 updated: 2026-03-16
 code:
-  - docs/challenge/sqli-demo/flag.txt
   - scripts/challenge-keygen.ts
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - vitest.config.ts
-  - docs/challenge/php-demo/index.php
   - scripts/create-challenge.ts
-  - docs/challenge/fastapi-demo/app.py
   - tests/__mocks__/virtual-fs.ts
-  - docs/challenge/sqli-demo/app.py
-  - docs/challenge/php-demo.md
-  - docs/challenge/php-demo/flag.txt
-  - docs/challenge/fastapi-demo/flag.txt
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - package.json
   - .vitepress/theme/components/TerminalPanel.vue
   - .vitepress/theme/components/BrowserPanel.vue
@@ -102,20 +93,11 @@ The script SHALL refuse to create files if `docs/challenge/<slug>/index.md` or `
 source: create-challenge-script
 updated: 2026-03-16
 code:
-  - docs/challenge/sqli-demo/flag.txt
   - scripts/challenge-keygen.ts
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - vitest.config.ts
-  - docs/challenge/php-demo/index.php
   - scripts/create-challenge.ts
-  - docs/challenge/fastapi-demo/app.py
   - tests/__mocks__/virtual-fs.ts
-  - docs/challenge/sqli-demo/app.py
-  - docs/challenge/php-demo.md
-  - docs/challenge/php-demo/flag.txt
-  - docs/challenge/fastapi-demo/flag.txt
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - package.json
   - .vitepress/theme/components/TerminalPanel.vue
   - .vitepress/theme/components/BrowserPanel.vue
@@ -154,20 +136,11 @@ The skeleton SHALL include a comment indicating it is a scaffold and where the v
 source: create-challenge-script
 updated: 2026-03-16
 code:
-  - docs/challenge/sqli-demo/flag.txt
   - scripts/challenge-keygen.ts
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - vitest.config.ts
-  - docs/challenge/php-demo/index.php
   - scripts/create-challenge.ts
-  - docs/challenge/fastapi-demo/app.py
   - tests/__mocks__/virtual-fs.ts
-  - docs/challenge/sqli-demo/app.py
-  - docs/challenge/php-demo.md
-  - docs/challenge/php-demo/flag.txt
-  - docs/challenge/fastapi-demo/flag.txt
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - package.json
   - .vitepress/theme/components/TerminalPanel.vue
   - .vitepress/theme/components/BrowserPanel.vue
@@ -210,8 +183,6 @@ source: extend-challenge-data-model
 updated: 2026-03-25
 code:
   - docs/public/icons/network.svg
-  - docs/challenge/php-demo.md
-  - docs/challenge/sqli-demo.md
   - docs/public/icons/browser.svg
   - scripts/create-challenge.ts
   - .vitepress/challenge/config.ts
@@ -221,7 +192,6 @@ code:
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - docs/guide/index.md
   - .vitepress/theme/components/HomeContent.vue
-  - docs/challenge/fastapi-demo.md
   - docs/shared/challenges.data.ts
   - docs/guide/python.md
   - .vitepress/theme/Layout.vue
@@ -258,20 +228,11 @@ After all files are created, the script SHALL invoke `challenge:keygen <slug>` a
 source: create-challenge-script
 updated: 2026-03-16
 code:
-  - docs/challenge/sqli-demo/flag.txt
   - scripts/challenge-keygen.ts
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - vitest.config.ts
-  - docs/challenge/php-demo/index.php
   - scripts/create-challenge.ts
-  - docs/challenge/fastapi-demo/app.py
   - tests/__mocks__/virtual-fs.ts
-  - docs/challenge/sqli-demo/app.py
-  - docs/challenge/php-demo.md
-  - docs/challenge/php-demo/flag.txt
-  - docs/challenge/fastapi-demo/flag.txt
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - package.json
   - .vitepress/theme/components/TerminalPanel.vue
   - .vitepress/theme/components/BrowserPanel.vue

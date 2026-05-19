@@ -26,8 +26,6 @@ source: documentation-pages
 updated: 2026-03-25
 code:
   - docs/public/icons/network.svg
-  - docs/challenge/php-demo.md
-  - docs/challenge/fastapi-demo.md
   - .vitepress/theme/style.css
   - docs/public/icons/repeater.svg
   - uno.config.ts
@@ -41,7 +39,6 @@ code:
   - docs/public/icons/browser.svg
   - scripts/create-challenge.ts
   - .vitepress/config.mts
-  - docs/challenge/sqli-demo.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - docs/public/icons/terminal.svg
   - .vitepress/theme/index.ts
@@ -76,8 +73,6 @@ source: documentation-pages
 updated: 2026-03-25
 code:
   - docs/public/icons/network.svg
-  - docs/challenge/php-demo.md
-  - docs/challenge/fastapi-demo.md
   - .vitepress/theme/style.css
   - docs/public/icons/repeater.svg
   - uno.config.ts
@@ -91,7 +86,6 @@ code:
   - docs/public/icons/browser.svg
   - scripts/create-challenge.ts
   - .vitepress/config.mts
-  - docs/challenge/sqli-demo.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - docs/public/icons/terminal.svg
   - .vitepress/theme/index.ts
@@ -126,8 +120,6 @@ source: documentation-pages
 updated: 2026-03-25
 code:
   - docs/public/icons/network.svg
-  - docs/challenge/php-demo.md
-  - docs/challenge/fastapi-demo.md
   - .vitepress/theme/style.css
   - docs/public/icons/repeater.svg
   - uno.config.ts
@@ -141,7 +133,6 @@ code:
   - docs/public/icons/browser.svg
   - scripts/create-challenge.ts
   - .vitepress/config.mts
-  - docs/challenge/sqli-demo.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - docs/public/icons/terminal.svg
   - .vitepress/theme/index.ts
@@ -175,8 +166,6 @@ source: documentation-pages
 updated: 2026-03-25
 code:
   - docs/public/icons/network.svg
-  - docs/challenge/php-demo.md
-  - docs/challenge/fastapi-demo.md
   - .vitepress/theme/style.css
   - docs/public/icons/repeater.svg
   - uno.config.ts
@@ -190,7 +179,6 @@ code:
   - docs/public/icons/browser.svg
   - scripts/create-challenge.ts
   - .vitepress/config.mts
-  - docs/challenge/sqli-demo.md
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - docs/public/icons/terminal.svg
   - .vitepress/theme/index.ts

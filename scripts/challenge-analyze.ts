@@ -5,7 +5,7 @@
  *
  * Usage:
  *   pnpm challenge:analyze              # analyze all challenges
- *   pnpm challenge:analyze fastapi-demo # analyze one challenge
+ *   pnpm challenge:analyze door-is-open # analyze one challenge
  *
  * Exit code 0 on success, 1 on validation failure.
  */

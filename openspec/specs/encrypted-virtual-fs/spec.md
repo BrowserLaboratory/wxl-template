@@ -21,10 +21,7 @@ A Rust WASM module (`wasm-fs`) SHALL provide functions to initialize, read, and 
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -70,10 +67,7 @@ When a challenge initializes, the `wasm-fs` module SHALL populate the in-memory 
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -119,10 +113,7 @@ At challenge page load, the challenge framework SHALL call `wasm_fs_init(challen
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -164,10 +155,7 @@ The challenge framework SHALL expose a `resetFs()` function that deletes all Ind
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs

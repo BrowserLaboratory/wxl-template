@@ -5,7 +5,7 @@
  *
  * Usage:
  *   pnpm challenge:validate              # validate all challenges
- *   pnpm challenge:validate fastapi-demo  # validate one challenge
+ *   pnpm challenge:validate door-is-open  # validate one challenge
  *
  * Exits with code 0 if all checks pass, 1 if any fail.
  */

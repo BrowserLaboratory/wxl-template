@@ -6,10 +6,7 @@
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -42,10 +39,7 @@ tests:
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -78,10 +72,7 @@ tests:
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -114,10 +105,7 @@ tests:
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -152,10 +140,7 @@ tests:
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs

@@ -46,10 +46,7 @@ The `swReady` readiness gate SHALL be unlocked (`true`) when any of the followin
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -104,10 +101,7 @@ The app entrypoint is stored as an encrypted FS entry under the reserved key `__
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs

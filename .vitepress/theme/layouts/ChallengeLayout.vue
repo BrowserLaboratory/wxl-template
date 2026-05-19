@@ -22,7 +22,7 @@ let currentExecutionId: string | null = null
 
 const { frontmatter, page } = useData()
 
-// Derive slug from per-folder relativePath: "challenge/sqli-demo/index.md" → "sqli-demo"
+// Derive slug from per-folder relativePath: "challenge/door-is-open/index.md" → "door-is-open"
 const slug = computed(() => {
   const rel: string = page.value.relativePath ?? ''
   const parts = rel.replace(/\.md$/, '').split('/')

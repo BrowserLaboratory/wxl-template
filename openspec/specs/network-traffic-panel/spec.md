@@ -233,9 +233,7 @@ code:
   - docs/challenge/door-is-open/src/app.py
   - .vitepress/theme/components/BrowserPanel.vue
   - docs/challenge/door-is-open/index.md
-  - docs/challenge/sqli-demo/index.md
   - docs/challenge/door-is-open/src/flag.txt
-  - docs/challenge/fastapi-demo/index.md
   - .vitepress/theme/composables/useWxlsh.ts
   - .vitepress/theme/composables/usePythonRuntime.ts
   - .vitepress/theme/composables/useTrafficLog.ts
@@ -243,5 +241,4 @@ code:
   - .wxl-creator/config.yaml
   - .vitepress/theme/layouts/ChallengeLayout.vue
   - .vitepress/theme/composables/useChallengePersistence.ts
-  - docs/challenge/php-demo/index.md
 -->

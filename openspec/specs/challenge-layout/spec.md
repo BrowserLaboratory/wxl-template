@@ -431,7 +431,6 @@ source: challenge-nav-integration
 updated: 2026-03-25
 code:
   - docs/public/icons/terminal.svg
-  - docs/challenge/sqli-demo.md
   - scripts/create-challenge.ts
   - docs/public/icons/code.svg
   - docs/public/icons/browser.svg
@@ -441,7 +440,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/theme/style.css
   - docs/index.md
-  - docs/challenge/php-demo.md
   - docs/shared/challenges.data.ts
   - .vitepress/theme/components/HomeContent.vue
   - docs/guide/python.md
@@ -451,7 +449,6 @@ code:
   - docs/guide/index.md
   - docs/public/icons/network.svg
   - docs/public/icons/notes.svg
-  - docs/challenge/fastapi-demo.md
   - docs/public/icons/repeater.svg
   - .vitepress/config.mts
   - docs/guide/terminal.md
@@ -478,7 +475,6 @@ source: challenge-nav-integration
 updated: 2026-03-25
 code:
   - docs/public/icons/terminal.svg
-  - docs/challenge/sqli-demo.md
   - scripts/create-challenge.ts
   - docs/public/icons/code.svg
   - docs/public/icons/browser.svg
@@ -488,7 +484,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/theme/style.css
   - docs/index.md
-  - docs/challenge/php-demo.md
   - docs/shared/challenges.data.ts
   - .vitepress/theme/components/HomeContent.vue
   - docs/guide/python.md
@@ -498,7 +493,6 @@ code:
   - docs/guide/index.md
   - docs/public/icons/network.svg
   - docs/public/icons/notes.svg
-  - docs/challenge/fastapi-demo.md
   - docs/public/icons/repeater.svg
   - .vitepress/config.mts
   - docs/guide/terminal.md
@@ -538,7 +532,6 @@ source: challenge-nav-integration
 updated: 2026-03-25
 code:
   - docs/public/icons/terminal.svg
-  - docs/challenge/sqli-demo.md
   - scripts/create-challenge.ts
   - docs/public/icons/code.svg
   - docs/public/icons/browser.svg
@@ -548,7 +541,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/theme/style.css
   - docs/index.md
-  - docs/challenge/php-demo.md
   - docs/shared/challenges.data.ts
   - .vitepress/theme/components/HomeContent.vue
   - docs/guide/python.md
@@ -558,7 +550,6 @@ code:
   - docs/guide/index.md
   - docs/public/icons/network.svg
   - docs/public/icons/notes.svg
-  - docs/challenge/fastapi-demo.md
   - docs/public/icons/repeater.svg
   - .vitepress/config.mts
   - docs/guide/terminal.md

@@ -17,11 +17,11 @@
 
 - [x] 2.1 產出 `DELETION-PLAN.md` 作為 **Decision: Three durable audit report files** 的第二份；內容須包含 (a) 三個 demo（sqli-demo / php-demo / fastapi-demo）在 specs、scripts、tests、`.claude/skills/*` 內被引用的完整位置清單、(b) **Decision: Switch wxl-creator canonical reference from sqli-demo to door-is-open** 之具體執行步驟（要替換的字串、要更新的 @trace 條目、要保留的引用）、(c) 預期執行後仍可運作之 invariant 列表（如：door-is-open 仍可被 build 與 dev server 載入）。**驗收**：`DELETION-PLAN.md` 存在於專案根目錄；每個被引用位置都標註絕對路徑 + 行號；wxl-creator 更新步驟可逐條對照執行。
 - [x] 2.2 對 stage 2 產出執行 **Decision: Per-stage /spectra-audit gating**，Critical/High 嚴重度 finding 為 0。**驗收**：audit 輸出保存；finding 計數 Critical=0、High=0。
-- [ ] 2.3 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 2 commit，訊息開頭為 `📋 plan:`。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `📋 plan:` 開頭。
+- [x] 2.3 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 2 commit，訊息開頭為 `📋 plan:`。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `📋 plan:` 開頭。
 
 ## 3. 歸檔與移除（Archive & Remove）
 
-- [ ] 3.1 依 **Decision: Archive via git mv to .archive/ instead of git rm** 設計決議，以**單一原子化 shell block** 完成三個 demo 搬移；採用以下精確序列以避免 partial-completion 或路徑混淆：
+- [x] 3.1 依 **Decision: Archive via git mv to .archive/ instead of git rm** 設計決議，以**單一原子化 shell block** 完成三個 demo 搬移；採用以下精確序列以避免 partial-completion 或路徑混淆：
 
   ```bash
   # 先確認 .archive/ 不在任何 ignore 名單，避免搬移後從版本控制消失
@@ -41,8 +41,8 @@
   ```
 
   保留 `docs/challenge/door-is-open/` 不變。**驗收**：上述 shell block 整體 exit 0（無中途 echo FAIL_*）；`git status --porcelain` 至少含三組 `R` 開頭條目。
-- [ ] 3.2 兌現 spec 新增的 **Skill uses canonical reference example for code generation style** 規範，並執行 **Decision: Switch wxl-creator canonical reference from sqli-demo to door-is-open**：更新 `.claude/skills/wxl-creator/SKILL.md` 把所有指向 sqli-demo 的字串替換為 door-is-open；同步清理 `openspec/specs/wxl-creator-skill/spec.md` 中 `@trace` 區段內指向已 archive 路徑的條目；確認 `.wxl-creator/config.yaml` 不含 sqli-demo 殘餘字串。**驗收**：`rg "sqli-demo" .claude/ openspec/specs/wxl-creator-skill/ .wxl-creator/` 必須為零比對；對應 spec.md 的 `@trace` 區段不再列 `docs/challenge/sqli-demo/index.md` 等已搬移路徑。
-- [ ] 3.3 對 stage 3 產出執行 **Decision: Per-stage /spectra-audit gating**，Critical/High 嚴重度 finding 為 0；額外驗證 `pnpm docs:build` 後輸出 `dist/` 不包含 `.archive/` 路徑（若被誤 bundle 則屬 Critical）。**驗收**：audit 輸出保存；finding 計數 Critical=0、High=0；`grep -r ".archive" .vitepress/dist/ 2>/dev/null` 無比對。
+- [x] 3.2 兌現 spec 新增的 **Skill uses canonical reference example for code generation style** 規範，並執行 **Decision: Switch wxl-creator canonical reference from sqli-demo to door-is-open**：更新 `.claude/skills/wxl-creator/SKILL.md` 把所有指向 sqli-demo 的字串替換為 door-is-open；同步清理 `openspec/specs/wxl-creator-skill/spec.md` 中 `@trace` 區段內指向已 archive 路徑的條目；確認 `.wxl-creator/config.yaml` 不含 sqli-demo 殘餘字串。**驗收**：`rg "sqli-demo" .claude/ openspec/specs/wxl-creator-skill/ .wxl-creator/` 必須為零比對；對應 spec.md 的 `@trace` 區段不再列 `docs/challenge/sqli-demo/index.md` 等已搬移路徑。
+- [x] 3.3 對 stage 3 產出執行 **Decision: Per-stage /spectra-audit gating**，Critical/High 嚴重度 finding 為 0；額外驗證 `pnpm docs:build` 後輸出 `dist/` 不包含 `.archive/` 路徑（若被誤 bundle 則屬 Critical）。**驗收**：audit 輸出保存；finding 計數 Critical=0、High=0；`grep -r ".archive" .vitepress/dist/ 2>/dev/null` 無比對。
 - [ ] 3.4 透過 **Decision: Per-stage commit checkpoint pattern using /tw-emoji-commit** 落地 Stage 3 commit，訊息開頭為 `🗑️ refactor:`。**驗收**：`git log --oneline -1` 顯示新 commit；訊息以 `🗑️ refactor:` 開頭；diff 同時涵蓋三組 file rename 與 SKILL.md 更新。
 
 ## 4. 驗證（Verification）

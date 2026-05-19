@@ -154,8 +154,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -168,7 +166,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:
@@ -209,8 +206,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -223,7 +218,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:
@@ -264,8 +258,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -278,7 +270,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:
@@ -319,8 +310,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -333,7 +322,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:
@@ -432,8 +420,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -446,7 +432,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:
@@ -486,8 +471,6 @@ code:
   - .vitepress/theme/Layout.vue
   - .vitepress/challenge/config.ts
   - .vitepress/config.mts
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/sqli-demo.md
   - uno.config.ts
   - docs/public/icons/code.svg
   - docs/public/icons/repeater.svg
@@ -500,7 +483,6 @@ code:
   - docs/guide/index.md
   - docs/guide/network.md
   - docs/public/icons/notes.svg
-  - docs/challenge/php-demo.md
   - docs/guide/terminal.md
   - scripts/create-challenge.ts
 tests:

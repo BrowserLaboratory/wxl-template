@@ -97,10 +97,10 @@ pnpm dev
 
 ```yaml
 ---
-title: SQL Injection Demo
-backend: flask           # flask | fastapi | php
+title: Door Is Open
+backend: fastapi         # flask | fastapi | php
 app: ./app.py
-wasmModule: /challenge/sqli-demo/runtime.wasm  # 由 keygen 自動產生
+wasmModule: /challenge/door-is-open/runtime.wasm  # 由 keygen 自動產生
 fs:
   /flag.txt: ./flag.txt
 difficulty: easy

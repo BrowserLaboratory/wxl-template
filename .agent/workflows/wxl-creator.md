@@ -108,8 +108,8 @@ digraph flow {
       - Flask/FastAPI: `docs/challenge/<slug>/src/app.py`
       - PHP: `docs/challenge/<slug>/src/index.php`
 
-   b. **Read the existing sqli-demo as reference** for code style and structure:
-      - `docs/challenge/sqli-demo/src/app.py`
+   b. **Read the canonical reference — the literal directory `docs/challenge/door-is-open/` (not the slug being created) — as the ONLY reference** for code style and structure. You SHALL NOT add additional reference paths to this list. <!-- SHALL NOT add backend-specific extra references; the single canonical reference applies to all backends -->
+      - `docs/challenge/door-is-open/src/app.py`
 
    c. **Write the vulnerable code** using the Write tool to overwrite the skeleton. The generated code SHALL:
       - Follow the same structure as the reference (docstring, imports, setup, HTML template, routes)
@@ -258,7 +258,7 @@ digraph flow {
 - You SHALL NOT skip any step. Follow the workflow in order.
 - You SHALL NOT generate trivially obvious vulnerabilities (e.g., bare `eval()`, `os.system(input())`).
 - You SHALL always read the scaffold skeleton before overwriting — never generate code from scratch without seeing the skeleton structure.
-- You SHALL always read `sqli-demo/src/app.py` as a reference for code style before generating.
+- You SHALL always read `docs/challenge/door-is-open/src/app.py` as THE canonical reference for code style before generating. You SHALL NOT fall back to any archived demo under `.archive/`, nor to any other directory under `docs/challenge/`, nor to a user-supplied path, nor to any auto-discovered "next available demo". If the canonical reference is unreadable, halt the scaffold operation with a deterministic error containing the literal path `docs/challenge/door-is-open/`.
 - You SHALL NOT modify existing scripts (`create-challenge.ts`, `challenge-validate.ts`, `challenge-analyze.ts`) — call them as-is.
 - You SHALL always wait for user confirmation before applying auto-fixes.
 - You SHALL track the fix loop counter and respect `max_fix_attempts`.

@@ -24,10 +24,7 @@ Each challenge page SHALL declare its configuration via YAML frontmatter in its 
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -99,10 +96,7 @@ A VitePress plugin SHALL transform each challenge page by: reading referenced ap
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -153,10 +147,7 @@ The challenge framework SHALL verify submitted flags by calling the WASM export 
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
@@ -203,10 +194,7 @@ During build-time processing, the build script SHALL read the local file referen
 source: per-challenge-wasm-hardening
 updated: 2026-03-23
 code:
-  - docs/challenge/sqli-demo.md
   - package.json
-  - docs/challenge/fastapi-demo.md
-  - docs/challenge/php-demo.md
   - .vitepress/challenge/plugin.ts
   - .vitepress/challenge/crypto.ts
   - chall-wasm/virtual-fs/src/tests.rs
