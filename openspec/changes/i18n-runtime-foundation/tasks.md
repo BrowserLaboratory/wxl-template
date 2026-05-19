@@ -57,9 +57,9 @@ Stages map to design.md decisions; each stage ends with /spectra-audit + /tw-emo
 
 ## 8. Vitest 覆蓋（messages-shape + locale-switcher）
 
-- [ ] 8.1 [P] 建立 `tests/unit/i18n/messages-shape.test.ts`，斷言 (a) `en.json` 與 `zh-TW.json` 之扁平化 key 路徑集合相同（任一 missing key 直接失敗）、(b) 掃 `en.json` 每個 leaf 值無 U+4E00–U+9FFF 字元、(c) 掃 `zh-TW.json` 每個 leaf 值至少有一個 U+4E00–U+9FFF 字元，實現規格「Vitest coverage validates LocaleSwitcher and message-shape parity」與設計決策「Vitest coverage scope」。Verification：在 `en.json` 暫時新增一個假 key 後跑 `pnpm test tests/unit/i18n/messages-shape.test.ts` 必須失敗並指出該 key path；移除後 exit 0。
-- [ ] 8.2 [P] 建立 `tests/unit/i18n/locale-switcher.test.ts`，使用 `@vue/test-utils` mount `LocaleSwitcher.vue`（搭配 vue-i18n test instance），覆蓋：(a) 從 `/challenges/door-is-open/` 切到 zh-TW → URL `/zh-TW/challenges/door-is-open/`、localStorage `'zh-TW'`、`i18n.global.locale.value === 'zh-TW'`；(b) 反向切換；(c) init-time precedence matrix（spec.md 表格 7 列）；(d) `localStorage` SecurityError fallback。Verification：`pnpm test tests/unit/i18n/locale-switcher.test.ts` exit 0；test 數量 ≥ 11（兩方向切換 2 + precedence 7 + fallback 1 + 至少 1 個切換 UI 顯示測試）。
-- [ ] 8.3 Stage 8 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze` Critical+High = 0。
+- [x] 8.1 [P] 建立 `tests/unit/i18n/messages-shape.test.ts`，斷言 (a) `en.json` 與 `zh-TW.json` 之扁平化 key 路徑集合相同（任一 missing key 直接失敗）、(b) 掃 `en.json` 每個 leaf 值無 U+4E00–U+9FFF 字元、(c) 掃 `zh-TW.json` 每個 leaf 值至少有一個 U+4E00–U+9FFF 字元，實現規格「Vitest coverage validates LocaleSwitcher and message-shape parity」與設計決策「Vitest coverage scope」。Verification：在 `en.json` 暫時新增一個假 key 後跑 `pnpm test tests/unit/i18n/messages-shape.test.ts` 必須失敗並指出該 key path；移除後 exit 0。
+- [x] 8.2 [P] 建立 `tests/unit/i18n/locale-switcher.test.ts`，使用 `@vue/test-utils` mount `LocaleSwitcher.vue`（搭配 vue-i18n test instance），覆蓋：(a) 從 `/challenges/door-is-open/` 切到 zh-TW → URL `/zh-TW/challenges/door-is-open/`、localStorage `'zh-TW'`、`i18n.global.locale.value === 'zh-TW'`；(b) 反向切換；(c) init-time precedence matrix（spec.md 表格 7 列）；(d) `localStorage` SecurityError fallback。Verification：`pnpm test tests/unit/i18n/locale-switcher.test.ts` exit 0；test 數量 ≥ 11（兩方向切換 2 + precedence 7 + fallback 1 + 至少 1 個切換 UI 顯示測試）。
+- [x] 8.3 Stage 8 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze` Critical+High = 0。
 
 ## 9. 完整 pipeline 驗收與終局 audit
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 
-// Mock vitepress useData
+// Mock vitepress useData + useRouter (LocaleSwitcher inside MergedNav uses useRouter)
 const mockIsDark = { value: false }
 vi.mock('vitepress', () => ({
   useData: vi.fn(() => ({
@@ -16,6 +16,7 @@ vi.mock('vitepress', () => ({
       },
     },
   })),
+  useRouter: vi.fn(() => ({ go: vi.fn(), route: { path: '/' } })),
 }))
 
 import MergedNav from '../../../.vitepress/theme/components/MergedNav.vue'
