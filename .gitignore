@@ -101,3 +101,11 @@ openspec/.vector-search.db*
 tmp/
 temp/
 .worktree/
+
+# ===========================
+# Humane Prose Audit
+# ===========================
+# Per-file audit run output written by `audit_orchestrator.py`.
+# The aggregated summary is committed under
+# `openspec/changes/<name>/audit-summary.md`; the raw run dirs are not.
+audit-runs/
