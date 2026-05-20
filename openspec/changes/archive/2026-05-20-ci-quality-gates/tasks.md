@@ -24,8 +24,8 @@
 ## 6. 端到端驗證
 
 - [x] 6.1 在 Node 22 LTS workstation 上以乾淨 checkout 跑 local-equivalent 指令鏈 `pnpm install --frozen-lockfile && pnpm wasm:build && pnpm challenge:keygen && pnpm wasm:test && pnpm test --run && pnpm challenge:validate && pnpm docs:build`——可觀察行為：全部 7 條指令 exit 0。驗證：terminal log 每條指令尾端可見 exit 0；任一條紅即停手，不進入 PR-time 驗證。
-- [ ] 6.2 從 throwaway branch 開 PR 至 `staging` 確認 workflow 正常觸發——可觀察行為：60 秒內 PR 上出現 `Quality Gates / test` 與 `Quality Gates / build` 兩個 check，且乾淨 branch 上兩者皆 green。驗證：`gh pr checks <pr-number>` 輸出兩條 check 與其 conclusion。
-- [ ] 6.3 在 throwaway branch 上故意打壞一個 vitest test 並 push，確認 `Quality Gates / test` 紅燈而 `Quality Gates / build` 仍 green，驗證兩 job 並行獨立性——可觀察行為：PR check 列表顯示 test red、build green。驗證：`gh pr checks <pr-number>` 或 PR 介面截圖；接著還原修改、再 push、確認兩 check 重回 green。
+- [x] 6.2 從 throwaway branch 開 PR 至 `staging` 確認 workflow 正常觸發——可觀察行為：60 秒內 PR 上出現 `Quality Gates / test` 與 `Quality Gates / build` 兩個 check，且乾淨 branch 上兩者皆 green。驗證：`gh pr checks <pr-number>` 輸出兩條 check 與其 conclusion。
+- [x] 6.3 在 throwaway branch 上故意打壞一個 vitest test 並 push，確認 `Quality Gates / test` 紅燈而 `Quality Gates / build` 仍 green，驗證兩 job 並行獨立性——可觀察行為：PR check 列表顯示 test red、build green。驗證：`gh pr checks <pr-number>` 或 PR 介面截圖；接著還原修改、再 push、確認兩 check 重回 green。
 
 ## 7. Follow-up 紀錄（本 change 不實作）
 
