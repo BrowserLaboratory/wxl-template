@@ -10,9 +10,9 @@
 ;(globalThis as any).__VUE_OPTIONS_API__ = true
 ;(globalThis as any).__INTLIFY_PROD_DEVTOOLS__ = false
 
-import { computed, defineComponent, h, onMounted, onUnmounted } from 'vue'
+import { computed, defineComponent, h, onMounted, onUnmounted, watch } from 'vue'
 import type { Theme } from 'vitepress'
-import { useData } from 'vitepress'
+import { useData, useRoute } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
 import { createPinia } from 'pinia'
 import 'virtual:uno.css'
@@ -22,7 +22,27 @@ import SourceViewer from './components/SourceViewer.vue'
 import ChallengeList from './components/ChallengeList.vue'
 import HomeContent from './components/HomeContent.vue'
 import LocaleSwitcher from './components/LocaleSwitcher.vue'
-import { i18n, detectInitialLocale, persistLocale } from './i18n'
+import { i18n, detectInitialLocale, detectLocaleFromPath, persistLocale } from './i18n'
+
+/**
+ * Locale-switcher selection flag.
+ *
+ * - `false` (default): use VitePress's built-in `VPNavBarTranslations`
+ *   dropdown on default-theme pages. A route watcher in the Layout setup
+ *   syncs `i18n.global.locale.value` and `localStorage` whenever the URL
+ *   prefix changes.
+ * - `true`: use the custom `LocaleSwitcher.vue` component, mounted into
+ *   the `nav-bar-content-before` slot. The built-in dropdown is hidden
+ *   via CSS scoped to `body.use-custom-locale-switcher`.
+ *
+ * Challenge pages always render the custom LocaleSwitcher through
+ * MergedNav.vue regardless of this flag — it only governs the default
+ * theme nav.
+ *
+ * Flip this and rebuild; no spec change is required (the i18n-runtime
+ * spec covers both modes).
+ */
+const USE_CUSTOM_LOCALE_SWITCHER = false as boolean
 
 export default {
   ...DefaultTheme,
@@ -32,25 +52,56 @@ export default {
       const { frontmatter } = useData()
       const isChallenge = computed(() => frontmatter.value.layout === 'challenge')
 
-      // Toggle body class for challenge-specific global styles
+      // Route watcher — syncs vue-i18n's `locale.value` and `localStorage`
+      // whenever the URL prefix crosses locale boundaries (SPA navigation,
+      // browser back/forward, or built-in dropdown selection). Idempotent:
+      // a no-op when the detected locale already matches. Reuses the
+      // single-sourced `detectLocaleFromPath` rule (mirrors LocaleSwitcher
+      // semantics) and `persistLocale` helper (SSR-safe).
+      const route = useRoute()
+      const stopRouteWatch = watch(
+        () => route.path,
+        (newPath) => {
+          const target = detectLocaleFromPath(newPath)
+          if (i18n.global.locale.value === target) return
+          i18n.global.locale.value = target
+          persistLocale(target)
+        },
+        // `flush: 'pre'` runs the watcher BEFORE child components update on
+        // the same tick, so any component using `t()` re-renders with the
+        // already-synchronised locale rather than the stale one. Vue 3's
+        // default is `'pre'`, but we set it explicitly so the contract is
+        // audit-proof and survives future Vue defaults changing.
+        { flush: 'pre' },
+      )
+
       onMounted(() => {
+        // Challenge-specific global styles
         document.body.classList.toggle('challenge-page', isChallenge.value)
+        // Custom-switcher CSS scope — when true, scopes the CSS hide rule
+        // for `.VPNavBarTranslations` so the built-in dropdown disappears.
+        if (USE_CUSTOM_LOCALE_SWITCHER) {
+          document.body.classList.add('use-custom-locale-switcher')
+        }
       })
       onUnmounted(() => {
         document.body.classList.remove('challenge-page')
+        document.body.classList.remove('use-custom-locale-switcher')
+        stopRouteWatch()
       })
 
       return () => {
         if (isChallenge.value) return h(ChallengeLayout)
-        return h(DefaultTheme.Layout, null, {
-          // Custom LocaleSwitcher syncs the vue-i18n `locale.value` (which the
-          // built-in VitePress translation dropdown does NOT do). Place it in
-          // the nav before built-in content (theme toggle, divider, GitHub) so
-          // it groups visually with the nav rather than dangling past the
-          // GitHub icon. The built-in `VPNavBarTranslations` dropdown is
-          // hidden via CSS in style.css to avoid two switchers competing.
-          'nav-bar-content-before': () => h(LocaleSwitcher),
-        })
+        // Default-theme nav: when the flag is true, inject the custom
+        // LocaleSwitcher into the `nav-bar-content-before` slot. When
+        // false, render no slot — VitePress's built-in dropdown takes
+        // over and the route watcher above keeps vue-i18n in sync.
+        if (USE_CUSTOM_LOCALE_SWITCHER) {
+          return h(DefaultTheme.Layout, null, {
+            'nav-bar-content-before': () => h(LocaleSwitcher),
+          })
+        }
+        return h(DefaultTheme.Layout)
       }
     },
   }),

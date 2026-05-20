@@ -29,14 +29,40 @@ export const i18n = createI18n({
 
 export default i18n
 
-// NOTE: `detectInitialLocale()` is exported here but is only wired into
-// `enhanceApp` in Task 7.1 (Stage 7). Until then, the i18n instance starts
-// fixed at `'en'` and locale state changes only when LocaleSwitcher runs.
+/**
+ * Pure-function locale detection from a URL pathname string. The rule:
+ * a pathname equal to `/zh-TW`, equal to `/zh-TW/`, or starting with
+ * `/zh-TW/` resolves to `'zh-TW'`; everything else resolves to `'en'`.
+ *
+ * Pathological inputs such as `/zh-TWfoo` (a hypothetical non-locale path
+ * that happens to begin with the literal characters `zh-TW` but has no
+ * separating slash) MUST resolve to `'en'` — the prefix rule requires the
+ * locale segment to be terminated by `/` or end-of-string.
+ *
+ * **Silent fallback to `'en'` is intentional.** Any unrecognised pathname
+ * (typo like `/zh-tw` lowercase, future-but-unconfigured locale prefix,
+ * deep link to a deleted page) resolves to `'en'` without warning. This
+ * matches VitePress's own `locales` routing semantics (the `root` locale
+ * catches everything not in another configured prefix). If a third locale
+ * is ever added, this function MUST be updated to dispatch on an explicit
+ * list — the current binary fallback rule will silently misclassify the
+ * new locale as `'en'` otherwise.
+ *
+ * SSR-safe: takes a plain string, touches no globals. Reused by both
+ * `detectInitialLocale()` (for cold loads) and the Layout's route watcher
+ * (for SPA navigation), keeping the rule single-sourced.
+ */
+export function detectLocaleFromPath(path: string): Locale {
+  if (path === '/zh-TW' || path === '/zh-TW/' || path.startsWith('/zh-TW/')) {
+    return 'zh-TW'
+  }
+  return 'en'
+}
+
 export function detectInitialLocale(): Locale {
   if (typeof window === 'undefined') return 'en'
 
-  const { pathname } = window.location
-  const urlIsZhTW = pathname === '/zh-TW' || pathname.startsWith('/zh-TW/')
+  const urlLocale = detectLocaleFromPath(window.location.pathname)
 
   let stored: Locale | null = null
   try {
@@ -47,7 +73,7 @@ export function detectInitialLocale(): Locale {
   }
 
   // URL `/zh-TW/...` prefix is an explicit request and overrides stored 'en'
-  if (urlIsZhTW) return 'zh-TW'
+  if (urlLocale === 'zh-TW') return 'zh-TW'
 
   if (stored) return stored
 

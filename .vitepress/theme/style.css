@@ -206,11 +206,16 @@ body.challenge-page {
   --vp-nav-height: 0px;
 }
 
-/* Hide VitePress's built-in translation dropdown (the `文A` icon). The
- * custom LocaleSwitcher (mounted via the `nav-bar-content-before` slot in
- * theme/index.ts) is the sole locale switcher because it also syncs the
- * vue-i18n runtime locale, which the built-in dropdown does not. */
-.VPNavBarTranslations,
-.VPNavScreenTranslations {
+/* Hide VitePress's built-in translation dropdown ONLY when the project is
+ * configured to use the custom `LocaleSwitcher` (i.e., when theme/index.ts
+ * sets `USE_CUSTOM_LOCALE_SWITCHER = true`, which adds the body class
+ * below). In the default mode (flag = false), the built-in dropdown is
+ * the sole switcher and the route watcher in Layout's setup keeps
+ * vue-i18n synchronised with the URL prefix.
+ *
+ * Flipping the flag is a one-line change in theme/index.ts and requires
+ * no edits here — the body class toggle drives this rule. */
+body.use-custom-locale-switcher .VPNavBarTranslations,
+body.use-custom-locale-switcher .VPNavScreenTranslations {
   display: none !important;
 }
