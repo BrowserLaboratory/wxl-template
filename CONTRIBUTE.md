@@ -292,7 +292,10 @@ gh api -X POST /repos/{owner}/{repo}/rulesets \
     {
       "type": "pull_request",
       "parameters": {
+        "required_approving_review_count": 0,
         "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
         "required_review_thread_resolution": true
       }
     },
@@ -317,7 +320,7 @@ Notes:
 - `conditions.ref_name.include=["~DEFAULT_BRANCH"]` scopes the ruleset to the repository's *default* branch, following GitHub's built-in `~DEFAULT_BRANCH` selector. This keeps the ruleset working when the default branch is renamed (e.g., `main` → `trunk`) and lets derived repositories whose default branch is not `main` (`master`, `develop`, etc.) reuse the same payload unchanged. `staging` and other non-default branches are *not* covered by this ruleset (tracked as a separate change).
 - The `deletion` rule prevents the default branch from being deleted at all (`git push --delete origin <default>` is rejected). The `non_fast_forward` rule prevents any history-rewriting push (`git push --force`, `git push --force-with-lease`, force-push from `gh`/IDE, etc.). Both rules apply even to repository administrators, so destructive operations always go through explicit `bypass_actors` invocation and are recorded in the audit log.
 - `bypass_actors` permits the organization admin (`OrganizationAdmin`, `actor_id=1`) and the repository's Admin role (`RepositoryRole`, `actor_id=5`) to bypass via `bypass_mode=pull_request`. This mode allows administrators to self-merge a pull request without waiting for required status checks (an emergency lever), but does **not** permit direct pushes to the default branch — administrators must still open a pull request. The legacy `bypass_mode=always` (which would permit direct push) is intentionally avoided. `RepositoryRole` `actor_id` follows GitHub's built-in role IDs: `1`=Read, `2`=Triage, `3`=Write, `4`=Maintain, `5`=Admin. Every bypass invocation appears in the GitHub audit log.
-- The `pull_request` rule sets `dismiss_stale_reviews_on_push=true` (a new commit invalidates earlier approving reviews — defends against the "approve-then-add-malicious-commit" pattern) and `required_review_thread_resolution=true` (every review-conversation thread must be resolved before merge, even on otherwise-passing PRs). Both flags are no-ops for solo maintainers and net positive for multi-reviewer teams; they are written in the default payload so use-template forks inherit them automatically.
+- The `pull_request` rule sets `dismiss_stale_reviews_on_push=true` (a new commit invalidates earlier approving reviews — defends against the "approve-then-add-malicious-commit" pattern) and `required_review_thread_resolution=true` (every review-conversation thread must be resolved before merge, even on otherwise-passing PRs). The other three flags — `required_approving_review_count: 0`, `require_code_owner_review: false`, `require_last_push_approval: false` — are written explicitly with their defaults because GitHub's API requires the `pull_request.parameters` block to be all-or-nothing: omitting any of the five flags yields `HTTP 422 — Invalid property /rules/<N>: data matches no possible input`. Both hardening flags are no-ops for solo maintainers and net positive for multi-reviewer teams; they ship in the default payload so use-template forks inherit them automatically.
 - The two `required_status_checks` contexts (`test`, `build`) are the job IDs pinned by `ci-quality-gates` — do not rename without updating the spec and ruleset together. Each check entry pins `integration_id: 15368`, the App id of GitHub Actions; without pinning, any GitHub App with `Checks: write` could report a same-named `success` check and bypass the gate. (Setting `integration_id` to `null` is rejected by the API; either pin to an integer or omit the key entirely.)
 
 #### Upgrade an existing ruleset
@@ -352,7 +355,10 @@ gh api -X PUT /repos/{owner}/{repo}/rulesets/<id> \
     {
       "type": "pull_request",
       "parameters": {
+        "required_approving_review_count": 0,
         "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": false,
+        "require_last_push_approval": false,
         "required_review_thread_resolution": true
       }
     },
