@@ -5,6 +5,8 @@ on:
     tags:
       - 'v*'
 
+# softprops/action-gh-release creates the GitHub Release and uploads the
+# wxl-${tag}.zip asset, which requires `contents: write` on GITHUB_TOKEN.
 permissions:
   contents: write
 
@@ -14,25 +16,27 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Cache Rust build artifacts
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
 
       - name: Install wasm-pack
-        uses: jetli/wasm-pack-action@v0.4.0
+        uses: jetli/wasm-pack-action@0d096b08b4e5a7de8c28de67e11e945404e9eefa # v0.4.0
+        with:
+          version: 'v0.14.0'  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
@@ -64,7 +68,7 @@ jobs:
           zip -r "../../wxl-${GITHUB_REF_NAME}.zip" .
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           name: "Release ${{ github.ref_name }}"
           generate_release_notes: true
