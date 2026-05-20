@@ -35,10 +35,10 @@
 
 實作 proposal 之 What Changes「撰寫 `docs/guide/python.md`、`docs/guide/terminal.md`、`docs/guide/network.md` 真實英文內容」。三檔互不依賴，可並行。
 
-- [ ] 4.1 [P] 重寫 `docs/guide/python.md`（對應 `docs/zh-TW/guide/python.md` 197 行）：Code Editor、Pyodide modules、requests API、attack examples。code block 與註解逐字搬遷；技術術語英文原文保留。交付行為：英文 `/guide/python` 路由顯示完整英文 Python guide。Verification：`rg '[一-鿿]' docs/guide/python.md` exit 1；`rg 'TODO\|placeholder' docs/guide/python.md` exit 1；`pnpm docs:build` 後 `dist/guide/python.html` 行數 ≥ 150。
-- [ ] 4.2 [P] 重寫 `docs/guide/terminal.md`（對應 `docs/zh-TW/guide/terminal.md` 223 行）：wxlsh 指令文件。所有 wxlsh subcommand 名稱與旗標保持原樣（如 `wxlsh curl`、`-X POST`、`--data` 等），僅描述文字翻譯。交付行為：英文 `/guide/terminal` 路由顯示完整英文 wxlsh 指令參考。Verification：`rg '[一-鿿]' docs/guide/terminal.md` exit 1；`rg 'wxlsh' docs/guide/terminal.md` 命中數 ≥ `rg 'wxlsh' docs/zh-TW/guide/terminal.md` 命中數（指令名稱不丟失）；`pnpm docs:build` 後 `dist/guide/terminal.html` 行數 ≥ 170。
-- [ ] 4.3 [P] 重寫 `docs/guide/network.md`（對應 `docs/zh-TW/guide/network.md` 143 行）：Network panel + Repeater workflow + examples。交付行為：英文 `/guide/network` 路由顯示完整英文 Network & Repeater guide。Verification：`rg '[一-鿿]' docs/guide/network.md` exit 1；`rg 'TODO\|placeholder' docs/guide/network.md` exit 1；`pnpm docs:build` 後 `dist/guide/network.html` 行數 ≥ 110。
-- [ ] 4.4 Stage 4 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze content-i18n-migration --json` Critical+High = 0；commit 訊息符合台灣繁中慣例。
+- [x] 4.1 [P] 重寫 `docs/guide/python.md`（對應 `docs/zh-TW/guide/python.md` 197 行）：Code Editor、Pyodide modules、requests API、attack examples。code block 與註解逐字搬遷；技術術語英文原文保留。交付行為：英文 `/guide/python` 路由顯示完整英文 Python guide。Verification：`rg '[一-鿿]' docs/guide/python.md` exit 1；`rg 'TODO\|placeholder' docs/guide/python.md` exit 1；`pnpm docs:build` 後 `dist/guide/python.html` 行數 ≥ 150。
+- [x] 4.2 [P] 重寫 `docs/guide/terminal.md`（對應 `docs/zh-TW/guide/terminal.md` 223 行）：wxlsh 指令文件。所有 wxlsh subcommand 名稱與旗標保持原樣（如 `wxlsh curl`、`-X POST`、`--data` 等），僅描述文字翻譯。交付行為：英文 `/guide/terminal` 路由顯示完整英文 wxlsh 指令參考。Verification：`rg '[一-鿿]' docs/guide/terminal.md` exit 1；`rg 'wxlsh' docs/guide/terminal.md` 命中數 ≥ `rg 'wxlsh' docs/zh-TW/guide/terminal.md` 命中數（指令名稱不丟失）；`pnpm docs:build` 後 `dist/guide/terminal.html` 行數 ≥ 170。
+- [x] 4.3 [P] 重寫 `docs/guide/network.md`（對應 `docs/zh-TW/guide/network.md` 143 行）：Network panel + Repeater workflow + examples。交付行為：英文 `/guide/network` 路由顯示完整英文 Network & Repeater guide。Verification：`rg '[一-鿿]' docs/guide/network.md` exit 1；`rg 'TODO\|placeholder' docs/guide/network.md` exit 1；`pnpm docs:build` 後 `dist/guide/network.html` 行數 ≥ 110。
+- [x] 4.4 Stage 4 收尾：執行 `/spectra-audit` + `/tw-emoji-commit`。Verification：`spectra analyze content-i18n-migration --json` Critical+High = 0；commit 訊息符合台灣繁中慣例。
 
 ## 5. 完整 pipeline 驗收與終局雙層稽核（artifact + code）
 
