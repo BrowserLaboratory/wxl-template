@@ -41,6 +41,8 @@ cargo install wasm-pack --version 0.14.0   # 或更新的 0.1x.x（最低 0.12�
 
 **影響範圍**：minimal — 整條 binary-install → tar → minizlib → minipass 損壞鏈從 `node_modules` 完全消失；不影響任何其他套件運作。**Trade-off**：wasm-pack 從 npm devDependency（自動安裝）變成系統 PATH 隱性依賴，第一次使用門檻略升。
 
+> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/<archive-date>-node-24-actions-upgrade/`，CI workflow 同步升至 Node 24 + composite-based wasm-pack 安裝）。
+
 #### A.2.2 顯式設定 `vite.build.target = 'esnext'` [High]
 
 **根因**（與 vite 版本無關的本質敘述）：`vite-plugin-top-level-await` 1.6.0 把 source 中的 top-level await 包成 IIFE，再交給 esbuild 0.27.7 對該包裝程式碼做 syntax lowering。包裝程式碼內含 esbuild 標為 **non-trivial destructuring** 的模式（assignment-target 結合 spread 或 default value 之組合），esbuild 對該特定模式直接拋出 `Transforming destructuring to the configured target environment is not supported yet`。**只要 build target 不是 `esnext`（亦即任何要求 esbuild 做語法下降的 target）此錯誤就會出現**。當前實際安裝為 vitepress 2.0.0-alpha.16 → vite 7.3.3 / esbuild 0.27.7，但本錯誤源頭是 esbuild 的轉換器實作，與 vite 版本無直接關係。
@@ -56,6 +58,8 @@ cargo install wasm-pack --version 0.14.0   # 或更新的 0.1x.x（最低 0.12�
 3. 確認 esbuild 該轉換器分支已支援該 destructuring 模式（檢查 esbuild changelog）。
 
 未滿足上述任一前提即還原 target，`pnpm docs:build` 將再次以 esbuild destructuring 錯誤失敗。
+
+> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/<archive-date>-node-24-actions-upgrade/`；本 stage 2 之 esbuild target=esnext 修復在 Node 24 build 環境下仍然有效）。
 
 ### A.3 Vitest Regression 詳情
 
