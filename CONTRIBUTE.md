@@ -310,6 +310,25 @@ Notes:
 - `bypass_actors` lists `OrganizationAdmin` and `RepositoryAdmin` with `bypass_mode=always` so a solo maintainer can resolve incidents without being locked out. Bypass invocations show up in the GitHub audit log.
 - The two `required_status_checks` contexts (`test`, `build`) are the job IDs pinned by `ci-quality-gates` — do not rename without updating the spec and ruleset together.
 
+#### Optional: require pull-request approvals (multi-reviewer teams)
+
+The default payload above does **not** require any approving review — solo maintainers can self-merge once `test` / `build` are green. If the team has multiple reviewers and you want to require at least one approval **in addition to** the existing required status checks, replace the `pull_request` rule entry above with:
+
+```json
+{
+  "type": "pull_request",
+  "parameters": {
+    "required_approving_review_count": 1,
+    "dismiss_stale_reviews_on_push": false,
+    "require_code_owner_review": false,
+    "require_last_push_approval": false,
+    "required_review_thread_resolution": false
+  }
+}
+```
+
+The `required_status_checks` rule entry stays untouched — approvals are layered **on top of** the existing `test` / `build` gate, not as a replacement.
+
 #### Verify the ruleset
 
 ```bash
