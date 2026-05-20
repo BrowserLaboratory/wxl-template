@@ -16,4 +16,4 @@
 
 - [x] 3.1 跑 spectra analyzer 與 validator 確認 Requirement 與 design／tasks 互相對應、無 cross-reference 漏接。verification：`spectra analyze align-ruleset-with-netsim --json` 0 Critical / 0 Warning；`spectra validate align-ruleset-with-netsim` exit 0。
 - [x] 3.2 確認 `CONTRIBUTE.md` 仍是合法 markdown。verification：`python3 -c "t=open('CONTRIBUTE.md').read(); assert t.count('\`\`\`')%2==0; print('ok')"` 印出 ok；若機器有 markdownlint 則 `markdownlint CONTRIBUTE.md` 退出碼 0（無則略）。
-- [ ] 3.3 PR 上 `quality-gates` workflow 跑出綠燈，純 markdown 與 spec 變更不應影響 build／test。verification：`gh run list --workflow=quality-gates.yml --branch <branch>` 顯示最新 run conclusion 為 `success`；CI 結果與 PR review 都不顯示 markdown 解析錯誤。
+- [x] 3.3 PR 上 `quality-gates` workflow 跑出綠燈，純 markdown 與 spec 變更不應影響 build／test。verification：`gh run list --workflow=quality-gates.yml --branch <branch>` 顯示最新 run conclusion 為 `success`；CI 結果與 PR review 都不顯示 markdown 解析錯誤。
