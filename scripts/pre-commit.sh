@@ -31,11 +31,15 @@ fi
 
 # Run validation; capture exit code.
 # Avoid `xargs` because GNU xargs (Linux/CI) translates any child exit in 1–125
-# into 123, while BSD xargs (macOS) forwards the child code unchanged. Reading
-# the file list into an array and invoking the node script directly lets `$?`
-# observe the script's native exit code on every platform.
+# into 123, while BSD xargs (macOS) forwards the child code unchanged. We build
+# the file list into a positional array via a `read` loop (bash 3.2-compatible,
+# unlike `mapfile`) and invoke the node script directly so `$?` observes its
+# native exit code on every platform.
 VALIDATION_EXIT=0
-mapfile -t CHALLENGE_FILE_LIST <<< "$CHALLENGE_FILES"
+CHALLENGE_FILE_LIST=()
+while IFS= read -r line; do
+  [ -n "$line" ] && CHALLENGE_FILE_LIST+=("$line")
+done <<< "$CHALLENGE_FILES"
 node --experimental-strip-types scripts/challenge-lint-staged.ts "${CHALLENGE_FILE_LIST[@]}" || VALIDATION_EXIT=$?
 
 # Restore stash if we stashed
