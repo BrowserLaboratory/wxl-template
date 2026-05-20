@@ -43,7 +43,13 @@ export default {
       return () => {
         if (isChallenge.value) return h(ChallengeLayout)
         return h(DefaultTheme.Layout, null, {
-          'nav-bar-content-after': () => h(LocaleSwitcher),
+          // Custom LocaleSwitcher syncs the vue-i18n `locale.value` (which the
+          // built-in VitePress translation dropdown does NOT do). Place it in
+          // the nav before built-in content (theme toggle, divider, GitHub) so
+          // it groups visually with the nav rather than dangling past the
+          // GitHub icon. The built-in `VPNavBarTranslations` dropdown is
+          // hidden via CSS in style.css to avoid two switchers competing.
+          'nav-bar-content-before': () => h(LocaleSwitcher),
         })
       }
     },

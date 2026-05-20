@@ -205,3 +205,12 @@ body.challenge-page .VPFooter {
 body.challenge-page {
   --vp-nav-height: 0px;
 }
+
+/* Hide VitePress's built-in translation dropdown (the `文A` icon). The
+ * custom LocaleSwitcher (mounted via the `nav-bar-content-before` slot in
+ * theme/index.ts) is the sole locale switcher because it also syncs the
+ * vue-i18n runtime locale, which the built-in dropdown does not. */
+.VPNavBarTranslations,
+.VPNavScreenTranslations {
+  display: none !important;
+}

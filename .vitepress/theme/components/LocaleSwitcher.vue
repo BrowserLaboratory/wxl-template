@@ -65,7 +65,7 @@ defineExpose({ buildTargetPath })
 </script>
 
 <template>
-  <div ref="rootEl" class="relative inline-block">
+  <div ref="rootEl" class="relative inline-block ml-4">
     <button
       data-locale-switcher-toggle
       class="ch-nav-icon-btn flex items-center gap-1"
