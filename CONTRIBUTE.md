@@ -251,3 +251,7 @@ Prefix the issue title with `[Feature]` and describe:
 - **Context**: what were you doing when you hit the limitation?
 - **Desired functionality**: what would you like added?
 - **Alternatives considered**: what other approaches did you weigh?
+
+## Maintainer Setup
+
+> This section is for repository maintainers only; contributors can skip it. It documents one-time GitHub configuration that lives outside the repo (server-side state) and that derived repositories must reproduce after `use-template`.
