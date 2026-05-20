@@ -34,4 +34,4 @@
 
 - [x] 6.1 [P] 跑 `spectra validate node-24-actions-upgrade`，確保 change artifacts 通過 spec-driven schema 驗證，落實「Spec MODIFIED 邊界」之最終一致性檢查。驗證：`spectra validate node-24-actions-upgrade` exit 0
 - [x] 6.2 [P] 跑 `spectra analyze node-24-actions-upgrade --json`，filter `severity in (Critical, Warning)`，確保無未解決之 critical 或 warning finding。驗證：`spectra analyze node-24-actions-upgrade --json | jq '.findings[] | select(.severity == "Critical" or .severity == "Warning")'` 輸出為空陣列
-- [ ] 6.3 開 PR 後觀察 `Quality Gates` workflow 之 `test` 與 `build` 兩個 status check 全綠通過，落實 Requirement「PR-time quality gates SHALL trigger on PRs to `main`/`staging` and pushes to `main`」於新 Node 24 stack 之延續正確性。驗證：PR run summary 顯示 `test` 與 `build` 皆 `success`；step inspection 顯示無 step 印出 Node runtime 廢棄警告
+- [x] 6.3 開 PR 後觀察 `Quality Gates` workflow 之 `test` 與 `build` 兩個 status check 全綠通過，落實 Requirement「PR-time quality gates SHALL trigger on PRs to `main`/`staging` and pushes to `main`」於新 Node 24 stack 之延續正確性。驗證：PR run summary 顯示 `test` 與 `build` 皆 `success`；step inspection 顯示無 step 印出 Node runtime 廢棄警告

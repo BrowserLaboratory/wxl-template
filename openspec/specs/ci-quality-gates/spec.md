@@ -60,13 +60,13 @@ The `quality-gates.yml` workflow SHALL define exactly two top-level jobs whose I
 
 The `test` and `build` jobs SHALL each execute the following setup steps in the listed order before any gate-specific step runs:
 
-1. `actions/checkout@v4`
+1. `actions/checkout@v6`
 2. `dtolnay/rust-toolchain@stable`
 3. `Swatinem/rust-cache@v2`
-4. `jetli/wasm-pack-action@v0.4.0`
+4. `taiki-e/install-action@v2` with `tool: wasm-pack@0.14.0` (composite-based; replaces the previously-used `jetli/wasm-pack-action`, which is now forbidden by another requirement in this capability)
 5. Install `binaryen` via `apt-get install -y binaryen`
-6. `pnpm/action-setup@v4`
-7. `actions/setup-node@v4` with `node-version: 22` and `cache: pnpm`
+6. `pnpm/action-setup@v6`
+7. `actions/setup-node@v6` with `node-version: 24` and `cache: pnpm`
 8. `pnpm install --frozen-lockfile`
 9. `pnpm wasm:build`
 10. `pnpm challenge:keygen`
@@ -76,7 +76,7 @@ This setup sequence SHALL match the setup steps used by `.github/workflows/relea
 #### Scenario: Setup sequence matches `release.yml`
 
 - **WHEN** a maintainer compares `quality-gates.yml` setup steps against `release.yml` setup steps
-- **THEN** the action references and pinned versions for `actions/checkout`, `dtolnay/rust-toolchain`, `Swatinem/rust-cache`, `jetli/wasm-pack-action`, `pnpm/action-setup`, and `actions/setup-node` SHALL be identical
+- **THEN** the action references and pinned versions for `actions/checkout`, `dtolnay/rust-toolchain`, `Swatinem/rust-cache`, `taiki-e/install-action` (the composite-based wasm-pack installer), `pnpm/action-setup`, and `actions/setup-node` SHALL be identical
 - **AND** the `pnpm install`, `pnpm wasm:build`, and `pnpm challenge:keygen` commands SHALL be present in both workflows with identical arguments
 
 #### Scenario: `pnpm install` uses `--frozen-lockfile`
@@ -135,26 +135,37 @@ Either step exiting with a non-zero status SHALL cause the `build` job to fail.
 - **AND** `pnpm docs:build` SHALL NOT execute
 
 ---
-### Requirement: The workflow SHALL pin Node.js to version 22 LTS
+### Requirement: The workflow SHALL pin Node.js to version 24 LTS
 
-The `quality-gates.yml` workflow SHALL configure `actions/setup-node@v4` with `node-version: 22`. The workflow SHALL NOT run on Node 24 or later until the Node 24 compatibility issue documented in `AUDIT.md` §A.2.1 is resolved.
+The `quality-gates.yml` workflow SHALL configure `actions/setup-node@v6` (or a later major version whose `runs.using` is `node24` or later) with `node-version: 24`. The Node 24 compatibility issues previously documented in `AUDIT.md` §A.2.1 and §A.2.2 have been resolved as of the `node-24-actions-upgrade` change; no Node-version deferral SHALL remain in this requirement or its scenarios.
 
-#### Scenario: Node version is pinned to 22
+#### Scenario: Node version is pinned to 24
 
 - **WHEN** a maintainer inspects the `actions/setup-node` step
-- **THEN** the `node-version` input SHALL be exactly `22` (or an equivalent SemVer expression that resolves only within the Node 22 LTS line)
-- **AND** the workflow SHALL NOT use a matrix that includes Node 24 or higher
+- **THEN** the `node-version` input SHALL be exactly `24` (or an equivalent SemVer expression that resolves only within the Node 24 LTS line)
+- **AND** the workflow SHALL NOT use a matrix that includes Node 22 or lower
+- **AND** the workflow SHALL NOT reference any deferral clause tied to `AUDIT.md` §A.2.1 or §A.2.2
 
 ---
-### Requirement: `wasm-pack` SHALL be installed via `jetli/wasm-pack-action`, not via npm
+### Requirement: `wasm-pack` SHALL be installed via a composite-based GitHub Action, not via npm
 
-The `quality-gates.yml` workflow SHALL install `wasm-pack` via the `jetli/wasm-pack-action@v0.4.0` GitHub Action. The workflow SHALL NOT install `wasm-pack` as an npm dependency (per `AUDIT.md` §A.2.1, which forbids re-adding `wasm-pack` to `devDependencies` because it triggers a minipass/minizlib version mismatch that breaks `wasm:build`).
+The `quality-gates.yml` workflow SHALL install `wasm-pack` via a composite-based GitHub Action whose `runs.using` is `composite` (and therefore not subject to GitHub's Node runtime deprecation policy). The workflow SHALL NOT install `wasm-pack` as an npm dependency (per `AUDIT.md` §A.2.1, which forbids re-adding `wasm-pack` to `devDependencies` because it triggers a minipass/minizlib version mismatch that breaks `wasm:build`). The workflow SHALL NOT install `wasm-pack` via the `jetli/wasm-pack-action` action, whose latest release `v0.4.0` (2022-11-23) declares `runs.using: node16` and whose upstream repository has been stale for more than three years.
 
-#### Scenario: `wasm-pack` comes from the action, not npm
+The composite action used to install `wasm-pack` SHALL receive the version `0.14.0` (matching the pin established by §A.2.1) through that action's documented version input (for example, the `tool` input of `taiki-e/install-action`).
+
+#### Scenario: `wasm-pack` comes from a composite action, not npm
 
 - **WHEN** a maintainer inspects the workflow's wasm-pack installation step
-- **THEN** the step SHALL invoke `jetli/wasm-pack-action@v0.4.0`
+- **THEN** the step SHALL invoke a GitHub Action whose `action.yml` declares `runs.using: composite`
+- **AND** the step SHALL NOT invoke `jetli/wasm-pack-action` at any version
 - **AND** `package.json` SHALL NOT list `wasm-pack` under `dependencies` or `devDependencies`
+
+##### Example: taiki-e/install-action installs wasm-pack 0.14.0
+
+- **GIVEN** the workflow uses `taiki-e/install-action` as the composite-based installer
+- **WHEN** the workflow file is inspected
+- **THEN** the step SHALL pass `tool: wasm-pack@0.14.0` (or equivalent input that resolves to `wasm-pack 0.14.0`)
+- **AND** the step SHALL pin `taiki-e/install-action` to a full 40-character commit SHA with a trailing `# v2.x.y` version comment, per the third-party action pinning requirement of this capability
 
 ---
 ### Requirement: The PR-time workflow SHALL NOT duplicate the release-time packaging steps
@@ -209,7 +220,7 @@ Every workflow file under `.github/workflows/` SHALL declare a `permissions:` bl
 ---
 ### Requirement: Third-party GitHub Actions pinned to commit SHAs
 
-Every GitHub Action referenced from `.github/workflows/quality-gates.yml` and `.github/workflows/release.yml` SHALL be pinned to a full 40-character commit SHA rather than a mutable tag or branch. Each pinned reference SHALL include a trailing comment of the form `# vN.x.y` (or `# stable` for actions that publish only a `stable` branch reference) indicating the corresponding semantic version for human auditability. The repository SHALL NOT use floating references such as `@v4`, `@main`, or `@latest` in any workflow file under `.github/workflows/`.
+Every GitHub Action referenced from `.github/workflows/quality-gates.yml` and `.github/workflows/release.yml` SHALL be pinned to a full 40-character commit SHA rather than a mutable tag or branch. Each pinned reference SHALL include a trailing comment of the form `# vN.x.y` (or `# stable` for actions that publish only a `stable` branch reference) indicating the corresponding semantic version for human auditability. The repository SHALL NOT use floating references such as `@v4`, `@main`, or `@latest` in any workflow file under `.github/workflows/`. When the pinned target is an annotated tag, the pinned SHA SHALL be the commit SHA that the annotated tag dereferences to, not the tag object SHA, so that the reference is anchored to immutable commit history.
 
 #### Scenario: Workflow uses no mutable tag references
 
@@ -225,20 +236,21 @@ Every GitHub Action referenced from `.github/workflows/quality-gates.yml` and `.
 
 ##### Example: pinned action reference
 
-- **GIVEN** the workflow references the `actions/checkout` action at release `v4.2.2`
+- **GIVEN** the workflow references the `actions/checkout` action at a release in the v6 line (the first major line whose `runs.using` is `node24`)
 - **WHEN** the workflow file is inspected
-- **THEN** the reference SHALL appear as `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2` rather than `uses: actions/checkout@v4`
+- **THEN** the reference SHALL appear as `uses: actions/checkout@<40-char-commit-SHA> # v6.x.y` rather than `uses: actions/checkout@v6`
+- **AND** the commit SHA SHALL be obtained by dereferencing the annotated release tag (for example via `git rev-parse v6.x.y^{}` or the GitHub API `GET /repos/actions/checkout/git/ref/tags/v6.x.y` followed by tag-object dereference), not the tag object SHA itself
 
 ---
 ### Requirement: CI workflows install build toolchain at fixed versions
 
-Every continuous-integration workflow under `.github/workflows/` that installs a build toolchain component (including but not limited to `wasm-pack`, the Rust toolchain, and `pnpm`) through a third-party GitHub Action SHALL specify a concrete version string (for example, a tag such as `v0.14.0`) on that action's version input. The workflow SHALL NOT pass floating values such as `'latest'`, `'stable'`, or unqualified branch names that can resolve to different versions across jobs or across runs. Where the same toolchain component is installed by multiple jobs in the same workflow file, every job SHALL declare the same concrete version string for that component.
+Every continuous-integration workflow under `.github/workflows/` that installs a build toolchain component (including but not limited to `wasm-pack`, the Rust toolchain, and `pnpm`) through a third-party GitHub Action SHALL specify a concrete version string (for example, a tag such as `0.14.0`) on that action's version input. The workflow SHALL NOT pass floating values such as `'latest'`, `'stable'`, or unqualified branch names that can resolve to different versions across jobs or across runs. Where the same toolchain component is installed by multiple jobs in the same workflow file, every job SHALL declare the same concrete version string for that component.
 
-#### Scenario: wasm-pack action declares a concrete version
+#### Scenario: wasm-pack composite action declares a concrete version
 
-- **WHEN** a CI workflow step installs `wasm-pack` through the `jetli/wasm-pack-action` GitHub Action
-- **THEN** the step SHALL pass a concrete version string to the action's `version` input
-- **AND** the step SHALL NOT pass `'latest'`, `'stable'`, or any other floating tag to the `version` input
+- **WHEN** a CI workflow step installs `wasm-pack` through a composite-based GitHub Action (for example, `taiki-e/install-action`)
+- **THEN** the step SHALL pass a concrete version string to the action's documented version input (for example, `tool: wasm-pack@0.14.0` for `taiki-e/install-action`)
+- **AND** the step SHALL NOT pass `'latest'`, `'stable'`, or any other floating tag to that input
 
 #### Scenario: Deterministic toolchain across parallel jobs
 
@@ -248,13 +260,14 @@ Every continuous-integration workflow under `.github/workflows/` that installs a
 
 ##### Example: wasm-pack version pinning across the quality-gates workflow
 
-| Workflow                          | Job     | Action `version` input    | Compliance               |
-| --------------------------------- | ------- | ------------------------- | ------------------------ |
-| `.github/workflows/quality-gates.yml` | `test`  | `'v0.14.0'` (concrete)    | Compliant                |
-| `.github/workflows/quality-gates.yml` | `build` | `'v0.14.0'` (concrete)    | Compliant                |
-| `.github/workflows/release.yml`       | `release` | `'v0.14.0'` (concrete)  | Compliant                |
-| (any workflow)                        | (any)   | `'latest'` or `'stable'`  | Violation (not concrete) |
-| (any workflow)                        | (any)   | omitted (input defaulted) | Violation (not pinned)   |
+| Workflow                              | Job       | Action invocation                            | Compliance               |
+| ------------------------------------- | --------- | -------------------------------------------- | ------------------------ |
+| `.github/workflows/quality-gates.yml` | `test`    | `taiki-e/install-action` with `tool: wasm-pack@0.14.0` | Compliant                |
+| `.github/workflows/quality-gates.yml` | `build`   | `taiki-e/install-action` with `tool: wasm-pack@0.14.0` | Compliant                |
+| `.github/workflows/release.yml`       | `release` | `taiki-e/install-action` with `tool: wasm-pack@0.14.0` | Compliant                |
+| (any workflow)                        | (any)     | `tool: wasm-pack` (no version)               | Violation (not pinned)   |
+| (any workflow)                        | (any)     | `tool: wasm-pack@latest`                     | Violation (not concrete) |
+| (any workflow)                        | (any)     | `jetli/wasm-pack-action@<any SHA>`           | Violation (Node-runtime-bound action) |
 
 ---
 ### Requirement: Branch protection ruleset guards main with required status checks

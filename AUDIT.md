@@ -41,7 +41,7 @@ cargo install wasm-pack --version 0.14.0   # 或更新的 0.1x.x（最低 0.12�
 
 **影響範圍**：minimal — 整條 binary-install → tar → minizlib → minipass 損壞鏈從 `node_modules` 完全消失；不影響任何其他套件運作。**Trade-off**：wasm-pack 從 npm devDependency（自動安裝）變成系統 PATH 隱性依賴，第一次使用門檻略升。
 
-> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/<archive-date>-node-24-actions-upgrade/`，CI workflow 同步升至 Node 24 + composite-based wasm-pack 安裝）。
+> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/2026-05-20-node-24-actions-upgrade/`，CI workflow 同步升至 Node 24 + composite-based wasm-pack 安裝）。
 
 #### A.2.2 顯式設定 `vite.build.target = 'esnext'` [High]
 
@@ -59,7 +59,7 @@ cargo install wasm-pack --version 0.14.0   # 或更新的 0.1x.x（最低 0.12�
 
 未滿足上述任一前提即還原 target，`pnpm docs:build` 將再次以 esbuild destructuring 錯誤失敗。
 
-> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/<archive-date>-node-24-actions-upgrade/`；本 stage 2 之 esbuild target=esnext 修復在 Node 24 build 環境下仍然有效）。
+> Node 24 阻擋已於 change `node-24-actions-upgrade` 解除（archive 後位於 `openspec/changes/archive/2026-05-20-node-24-actions-upgrade/`；本 stage 2 之 esbuild target=esnext 修復在 Node 24 build 環境下仍然有效）。
 
 ### A.3 Vitest Regression 詳情
 
