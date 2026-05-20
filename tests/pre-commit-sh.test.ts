@@ -78,7 +78,11 @@ if [ "$HAS_STASHABLE" = true ]; then
   git stash push --keep-index --include-untracked --quiet -m "pre-commit: stash unstaged changes" -- docs/
 fi
 VALIDATION_EXIT=0
-echo "$CHALLENGE_FILES" | xargs node --experimental-strip-types ${LINT_STAGED_TS} || VALIDATION_EXIT=$?
+CHALLENGE_FILE_LIST=()
+while IFS= read -r line; do
+  [ -n "$line" ] && CHALLENGE_FILE_LIST+=("$line")
+done <<< "$CHALLENGE_FILES"
+node --experimental-strip-types ${LINT_STAGED_TS} "\${CHALLENGE_FILE_LIST[@]}" || VALIDATION_EXIT=$?
 if [ "$HAS_STASHABLE" = true ]; then
   git stash pop --quiet
 fi
