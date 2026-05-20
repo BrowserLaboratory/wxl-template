@@ -5,7 +5,7 @@
 ## 2. 驗證 vitest 測試在兩平台皆 PASS
 
 - [x] 2.1 在本地 Node 22.22.3 (macOS BSD userland) 跑 `pnpm test --run tests/pre-commit-sh.test.ts`——可觀察行為：4 條原本失敗測試（`tests/pre-commit-sh.test.ts` line 138 / 146 / 176 / 192，皆斷言 `result.exitCode === 1`）轉綠；該 test file 全 N 條測試 PASS。驗證：terminal 輸出 `Test Files  1 passed (1)`、`Tests  N passed (N)`、`Duration` 與 exit 0。
-- [ ] 2.2 把 fix push 至 `feature/ci-quality-gates`（或本 change 之 fix branch）後，GitHub Actions `ubuntu-latest` runner 上跑 `pnpm test --run`——可觀察行為：`Quality Gates / test` job 由紅轉綠，4 條失敗測試在 Linux GNU userland 上也通過、684/684 全綠。驗證：`gh pr checks <pr-number>` 顯示 `test` 與 `build` 兩 check 皆 `pass`；或 PR Actions 頁面該 run 之 conclusion 為 `success`。
+- [x] 2.2 把 fix push 至 `feature/ci-quality-gates`（或本 change 之 fix branch）後，GitHub Actions `ubuntu-latest` runner 上跑 `pnpm test --run`——可觀察行為：`Quality Gates / test` job 由紅轉綠，4 條失敗測試在 Linux GNU userland 上也通過、684/684 全綠。驗證：`gh pr checks <pr-number>` 顯示 `test` 與 `build` 兩 check 皆 `pass`；或 PR Actions 頁面該 run 之 conclusion 為 `success`。
 
 ## 3. 行為回歸測試
 
