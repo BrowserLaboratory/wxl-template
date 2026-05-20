@@ -283,8 +283,8 @@ gh api -X POST /repos/{owner}/{repo}/rulesets \
     }
   },
   "bypass_actors": [
-    { "actor_type": "OrganizationAdmin", "bypass_mode": "always" },
-    { "actor_type": "RepositoryAdmin",  "bypass_mode": "always" }
+    { "actor_type": "OrganizationAdmin", "actor_id": 1, "bypass_mode": "always" },
+    { "actor_type": "RepositoryRole",    "actor_id": 5, "bypass_mode": "always" }
   ],
   "rules": [
     { "type": "pull_request" },
@@ -293,8 +293,8 @@ gh api -X POST /repos/{owner}/{repo}/rulesets \
       "parameters": {
         "strict_required_status_checks_policy": false,
         "required_status_checks": [
-          { "context": "test",  "integration_id": null },
-          { "context": "build", "integration_id": null }
+          { "context": "test" },
+          { "context": "build" }
         ]
       }
     }
@@ -307,8 +307,8 @@ Notes:
 
 - `name=Protect main` / `target=branch` / `enforcement=active` keep the ruleset active immediately.
 - `conditions.ref_name.include=["refs/heads/main"]` scopes the ruleset to `main` only; `staging` is not covered yet (tracked separately).
-- `bypass_actors` lists `OrganizationAdmin` and `RepositoryAdmin` with `bypass_mode=always` so a solo maintainer can resolve incidents without being locked out. Bypass invocations show up in the GitHub audit log.
-- The two `required_status_checks` contexts (`test`, `build`) are the job IDs pinned by `ci-quality-gates` — do not rename without updating the spec and ruleset together.
+- `bypass_actors` permits the organization admin (`OrganizationAdmin`, `actor_id=1`) and the repository's Admin role (`RepositoryRole`, `actor_id=5`) to bypass with `bypass_mode=always`, so a solo maintainer can resolve incidents without being locked out. `RepositoryRole` `actor_id` follows GitHub's built-in role IDs: `1`=Read, `2`=Triage, `3`=Write, `4`=Maintain, `5`=Admin. Bypass invocations show up in the GitHub audit log.
+- The two `required_status_checks` contexts (`test`, `build`) are the job IDs pinned by `ci-quality-gates` — do not rename without updating the spec and ruleset together. Omit `integration_id` to accept the check from any GitHub App that reports it (GitHub Actions reports via App id `15368`; setting `integration_id` to `null` is rejected by the API).
 
 #### Optional: require pull-request approvals (multi-reviewer teams)
 
