@@ -1,39 +1,39 @@
 # Contributing to Web eXploitation Laboratory
 
-感謝你對本專案的興趣！在提交 PR 之前，請先閱讀本指南。
+Thanks for your interest in this project! Please read this guide before submitting a PR.
 
-## 目錄
+## Table of contents
 
-- [分支模型](#分支模型)
-- [開發流程](#開發流程)
-- [PR 提交流程](#pr-提交流程)
-- [新增挑戰](#新增挑戰)
-- [Commit 規範](#commit-規範)
-- [Issue 回報](#issue-回報)
+- [Branch model](#branch-model)
+- [Development workflow](#development-workflow)
+- [PR submission workflow](#pr-submission-workflow)
+- [Adding a new challenge](#adding-a-new-challenge)
+- [Commit conventions](#commit-conventions)
+- [Reporting issues](#reporting-issues)
 
-## 分支模型
+## Branch model
 
-本專案採用 **Git Flow** 分支策略：
+This project follows the **Git Flow** branching strategy:
 
-| 分支 | 用途 | 穩定度 | 基於 |
+| Branch | Purpose | Stability | Based on |
 |------|------|--------|------|
-| `main` | 正式發布版本，永遠可部署 | 最高 | — |
-| `staging` | 整合分支，所有 PR 的合併目標 | 中 | `main` |
-| `feature/*` | 新功能開發 | 低 | `staging` |
-| `bugfix/*` | 非緊急 bug 修復 | 低 | `staging` |
-| `hotfix/*` | 緊急正式環境修復 | 中 | `main` |
+| `main` | Production release; always deployable | Highest | — |
+| `staging` | Integration branch; merge target for every PR | Medium | `main` |
+| `feature/*` | New feature development | Low | `staging` |
+| `bugfix/*` | Non-urgent bug fixes | Low | `staging` |
+| `hotfix/*` | Urgent production fixes | Medium | `main` |
 
-### 分支命名規則
+### Branch naming convention
 
 ```
-feat/<簡短描述>      # 例：feature/add-php-upload-challenge
-bugfix/<簡短描述>       # 例：bugfix/fix-flag-verifier-timing
-hotfix/<簡短描述>       # 例：hotfix/patch-wasm-memory-leak
+feat/<short-description>      # e.g. feature/add-php-upload-challenge
+bugfix/<short-description>    # e.g. bugfix/fix-flag-verifier-timing
+hotfix/<short-description>    # e.g. hotfix/patch-wasm-memory-leak
 ```
 
-### Hotfix 特殊規則
+### Hotfix rules
 
-`hotfix/*` 從 `main` 切出，完成後需同時合併回 `main` **與** `staging`，確保修復不會在下次 release 時遺失：
+A `hotfix/*` branch is cut from `main` and, once complete, must merge back into **both** `main` and `staging` so the fix is not lost in the next release:
 
 ```
 main ──────────●──────────────────●── (merge hotfix)
@@ -43,9 +43,9 @@ main ──────────●──────────────
 staging ──────────────────────────●── (merge hotfix)
 ```
 
-## 開發流程
+## Development workflow
 
-1. Fork 本 repository 並 clone 你的 fork：
+1. Fork the repository and clone your fork:
 
    ```bash
    git clone https://github.com/<your-username>/wxl.git
@@ -53,13 +53,13 @@ staging ────────────────────────
    pnpm install
    ```
 
-2. 新增 upstream remote：
+2. Add the upstream remote:
 
    ```bash
    git remote add upstream https://github.com/CXPhoenix/wxl.git
    ```
 
-3. 從 `staging` 切出工作分支：
+3. Cut your working branch from `staging`:
 
    ```bash
    git checkout staging
@@ -67,59 +67,59 @@ staging ────────────────────────
    git checkout -b feature/<your-feature>
    ```
 
-4. 開發並在本地確認測試通過：
+4. Develop locally and confirm the tests pass:
 
    ```bash
-   pnpm dev          # 啟動開發伺服器
-   pnpm test         # TypeScript / JavaScript 單元測試
-   pnpm wasm:test    # Rust 單元測試
+   pnpm dev          # Start the dev server
+   pnpm test         # TypeScript / JavaScript unit tests
+   pnpm wasm:test    # Rust unit tests
    ```
 
-5. Commit 變更（見 [Commit 規範](#commit-規範)），並 push 至你的 fork。
+5. Commit your changes (see [Commit conventions](#commit-conventions)) and push to your fork.
 
-6. 開啟 Pull Request（見 [PR 提交流程](#pr-提交流程)）。
+6. Open a Pull Request (see [PR submission workflow](#pr-submission-workflow)).
 
-## PR 提交流程
+## PR submission workflow
 
-### 目標分支
+### Target branch
 
-| 情境 | PR 目標分支 |
+| Scenario | PR target branch |
 |------|------------|
-| 新功能、一般 bugfix | `staging` |
-| 緊急正式環境修復 | `main`（並須同時開一個 PR 至 `staging`） |
+| New feature, general bugfix | `staging` |
+| Urgent production fix | `main` (open a second PR against `staging` at the same time) |
 
-> **請勿直接向 `main` 提交功能性 PR。**
+> **Do not open feature-style PRs directly against `main`.**
 
-### PR Description 必填欄位
+### Required PR description sections
 
-PR 描述必須包含以下三個部分：
+The PR description must contain the following three sections:
 
 ```markdown
 ## Summary
 
-<!-- 簡述本次變更內容（1-3 條 bullet points） -->
+<!-- Briefly describe the change (1–3 bullet points). -->
 
 ## Motivation
 
-<!-- 說明為什麼需要這個變更 -->
+<!-- Explain why this change is needed. -->
 
 ## Test Plan
 
-<!-- 說明如何驗證變更正確性（測試指令、手動測試步驟等） -->
+<!-- Describe how to verify the change (test commands, manual steps, etc.). -->
 ```
 
-### PR Checklist
+### PR checklist
 
-提交前請確認：
+Before submitting, confirm:
 
-- [ ] 本地測試通過（`pnpm test` & `pnpm wasm:test`）
-- [ ] Commit message 符合規範（見下方）
-- [ ] PR 目標分支正確（`staging`；hotfix 則為 `main` 及 `staging`）
-- [ ] PR description 包含 Summary / Motivation / Test Plan
+- [ ] Local tests pass (`pnpm test` & `pnpm wasm:test`).
+- [ ] Commit messages follow the conventions below.
+- [ ] PR target branch is correct (`staging`; for a hotfix, both `main` and `staging`).
+- [ ] PR description contains Summary / Motivation / Test Plan.
 
-## 新增挑戰
+## Adding a new challenge
 
-使用 `scripts/create-challenge.ts` scaffold 新挑戰：
+Use `scripts/create-challenge.ts` to scaffold a new challenge:
 
 ```bash
 pnpm create:challenge --name <slug> [--title <title>] \
@@ -127,44 +127,44 @@ pnpm create:challenge --name <slug> [--title <title>] \
   [--flag <flag>]
 ```
 
-此腳本會自動：
-1. 在 `docs/challenge/` 下建立挑戰目錄與 Markdown 檔案
-2. 產生對應 backend 的 app 骨架（`app.py` 或 `index.php`）
-3. 建立 `flag.txt` 並寫入指定 flag
-4. 執行 `pnpm challenge:keygen` 產生加密 WASM 模組
+The script automatically:
+1. Creates the challenge directory and Markdown file under `docs/challenge/`.
+2. Generates the matching backend app skeleton (`app.py` or `index.php`).
+3. Creates `flag.txt` with the supplied flag.
+4. Runs `pnpm challenge:keygen` to produce the encrypted WASM module.
 
-### 範例
+### Example
 
 ```bash
-# 建立一個 Flask SQLi 挑戰
+# Create a Flask SQLi challenge
 pnpm create:challenge --name sqli-login --title "SQL Injection Login Bypass" \
   --backend flask --difficulty medium --flag "CTF{sqli_bypassed}"
 ```
 
 ## Challenge Keygen
 
-使用 `challenge-keygen` 腳本為挑戰產生加密 WASM payload：
+Use the `challenge-keygen` script to produce the encrypted WASM payload for a challenge:
 
 ```bash
-pnpm challenge:keygen                 # 處理所有挑戰
-pnpm challenge:keygen <slug>          # 處理指定挑戰
-pnpm challenge:keygen --force <slug>  # 強制重新產生
+pnpm challenge:keygen                 # Process every challenge
+pnpm challenge:keygen <slug>          # Process the named challenge only
+pnpm challenge:keygen --force <slug>  # Force a regeneration
 ```
 
-此腳本執行以下流程：
-1. 讀取挑戰 frontmatter 與 `src/` 目錄中的檔案
-2. 產生隨機 AES-256 金鑰，加密所有 FS 項目
-3. 推導 flag verifier（PBKDF2-HMAC-SHA256）
-4. 打包為 WASM custom section，注入模板 WASM 二進位
-5. 更新 frontmatter 中的 `wasmModule` 路徑
+The script runs this pipeline:
+1. Read the challenge frontmatter and the files under `src/`.
+2. Generate a random AES-256 key and encrypt every FS entry.
+3. Derive the flag verifier (PBKDF2-HMAC-SHA256).
+4. Pack the result as a WASM custom section and inject it into the template WASM binary.
+5. Update the `wasmModule` path in the frontmatter.
 
-> **跳過邏輯**：若 frontmatter 已包含 `wasmModule` 且對應的 `runtime.wasm` 檔案存在，腳本會跳過該挑戰。在 CI 環境中，由於 `.wasm` 檔案未納入版控，腳本會自動重新產生。使用 `--force` 可強制重新產生。
+> **Skip behavior**: if the frontmatter already has `wasmModule` and the corresponding `runtime.wasm` file exists, the script skips that challenge. In CI environments — where `.wasm` files are not under version control — the script regenerates automatically. Use `--force` to force a regeneration.
 
-## Commit 規範
+## Commit conventions
 
-本專案採用 **[Conventional Commits](https://www.conventionalcommits.org/)** 格式，並加入 **gitmoji** 前綴。
+This project follows the **[Conventional Commits](https://www.conventionalcommits.org/)** format with a **gitmoji** prefix.
 
-### 格式
+### Format
 
 ```
 <emoji> <type>(<scope>): <description>
@@ -174,38 +174,40 @@ pnpm challenge:keygen --force <slug>  # 強制重新產生
 [optional footer(s)]
 ```
 
-### 常用 Type 與 Emoji
+### Common types and emoji
 
-| Emoji | Type | 說明 |
+| Emoji | Type | Description |
 |-------|------|------|
-| ✨ | `feat` | 新功能 |
-| 🐛 | `fix` | Bug 修復 |
-| ♻️ | `refactor` | 重構（不影響對外行為） |
-| 📝 | `docs` | 文件修改 |
-| ✅ | `test` | 新增或修改測試 |
-| 🏗️ | `build` | 建置系統或依賴變更 |
-| 🔧 | `chore` | 其他維護性工作 |
-| 🚑️ | `hotfix` | 緊急修復 |
+| ✨ | `feat` | New feature |
+| 🐛 | `fix` | Bug fix |
+| ♻️ | `refactor` | Refactor with no external behavior change |
+| 📝 | `docs` | Documentation change |
+| ✅ | `test` | Add or modify tests |
+| 🏗️ | `build` | Build system or dependency change |
+| 🔧 | `chore` | Other maintenance work |
+| 🚑️ | `hotfix` | Urgent fix |
 
-### 範例
+### Examples
+
+The project uses `/tw-emoji-commit` to compose Traditional Chinese commit subjects; these examples illustrate that convention:
 
 ```bash
-# 新功能
+# New feature
 ✨ feat(challenge): 新增 SQL injection 進階練習題
 
-# Bug 修復
+# Bug fix
 🐛 fix(flag-verifier): 修正 PBKDF2 timing 比較邏輯
 
-# 重構
+# Refactor
 ♻️ refactor(service-worker): 將路由邏輯提取為獨立模組
 
-# 建置系統
+# Build system
 🏗️ build: 升級 VitePress 至 2.0.0-alpha.16
 ```
 
-### Breaking Changes
+### Breaking changes
 
-若本次變更包含破壞性異動，必須在 commit footer 加入 `BREAKING CHANGE:`：
+If a change includes a breaking change, append a `BREAKING CHANGE:` footer to the commit:
 
 ```
 ♻️ refactor(challenge-api): 修改 frontmatter schema
@@ -215,37 +217,37 @@ pnpm challenge:keygen --force <slug>  # 強制重新產生
 BREAKING CHANGE: `backend_url` 欄位不再支援，請改用 `backend: flask|fastapi|php`。
 ```
 
-## Issue 回報
+## Reporting issues
 
-請至 [GitHub Issues](https://github.com/CXPhoenix/wxl/issues) 建立 Issue。
+File an issue at [GitHub Issues](https://github.com/CXPhoenix/wxl/issues).
 
-### Bug 回報
+### Bug reports
 
-請在 Issue 中提供以下資訊：
+Please include the following in the issue:
 
 ```markdown
-**環境**
-- OS：macOS / Windows / Linux
-- Browser 及版本：Chrome 120 / Firefox 121 / ...
-- Node.js 版本：
-- pnpm 版本：
+**Environment**
+- OS: macOS / Windows / Linux
+- Browser and version: Chrome 120 / Firefox 121 / ...
+- Node.js version:
+- pnpm version:
 
-**重現步驟**
-1. 前往 ...
-2. 點擊 ...
-3. 看到錯誤 ...
+**Steps to reproduce**
+1. Go to ...
+2. Click ...
+3. See the error ...
 
-**預期行為**
-<!-- 說明你預期應該發生什麼 -->
+**Expected behavior**
+<!-- Describe what you expected to happen. -->
 
-**實際行為**
-<!-- 說明實際發生了什麼，附上錯誤訊息或截圖 -->
+**Actual behavior**
+<!-- Describe what actually happened; attach error messages or screenshots. -->
 ```
 
-### Feature Request
+### Feature requests
 
-Feature request 請在 Issue 標題加上 `[Feature]` 前綴，並描述：
+Prefix the issue title with `[Feature]` and describe:
 
-- **需求情境**：你在做什麼時遇到了什麼限制？
-- **期望功能**：你希望增加什麼功能？
-- **替代方案**：你考慮過哪些其他做法？
+- **Context**: what were you doing when you hit the limitation?
+- **Desired functionality**: what would you like added?
+- **Alternatives considered**: what other approaches did you weigh?

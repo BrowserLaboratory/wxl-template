@@ -1,5 +1,5 @@
 ---
-title: Challenges
+title: 挑戰
 layout: page
 ---
 
