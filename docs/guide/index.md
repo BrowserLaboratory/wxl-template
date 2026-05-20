@@ -59,7 +59,7 @@ Once you successfully exploit the vulnerability you obtain a flag string (typica
 
 When you open a challenge page for the first time, the platform downloads the Pyodide WebAssembly runtime (~10–20 MB). Please be patient until the load completes. Subsequent visits use the browser cache and load much faster.
 
-**Q: My Python script ran but printed nothing — what should I do?**
+**Q: What if a Python script runs but prints nothing?**
 
 Make sure your script calls `print()` to emit output. Pyodide also takes a moment to initialize, so if you run a script immediately after opening the page, you may see a "Pyodide not ready yet" notice — wait a few seconds and try again.
 
@@ -67,10 +67,10 @@ Make sure your script calls `print()` to emit output. Pyodide also takes a momen
 
 The Network Traffic Log only records requests issued through the **Browser** panel. Requests made from the Code Editor via the `requests` module appear in the Code Editor's output area, not in the Network panel.
 
-**Q: Will my Pentest Notes disappear after I close the page?**
+**Q: Do Pentest Notes disappear after closing the page?**
 
 No. Pentest Notes are stored in the browser's `localStorage`. As long as you do not clear your browser data, you will see your previous notes the next time you open the page.
 
-**Q: Can I `import` third-party packages in the Code Editor?**
+**Q: Are third-party packages importable in the Code Editor?**
 
 The platform supports the standard library modules bundled with Pyodide (such as `json`, `re`, `base64`, `hashlib`) and the platform-provided `requests` stub. `pip install` is not supported, and third-party packages that are not bundled with Pyodide cannot be imported.

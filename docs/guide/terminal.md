@@ -2,15 +2,15 @@
 
 ## Terminal Interface Overview
 
-The Terminal panel provides an in-browser command-line environment powered by the platform's custom **wxlsh** shell. wxlsh ships with built-in commands commonly used in security testing, including encoding conversions, HTTP requests, and data parsing utilities.
+The Terminal panel exposes an in-browser command-line console driven by the platform's custom **wxlsh** shell. wxlsh ships with native utilities frequently invoked during security testing — including codec conversion, HTTP probes, and data parsing helpers.
 
 Interface regions:
 
 | Region | Description |
 |---|---|
-| Output area | Displays command results and system messages |
-| Input line | Where you type commands; supports history navigation |
-| Prompt | `wxlsh $` indicates the shell is ready to accept input |
+| Output area | Renders directive results and system notices |
+| Input line | Where directives are typed; supports history navigation |
+| Prompt | `wxlsh $` signals that the shell stands ready to accept input |
 
 ## Built-in Command List
 
@@ -30,7 +30,7 @@ Interface regions:
 
 ### help
 
-Show the description list for every command available in wxlsh.
+List every utility exposed by wxlsh alongside its purpose.
 
 **Syntax**
 
@@ -54,7 +54,7 @@ Available commands:
 
 ### clear / cls
 
-Clear all current output from the terminal and return to a blank screen.
+Wipe the existing output from the console and restore a blank canvas.
 
 **Syntax**
 
@@ -67,7 +67,7 @@ cls
 
 ### base64 encode
 
-Base64-encode the given plain text string and print the result.
+Apply Base64 encoding to the supplied plaintext payload and emit the resulting ciphered output.
 
 **Syntax**
 
@@ -86,7 +86,7 @@ YWRtaW46cGFzc3dvcmQ=
 
 ### base64 decode
 
-Decode a Base64-encoded string and print the original text.
+Reverse Base64 encoding on the given input and emit the original characters.
 
 **Syntax**
 
@@ -105,7 +105,7 @@ flag{secret}
 
 ### hex encode
 
-Convert each character of a text string into its corresponding hexadecimal ASCII code.
+Translate each character of the supplied input into its hexadecimal ASCII codepoint.
 
 **Syntax**
 
@@ -124,7 +124,7 @@ wxlsh $ hex encode hello
 
 ### hex decode
 
-Convert a hexadecimal string back to readable text.
+Reverse hexadecimal encoding back into human-readable characters.
 
 **Syntax**
 
@@ -143,7 +143,7 @@ flag{hexxx}
 
 ### curl
 
-Send an HTTP GET request to the given URL and print the response body to the terminal. Useful for quickly inspecting API responses or probing whether an endpoint exists.
+Issue an HTTP GET request against the supplied URL and emit the response body to the console. Handy for rapidly inspecting API replies or probing whether an endpoint exists.
 
 **Syntax**
 
@@ -166,7 +166,7 @@ wxlsh $ curl http://target.local/admin -H "X-Admin: true"
 
 ### encode
 
-Apply URL percent-encoding to a string, converting special characters into the `%XX` form. Useful for crafting query parameters that contain special characters.
+Apply URL percent-encoding to a payload, transforming reserved characters into the `%XX` form. Handy for crafting query parameters that carry reserved characters.
 
 **Syntax**
 
@@ -185,7 +185,7 @@ wxlsh $ encode ' OR 1=1 --
 
 ### decode
 
-Convert a URL percent-encoded string back to its original text.
+Reverse URL percent-encoding on a payload, restoring the original characters.
 
 **Syntax**
 
@@ -204,20 +204,20 @@ flag{test}
 
 ## Command History
 
-wxlsh records the commands executed during the current session, and you can use the arrow keys to browse and reuse them quickly.
+wxlsh retains every directive invoked during the current session, and the arrow keys let you browse and reuse prior entries quickly.
 
 | Key | Action |
 |---|---|
-| `↑` (Up) | Show the previous command in history |
-| `↓` (Down) | Show the next command in history (toward newer entries) |
+| `↑` (Up) | Surface the previous directive from history |
+| `↓` (Down) | Advance to the next directive in history (toward newer entries) |
 
-> **Note**: History is only kept for the current page session; refreshing the page clears the history.
+> **Note**: The session log persists only while the page stays open; refreshing the tab purges the buffer.
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
 |---|---|
-| `Ctrl + A` | Move the cursor to the beginning of the input line |
-| `Ctrl + E` | Move the cursor to the end of the input line |
-| `Ctrl + L` | Clear the terminal screen (equivalent to the `clear` command) |
-| `Ctrl + C` | Abort the current input, empty the input line, and move to a new line |
+| `Ctrl + A` | Jump the cursor to the start of the input line |
+| `Ctrl + E` | Jump the cursor to the end of the input line |
+| `Ctrl + L` | Wipe the console screen (equivalent to invoking `clear`) |
+| `Ctrl + C` | Abort the current entry, empty the input line, and advance to a fresh row |
