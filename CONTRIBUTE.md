@@ -255,3 +255,66 @@ Prefix the issue title with `[Feature]` and describe:
 ## Maintainer Setup
 
 > This section is for repository maintainers only; contributors can skip it. It documents one-time GitHub configuration that lives outside the repo (server-side state) and that derived repositories must reproduce after `use-template`.
+
+### Branch protection ruleset
+
+This subsection implements the `ci-quality-gates` capability's **"Branch protection ruleset guards main with required status checks"** Requirement. Without the ruleset, anyone with write access can push directly to `main` or merge a pull request while `test` / `build` are red — both of which negate the hardening landed in `harden-ci-workflows`.
+
+GitHub offers two mechanisms: legacy **Branch protection rules** and the newer **Repository rulesets**. We document rulesets only — GitHub now recommends rulesets, the `gh api` REST surface is stable, and bypass actors are first-class.
+
+> Reference: [GitHub REST API — Repository rules](https://docs.github.com/en/rest/repos/rules).
+
+#### Create the ruleset
+
+Substitute `{owner}` and `{repo}` with your fork's slug, then run:
+
+```bash
+gh api -X POST /repos/{owner}/{repo}/rulesets \
+  -H "Accept: application/vnd.github+json" \
+  --input - <<'JSON'
+{
+  "name": "Protect main",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/main"],
+      "exclude": []
+    }
+  },
+  "bypass_actors": [
+    { "actor_type": "OrganizationAdmin", "bypass_mode": "always" },
+    { "actor_type": "RepositoryAdmin",  "bypass_mode": "always" }
+  ],
+  "rules": [
+    { "type": "pull_request" },
+    {
+      "type": "required_status_checks",
+      "parameters": {
+        "strict_required_status_checks_policy": false,
+        "required_status_checks": [
+          { "context": "test",  "integration_id": null },
+          { "context": "build", "integration_id": null }
+        ]
+      }
+    }
+  ]
+}
+JSON
+```
+
+Notes:
+
+- `name=Protect main` / `target=branch` / `enforcement=active` keep the ruleset active immediately.
+- `conditions.ref_name.include=["refs/heads/main"]` scopes the ruleset to `main` only; `staging` is not covered yet (tracked separately).
+- `bypass_actors` lists `OrganizationAdmin` and `RepositoryAdmin` with `bypass_mode=always` so a solo maintainer can resolve incidents without being locked out. Bypass invocations show up in the GitHub audit log.
+- The two `required_status_checks` contexts (`test`, `build`) are the job IDs pinned by `ci-quality-gates` — do not rename without updating the spec and ruleset together.
+
+#### Verify the ruleset
+
+```bash
+gh ruleset list -R {owner}/{repo}
+# then take the numeric id of "Protect main" and:
+gh api -X GET /repos/{owner}/{repo}/rulesets/<id>
+# confirm rules[].parameters.required_status_checks[].context contains "test" and "build"
+```
