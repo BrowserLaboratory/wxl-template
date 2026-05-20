@@ -29,9 +29,14 @@ if [ "$HAS_STASHABLE" = true ]; then
   git stash push --keep-index --include-untracked --quiet -m "pre-commit: stash unstaged changes" -- docs/
 fi
 
-# Run validation; capture exit code
+# Run validation; capture exit code.
+# Avoid `xargs` because GNU xargs (Linux/CI) translates any child exit in 1–125
+# into 123, while BSD xargs (macOS) forwards the child code unchanged. Reading
+# the file list into an array and invoking the node script directly lets `$?`
+# observe the script's native exit code on every platform.
 VALIDATION_EXIT=0
-echo "$CHALLENGE_FILES" | xargs node --experimental-strip-types scripts/challenge-lint-staged.ts || VALIDATION_EXIT=$?
+mapfile -t CHALLENGE_FILE_LIST <<< "$CHALLENGE_FILES"
+node --experimental-strip-types scripts/challenge-lint-staged.ts "${CHALLENGE_FILE_LIST[@]}" || VALIDATION_EXIT=$?
 
 # Restore stash if we stashed
 if [ "$HAS_STASHABLE" = true ]; then
