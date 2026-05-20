@@ -97,6 +97,15 @@ async function mountPanel(
     (await import('../../../.vitepress/theme/components/CodeEditorPanel.vue')).default,
     { props, attachTo: document.body },
   )
+  // initEditor()'s 6 chained `await import(...)` resolve across multiple
+  // microtask rounds that a single flushPromises() does not fully drain
+  // under vitest 4 + happy-dom 20. Poll until the EditorView constructor
+  // (mocked above) has run; that proves editorView.value is also set,
+  // because the constructor and the `editorView.value = view` assignment
+  // are in the same synchronous block of initEditor().
+  await vi.waitFor(() => {
+    expect(editorViewConstructed).toBe(true)
+  }, { timeout: 5000, interval: 5 })
   await flushPromises()
   return wrapper
 }
@@ -126,12 +135,13 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
-    configurable: true, get: () => 0,
-  })
-  Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
-    configurable: true, get: () => 0,
-  })
+  // Fully delete the stub descriptors so the prototype returns to its
+  // original (happy-dom-default) state. Without this, the non-zero
+  // dimensions set in beforeEach could leak into the gap between this
+  // file's last afterEach and a neighbor file's first beforeEach if a
+  // worker were ever reused without re-isolating happy-dom.
+  delete (HTMLElement.prototype as unknown as { clientWidth?: number }).clientWidth
+  delete (HTMLElement.prototype as unknown as { clientHeight?: number }).clientHeight
 })
 
 describe('CodeEditorPanel', () => {
