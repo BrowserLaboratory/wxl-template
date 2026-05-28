@@ -127,12 +127,10 @@ jobs:
         id: diff
         run: |
           git fetch origin "${{ github.base_ref }}"
-          CHANGED=$(git diff --name-only --diff-filter=AMR -M "origin/${{ github.base_ref }}...HEAD" -- '*.md')
-          {
-            echo "files<<EOF"
-            echo "$CHANGED"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+          # Single space-separated line: each path becomes a positional arg to run.py.
+          # A multi-line value would split across shell lines and run later paths as commands.
+          CHANGED=$(git diff --name-only --diff-filter=AMR -M "origin/${{ github.base_ref }}...HEAD" -- '*.md' | tr '\n' ' ')
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
 
       - name: Run Phase-1 prose audit
         run: |
