@@ -434,6 +434,12 @@ onMounted(async () => {
     runtimeError.value = err instanceof Error ? err.message : String(err)
   }
 
+  // L3 Playwright spec hook: expose the in-page dispatcher so Playwright e2e
+  // tests can drive the runtime without the SW round-trip. Dev/test builds only.
+  if (import.meta.env.DEV) {
+    ;(globalThis as unknown as { __wxlDispatch?: (req: Request) => Promise<Response> }).__wxlDispatch = trackedDispatch
+  }
+
   // Initialize attack session (non-blocking), then pentest notes
   attackSession.init()
     .then(() => pentestNotes.init(slug.value))

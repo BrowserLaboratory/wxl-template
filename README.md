@@ -36,6 +36,11 @@
 - **pnpm** >= 10 (`npm install -g pnpm`)
 - **Rust** toolchain (install via [rustup](https://rustup.rs/))
 - **wasm-pack** (`cargo install wasm-pack`)
+- **Chromium for Playwright** — required only before the first `pnpm challenge:verify` run. After `pnpm install`, install the browser binary once with:
+
+  ```bash
+  pnpm exec playwright install chromium
+  ```
 
 ## Quick start
 
@@ -67,6 +72,9 @@ The dev server starts at `http://localhost:5173` by default.
 | `pnpm wasm:test` | Run the Rust unit tests (`cargo test`) |
 | `pnpm challenge:keygen` | Generate the encrypted WASM module for every challenge |
 | `pnpm create:challenge` | Interactively scaffold a new challenge |
+| `pnpm challenge:retype` | Mutate an existing challenge's backend / difficulty / tags / category |
+| `pnpm challenge:verify` | Run the layered verify gate (L1 lint, L2 build, L3 Playwright e2e) on a challenge |
+| `pnpm challenge:verify:blind` | Run the L4 blind-solve sub-routine standalone (also reached via `pnpm challenge:verify <slug> --blind`) |
 
 ## Architecture
 
