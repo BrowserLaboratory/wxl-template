@@ -7,7 +7,7 @@ The default branch SHALL be guarded by a GitHub repository ruleset whose `condit
 The ruleset SHALL include the following `rules`, in addition to any rules introduced by other capabilities:
 
 - A `pull_request` rule that requires every change to land via a pull request rather than a direct push. The rule's `parameters` SHALL set `dismiss_stale_reviews_on_push` to `true` (a new commit on the pull request invalidates prior approving reviews), `required_review_thread_resolution` to `true` (every review-conversation thread MUST be resolved before merge), and `allowed_merge_methods` to `["squash", "rebase"]` (the GitHub merge UI MUST only offer squash and rebase as merge methods — the legacy "Create a merge commit" button SHALL NOT be available for pull requests against the default branch). `required_approving_review_count` is NOT required to be non-zero by this requirement; teams that want a stricter approval policy SHALL follow the upgrade snippet documented in `CONTRIBUTE.md`.
-- A `required_status_checks` rule listing both `test` and `build` as required status checks, each pinned to `integration_id: 15368` (the GitHub Actions App). Pinning `integration_id` prevents a third-party GitHub App from reporting a same-named check and bypassing the gate. The rule's `parameters.strict_required_status_checks_policy` SHALL be `true`: this requires every pull-request head commit to be up-to-date with the latest base before merge, so that the `test` / `build` outcome reflects the actual `base-with-this-PR` combination rather than a stale `base-without-other-merged-PRs` combination. Both checks MUST report a success conclusion on the up-to-date head before a pull request becomes mergeable. The `test` and `build` contexts refer to the job IDs defined in `.github/workflows/quality-gates.yml`, which are pinned by other requirements in this capability and SHALL NOT be renamed without also updating the ruleset.
+- A `required_status_checks` rule listing `test`, `build`, and `prose-audit` as required status checks, each pinned to `integration_id: 15368` (the GitHub Actions App). Pinning `integration_id` prevents a third-party GitHub App from reporting a same-named check and bypassing the gate. The rule's `parameters.strict_required_status_checks_policy` SHALL be `true`: this requires every pull-request head commit to be up-to-date with the latest base before merge, so that the `test` / `build` / `prose-audit` outcome reflects the actual `base-with-this-PR` combination rather than a stale `base-without-other-merged-PRs` combination. All three checks MUST report a success conclusion on the up-to-date head before a pull request becomes mergeable. The `test`, `build`, and `prose-audit` contexts refer to the job IDs defined in `.github/workflows/quality-gates.yml`, which are pinned by other requirements in this capability and SHALL NOT be renamed without also updating the ruleset.
 - A `deletion` rule that prevents the default branch from being deleted, even by accounts that would otherwise have administrative permission. Deletion MUST go through explicit `bypass_actors` invocation and SHALL be recorded in the GitHub audit log.
 - A `non_fast_forward` rule that prevents force-push to the default branch (`git push --force`, `git push --force-with-lease`, and equivalent rewrites). Force-push MUST go through explicit `bypass_actors` invocation and SHALL be recorded in the GitHub audit log.
 - A `required_linear_history` rule that prevents merges which would produce a merge commit on the default branch. Combined with the `pull_request` rule's `allowed_merge_methods: ["squash", "rebase"]`, this enforces a linear `git log --oneline <default-branch>` history end-to-end: server-side rejection of any non-fast-forward / non-linear merge, plus UI restriction of the merge button to squash and rebase modes. The combination is intentional belt-and-suspenders: `required_linear_history` enforces the constraint even if the UI restriction is bypassed or misconfigured, while `allowed_merge_methods` makes the constraint visible to the contributor at PR time (the merge-commit button is grayed out) rather than only at merge time (the merge fails with a server error).
@@ -30,15 +30,15 @@ The ruleset itself is GitHub server-side state and SHALL NOT be expected to live
 
 #### Scenario: Pull request to the default branch cannot merge while a required check is failing
 
-- **WHEN** a contributor opens a pull request targeting the default branch whose `quality-gates` workflow run has either `test` or `build` reporting a failure conclusion
+- **WHEN** a contributor opens a pull request targeting the default branch whose `quality-gates` workflow run has any of `test`, `build`, or `prose-audit` reporting a failure conclusion
 - **THEN** the GitHub merge button SHALL be disabled with a message indicating one or more required status checks have not passed
-- **AND** the pull request SHALL only become mergeable once both `test` and `build`, each reported by the GitHub Actions App (`integration_id: 15368`), report success on the head commit
+- **AND** the pull request SHALL only become mergeable once all three of `test`, `build`, and `prose-audit`, each reported by the GitHub Actions App (`integration_id: 15368`), report success on the head commit
 - **AND** any unresolved review-conversation thread SHALL also block merge, per `required_review_thread_resolution: true`
 
 #### Scenario: Third-party app reporting a same-named check does not satisfy the gate
 
 - **GIVEN** the required-status-checks rule pins each check entry to `integration_id: 15368`
-- **WHEN** a non-GitHub-Actions GitHub App installed on the repository publishes a status check with the same `context` name (`test` or `build`) and a `success` conclusion
+- **WHEN** a non-GitHub-Actions GitHub App installed on the repository publishes a status check with the same `context` name (`test`, `build`, or `prose-audit`) and a `success` conclusion
 - **THEN** the pull request SHALL NOT become mergeable on the strength of that third-party report
 - **AND** mergeability SHALL require a `success` conclusion from the GitHub Actions App specifically
 
@@ -65,10 +65,10 @@ The ruleset itself is GitHub server-side state and SHALL NOT be expected to live
 #### Scenario: Pull request whose head is stale relative to base cannot merge
 
 - **GIVEN** the ruleset includes a `required_status_checks` rule whose `parameters.strict_required_status_checks_policy` is `true`
-- **AND** pull request B has both `test` and `build` reporting success conclusions on its current head commit
+- **AND** pull request B has all three of `test`, `build`, and `prose-audit` reporting success conclusions on its current head commit
 - **WHEN** another pull request A merges into the default branch, advancing the base ahead of B's head
-- **THEN** B's merge button SHALL be disabled with a message indicating the branch is out-of-date with the base branch, even though `test` and `build` still report success on B's existing head
-- **AND** B SHALL only become mergeable once its head is advanced to the new base (via the GitHub "Update branch" button, `git rebase`, or `git merge` from the contributor side) AND both `test` and `build` then re-run and report success on the new head commit
+- **THEN** B's merge button SHALL be disabled with a message indicating the branch is out-of-date with the base branch, even though `test`, `build`, and `prose-audit` still report success on B's existing head
+- **AND** B SHALL only become mergeable once its head is advanced to the new base (via the GitHub "Update branch" button, `git rebase`, or `git merge` from the contributor side) AND all three of `test`, `build`, and `prose-audit` then re-run and report success on the new head commit
 
 ##### Example: required status checks contract
 
@@ -76,5 +76,6 @@ The ruleset itself is GitHub server-side state and SHALL NOT be expected to live
 | -------------- | ---------------------------------------- | ---------------- | ------------------- | ----------------------------------------------------- |
 | `test`         | `.github/workflows/quality-gates.yml`    | `15368`          | Yes                 | Vitest + Rust/WASM tests; pinned by other Requirement |
 | `build`        | `.github/workflows/quality-gates.yml`    | `15368`          | Yes                 | Challenge validate + VitePress build                  |
+| `prose-audit`  | `.github/workflows/quality-gates.yml`    | `15368`          | Yes                 | Phase-1 deterministic prose audit on outward markdown |
 | `release`      | `.github/workflows/release.yml`          | `15368`          | No                  | Tag-driven only; not part of PR gate                  |
 | Future checks  | (not yet defined)                        | (set when the check is added) | No     | Adding one requires updating this Requirement first   |

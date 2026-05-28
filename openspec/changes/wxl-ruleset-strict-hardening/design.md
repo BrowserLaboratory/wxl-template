@@ -22,6 +22,8 @@
 | `required_status_checks.parameters.strict_required_status_checks_policy` | `false` | `true` |
 | 其餘設定（bypass_actors／integration_id pinning／~DEFAULT_BRANCH／pull_request 細項） | 已就緒 | 不動 |
 
+**prose-audit reconciliation 註**：本 change 之 spec delta 於 propose 階段（在 `prose-audit-phase-1-deterministic` archive 之前）寫成 required checks 只列 `test`+`build`。但該 sibling change archive 後，canonical spec 第 12 條已被改為 `test`+`build`+`prose-audit`（並把 prose-audit 標記為 `Required by ruleset: Yes`）。為避免本 change archive 時把已落地的 prose-audit required check 從 spec 洗掉，spec delta 與 `CONTRIBUTE.md` 的 POST／PUT payload 均更新為三個 required check（`test`／`build`／`prose-audit`）並列三條紅燈。這不是「引入新 required check」（prose-audit 已是 canonical 規範），而是把本 change 的 delta 與既有 canonical 對齊。實際 live ruleset 的 prose-audit required check 與三條紅燈，於本 change PR merge 後由 maintainer 以**單一 PUT** 一次升級（兩者改同一個 `required_status_checks` rule，PUT 整包取代，分兩次會互相 clobber）。
+
 ## Goals / Non-Goals
 
 **Goals:**
@@ -120,6 +122,7 @@ ruleset id 維持原本 `16637478`、`conditions.ref_name.include` 維持 `["~DE
   - `rules` 列表新增 `required_linear_history`。
   - `pull_request` rule 之 parameters 新增 `allowed_merge_methods: ["squash", "rebase"]`。
   - `required_status_checks` rule 之 `strict_required_status_checks_policy` 描述由「`false`」改為「`true`」。
+  - `required_status_checks` 之 required checks 由「`test`+`build`」更新為「`test`+`build`+`prose-audit`」（reconcile：canonical 第 12 條已被 prose-audit-phase-1 archive 加入 `prose-audit`，本 change 之 delta 須帶上以免 archive 時退化）。
 - 第 12 條 Requirement 之 Scenarios 數量由 5 增加到 8（新增 3 個 Scenario 覆蓋三條紅燈），Example 維持原 1 個。
 - **Header 不動**：spec delta 之 `### Requirement: Branch protection ruleset guards main with required status checks` 與 canonical spec L273 逐字一致（避開 spectra archive 對 header 變更只半自動之陷阱）。
 - `CONTRIBUTE.md` 「Maintainer Setup → Branch protection ruleset」段落之 POST 與 PUT 範例 payload 同步升級（含三條新設定）；Notes 段新增三條解釋（含「綠了又被打回」副作用之中文／英文表述）；Verify 段更新預期 rule type 列表與新增 `allowed_merge_methods`／`strict_required_status_checks_policy` 之檢查。
@@ -131,6 +134,7 @@ ruleset id 維持原本 `16637478`、`conditions.ref_name.include` 維持 `["~DE
   - `enforcement: "active"`、`target: "branch"`、`conditions.ref_name.include: ["~DEFAULT_BRANCH"]`（不動）
   - `rules` 含 5 條：`deletion`、`non_fast_forward`、`required_linear_history`、`pull_request`、`required_status_checks`
   - `pull_request.parameters` 含 `allowed_merge_methods: ["squash", "rebase"]`、`dismiss_stale_reviews_on_push: true`、`required_review_thread_resolution: true`（後兩者不動）
+  - `required_status_checks.parameters.required_status_checks` 含三個 context：`test`、`build`、`prose-audit`，皆 `integration_id: 15368`
   - `required_status_checks.parameters.strict_required_status_checks_policy: true`
   - `bypass_actors`：兩個 entry，皆 `bypass_mode: "pull_request"`（不動）
 
@@ -143,7 +147,8 @@ ruleset id 維持原本 `16637478`、`conditions.ref_name.include` 維持 `["~DE
 
 **Acceptance criteria**：
 
-- `grep -c '^### Requirement:' openspec/specs/ci-quality-gates/spec.md` 維持 12（MODIFY、不增不減）。
+- `grep -c '^### Requirement:' openspec/specs/ci-quality-gates/spec.md` 維持 13（MODIFY 第 12 條、不增不減；canonical 已含 prose-audit-phase-1 archive 加入的第 13 條）。
+- `grep -c '"context": *"prose-audit"' CONTRIBUTE.md` ≥ 2（POST + PUT payload 各一處）。
 - `grep -c '^### Requirement:' openspec/specs/contributor-guide/spec.md` 維持 6（不動）。
 - `grep -c '^#### Scenario:' openspec/changes/wxl-ruleset-strict-hardening/specs/ci-quality-gates/spec.md` 為 8（原 5 + 新 3）。
 - `grep -c '"type": *"required_linear_history"' CONTRIBUTE.md` ≥ 2（POST + PUT 各一）。
@@ -184,11 +189,14 @@ ruleset id 維持原本 `16637478`、`conditions.ref_name.include` 維持 `["~DE
   - **論點 A（直接 main）**：staging branch 尚未啟用，要啟用 staging 本身就需要另一個 change；先啟 staging 再用 staging 試三條紅燈，總路徑長、ROI 不高。三條紅燈之副作用（特別是「綠了又被打回」）只有在「base 有變動」之 PR 上才會發生，staging 變動頻率比 main 低、staging 試一週也未必觀察到副作用。
   - **論點 B（staging 先試）**：staging 流量低、即使三條一起出問題影響範圍小、滾回容易。staging 試一週後再 promote 到 main 是穩健做法。
   - **決議方式**：留待本 change PR review 期間於 PR comment 決議；目前 baseline 採論點 A（直接 main）。如決議改採 B，本 change 需 park 直到 staging branch 啟用之 change 完成。
+  - **已決議（2026-05-28）：採論點 A（直接合入 main，不走 staging）。** staging 尚未啟用、ROI 不高。
 - **Open Question 4.2：是否要分批合入三條紅燈（例如先合 `required_linear_history` + `allowed_merge_methods`、觀察一週後再合 `strict_required_status_checks_policy`）？**
   - **論點 A（三條同合）**：三條都是 main hardening、語意 group 一致；同 PUT 升級 ruleset 減少 spec／server 不同步 surface；副作用 attribution 在 Verify 段預期輸出已可逐條驗證、不需分批就能辨認問題來源。
   - **論點 B（分批）**：副作用最大的是 `strict_required_status_checks_policy: true`（「綠了又被打回」），與前兩條 hardening 之副作用屬性不同（前兩條是 UI／git policy 議題、後一條是 PR throughput 議題）；分批可隔離觀察。
   - **決議方式**：留待本 change PR review 期間於 PR comment 決議；目前 baseline 採論點 A（三條同合）。如決議改採 B，本 change 須拆為兩 change（例如 `wxl-ruleset-strict-hardening-history-policy`+`wxl-ruleset-strict-hardening-strict-checks`）。
+  - **已決議（2026-05-28）：採論點 A（三條同時合入，不分批）。** 同一語意 group、一次 PUT 升級，副作用可由 Verify 段逐條驗證。
 - **Open Question 4.3：CONTRIBUTE.md 是否要明寫「衍生 repo 可如何 opt out 三條中的個別 hardening」之選用替換片段？**
   - **論點 A（寫**）**：本 change Notes 段已說明三條之副作用、衍生 repo maintainer 有自主決定權；提供 opt-out 範例可降低衍生 repo 採用阻力。
   - **論點 B（不寫）**：opt-out 範例會讓文件膨脹；本 change 之 baseline 是「三條都採用」，opt-out 屬於 advanced 用法、可由衍生 repo maintainer 自行查 GitHub docs。
   - **決議方式**：留待本 change PR review 期間決議；目前 baseline 採論點 B（不寫 opt-out 範例）。
+  - **已決議（2026-05-28）：採論點 B（不寫 opt-out 範例）。** Notes 段 `strict` bullet 已附帶「可單獨 revert 此 flag」說明，足以指引衍生 repo，無須完整 opt-out 片段。
