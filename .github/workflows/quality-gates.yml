@@ -99,3 +99,49 @@ jobs:
 
       - name: Build VitePress site
         run: pnpm docs:build
+
+  prose-audit:
+    # PR-time deterministic prose audit on changed outward-facing markdown.
+    # Guarded to pull_request because the base-vs-head diff needs github.base_ref,
+    # which is empty on push events.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/prose-audit/requirements.txt
+
+      - name: Install prose-audit dependencies
+        run: pip install -r scripts/prose-audit/requirements.txt
+
+      - name: Compute changed outward markdown
+        id: diff
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          # Single space-separated line: each path becomes a positional arg to run.py.
+          # A multi-line value would split across shell lines and run later paths as commands.
+          CHANGED=$(git diff --name-only --diff-filter=AMR -M "origin/${{ github.base_ref }}...HEAD" -- '*.md' | tr '\n' ' ')
+          echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
+
+      - name: Run Phase-1 prose audit
+        run: |
+          python scripts/prose-audit/run.py ${{ steps.diff.outputs.files }} \
+            --out audit-runs/prose-phase1-ci/ \
+            --json-summary audit-runs/prose-phase1-ci/summary.json
+
+      - name: Upload audit reports
+        if: always()
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: prose-audit-phase1-reports
+          path: audit-runs/prose-phase1-ci/
+          retention-days: 14
