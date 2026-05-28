@@ -54,8 +54,8 @@
 - [x] 8.1 本地乾淨 checkout（Node 22+ / Python 3.12+）跑 `pip install -r scripts/prose-audit/requirements.txt && python scripts/prose-audit/run.py README.md CONTRIBUTE.md`——可觀察行為：兩檔皆走 14 個 checker、無 ImportError、exit code 反映 finding。驗證：`echo $?` 與 stdout summary 一致。
 - [x] 8.2 fixture 驗 blocking：含「視頻」之 markdown → exit 1（`mainland_vocab` 是 blocking rule）；含「TODO」之 markdown → exit 1（`placeholder_grep`）；乾淨 markdown → exit 0——驗證：`echo $?` 各為 1 / 1 / 0。
 - [x] 8.3 `citation_format` 在無 references 設定之 README / CONTRIBUTE 上不產 finding、不誤擋——可觀察行為：blocking set 不因 `citation_format` 在純文件上誤觸發。驗證：`python scripts/prose-audit/checks/citation_format.py README.md` 之 `findings` 為空（若噪音過多，將其從 `--block-rules` 預設移出、降為 advisory，並回頭更新 2.3 / spec delta）。
-- [ ] 8.4 開 throwaway PR 至 `staging` 確認三 job 並行——可觀察行為：60 秒內 PR 出現 `Quality Gates / test`、`Quality Gates / build`、`Quality Gates / prose-audit` 三 check。再在 outward markdown 引入「視頻」push → `prose-audit` 紅燈、`test` / `build` 綠燈；還原後三 check 重回 green。驗證：`gh pr checks <pr-number>` 輸出三條 check + 紅/綠轉換。
-- [ ] 8.5 確認 `audit-runs/prose-phase1-ci/` artifact 可從 Actions UI 下載並含 per-file `findings.json` + `summary.json`——驗證：`unzip -l <artifact>.zip` 列出預期檔案結構。
+- [x] 8.4 開 throwaway PR 至 `staging` 確認三 job 並行——可觀察行為：60 秒內 PR 出現 `Quality Gates / test`、`Quality Gates / build`、`Quality Gates / prose-audit` 三 check。再在 outward markdown 引入「視頻」push → `prose-audit` 紅燈、`test` / `build` 綠燈；還原後三 check 重回 green。驗證：`gh pr checks <pr-number>` 輸出三條 check + 紅/綠轉換。
+- [x] 8.5 確認 `audit-runs/prose-phase1-ci/` artifact 可從 Actions UI 下載並含 per-file `findings.json` + `summary.json`——驗證：`unzip -l <artifact>.zip` 列出預期檔案結構。
 - [x] 8.6 確認 vendor 後之 14 個 checker 各自獨立 CLI 仍與 upstream byte-identical（path 欄位除外）——驗證：`diff <(python scripts/prose-audit/checks/mainland_vocab.py fixture.md) <(python ~/.claude/skills/humane-prose-audit/checks/mainland_vocab.py fixture.md)` 只見 path 差異。
 
 ## 9. Follow-up 紀錄（本 change 不實作）
