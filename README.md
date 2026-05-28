@@ -185,5 +185,3 @@ jobs:
 ## License
 
 This project is licensed under the [Educational Community License, Version 2.0 (ECL-2.0)](LICENSE).
-
-<!-- TEMP prose-audit CI red-path test line — 視頻 — to be reverted -->>
