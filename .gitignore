@@ -109,3 +109,23 @@ temp/
 # The aggregated summary is committed under
 # `openspec/changes/<name>/audit-summary.md`; the raw run dirs are not.
 audit-runs/
+
+# ===========================
+# Claude Code scheduled tasks
+# ===========================
+# Runtime lock file owned by the local Claude Code session; ephemeral.
+.claude/scheduled_tasks.lock
+
+# ===========================
+# wxl-creator L4 blind-solve
+# ===========================
+# Ephemeral player-package and run.log produced by `pnpm challenge:verify --blind`.
+# Deleted automatically on verify exit; never committed.
+tmp/wxl-verify/
+
+# ===========================
+# Playwright
+# ===========================
+# Per-test failure attachments and traces created by `pnpm exec playwright test`.
+test-results/
+playwright-report/

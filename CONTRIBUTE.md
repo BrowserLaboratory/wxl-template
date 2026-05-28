@@ -141,6 +141,49 @@ pnpm create:challenge --name sqli-login --title "SQL Injection Login Bypass" \
   --backend flask --difficulty medium --flag "CTF{sqli_bypassed}"
 ```
 
+### Mutate gate (`pnpm challenge:retype`)
+
+Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, re-runs `pnpm challenge:keygen`, and (when the backend changes) tries to keep `tests/challenges/<slug>.spec.ts` in sync.
+
+```bash
+# Metadata-only mutations
+pnpm challenge:retype <slug> --difficulty hard
+pnpm challenge:retype <slug> --tags 'sqli,injection,flask,sqlite'
+pnpm challenge:retype <slug> --category web
+
+# Backend mutation within the same language family (e.g., fastapi ↔ flask)
+pnpm challenge:retype <slug> --backend flask
+
+# Cross-language mutations exit with code 2 ("manual retype required");
+# perform those rewrites by hand.
+```
+
+### Verify gate (`pnpm challenge:verify`)
+
+`pnpm challenge:verify <slug>` is the **release-blocking gate** for a challenge. It runs four layers; the first three are default, L4 is opt-in.
+
+| Layer | Gate | Default? |
+|-------|------|----------|
+| L1 | Frontmatter + structure validation (delegates to `challenge:validate`) | yes |
+| L2 | Content analysis + keygen + `wasm-tools validate runtime.wasm` (delegates to `challenge:analyze`) | yes |
+| L3 | Playwright e2e exploit spec at `tests/challenges/<slug>.spec.ts` | yes |
+| L4 | Spawn a fresh agent CLI session and require it to solve the challenge blind | only with `--blind` |
+
+```bash
+# Default: L1 + L2 + L3
+pnpm challenge:verify <slug>
+
+# Add L4 blind-solve gate (requires `pnpm docs:dev` already running on localhost:5173)
+pnpm challenge:verify <slug> --blind
+
+# Filter layers (debugging)
+pnpm challenge:verify <slug> --layers L1,L3
+```
+
+L4 picks the host agent CLI via the `WXL_VERIFY_RUNTIME` environment variable (`claude` / `codex` / `gemini`; defaults to `claude`). All ephemeral artefacts live under `tmp/wxl-verify/<slug>/` and are deleted when verify exits — they are never committed.
+
+Run `pnpm challenge:verify <slug>` before opening any PR that touches a challenge. Treat a non-zero exit code as a blocker; do not merge until every gate reports green.
+
 ## Challenge Keygen
 
 Use the `challenge-keygen` script to produce the encrypted WASM payload for a challenge:
