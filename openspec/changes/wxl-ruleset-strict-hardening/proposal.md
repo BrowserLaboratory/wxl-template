@@ -28,7 +28,7 @@
 ## Non-Goals (optional)
 
 - **不把 framing 寫成「對齊 sister」**：如 Why 段所述，sister repo 用 legacy branch protection rules、不是 rulesets，沒有 payload 可抄。本 change 是 wxl 自身對三條紅燈之政策採用，spec／文件不得出現「對齊 sister」「複製 sister payload」之描述以避免誤導。
-- **不引入新 required status check**（lighthouse／prose-audit／site-smoke 等）：仍維持 `test`／`build` 兩個 check；新 check 由各自獨立 change 引入。`strict_required_status_checks_policy: true` 之影響範圍以現有兩 check 為基準討論。
+- **不引入新 required status check**：本 change 不新增 lighthouse／site-smoke 等 check。`prose-audit` 雖出現在 required check 清單中，但它是由 sibling change `prose-audit-phase-1-deterministic`（已 archive、PR #17/#18）引入 canonical 第 12 條的；本 change 只是在 spec delta 與 `CONTRIBUTE.md` payload 中**帶上**它以對齊 canonical（reconcile，避免 archive 時把它洗掉），並非由本 change 引入。`strict_required_status_checks_policy: true` 之影響範圍以 `test`／`build`／`prose-audit` 三個 check 為基準討論。
 - **不動 `staging` branch ruleset**：`staging` 尚未啟用，待之後另開 change 處理。Open Question 段討論「是否要先在 staging 試」之 framing，不在本 change 實作 staging 部分。
 - **不修改 `contributor-guide` 第 6 條 Requirement**：原文要求「copy-paste-ready `gh api` command」、「verification command」、「stricter approval policy 升級指引」等仍由更新後的 CONTRIBUTE.md 內容滿足，Requirement 措辭不需動。
 - **不調整 `bypass_actors`／`bypass_mode`／`integration_id` pinning** 等已落地之設定：本 change 純粹是 incremental hardening，不重新討論前一個 change 已決定之事項。
