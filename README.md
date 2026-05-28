@@ -2,6 +2,7 @@
 
 > A fully browser-based, WebAssembly-powered web exploitation training platform — no backend server required.
 
+[![Quality Gates](https://github.com/BrowserLaboratory/wxl-template/actions/workflows/quality-gates.yml/badge.svg)](https://github.com/BrowserLaboratory/wxl-template/actions/workflows/quality-gates.yml)
 [![License: ECL-2.0](https://img.shields.io/badge/License-ECL--2.0-blue.svg)](LICENSE)
 [![VitePress](https://img.shields.io/badge/VitePress-2.0.0--alpha.16-green.svg)](https://vitepress.dev)
 [![pnpm](https://img.shields.io/badge/pnpm-10.28.0-orange.svg)](https://pnpm.io)

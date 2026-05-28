@@ -75,6 +75,13 @@ staging ────────────────────────
    pnpm wasm:test    # Rust unit tests
    ```
 
+   If you changed outward-facing Markdown (`README.md`, `CONTRIBUTE.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, or anything under `docs/`), run the same Phase-1 prose audit that CI runs. It blocks on mainland-Chinese vocabulary, unfinished placeholders, and malformed citations; other (stylistic) findings are advisory only:
+
+   ```bash
+   pip install -r scripts/prose-audit/requirements.txt
+   python scripts/prose-audit/run.py $(git diff --name-only --diff-filter=AMR -M origin/main...HEAD -- '*.md')
+   ```
+
 5. Commit your changes (see [Commit conventions](#commit-conventions)) and push to your fork.
 
 6. Open a Pull Request (see [PR submission workflow](#pr-submission-workflow)).

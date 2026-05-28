@@ -2,7 +2,7 @@
 
 `ci-quality-gates` capability 之 archive design.md（`openspec/changes/archive/2026-05-20-ci-quality-gates/design.md` line 168–187）已明確列出三條 prose-audit CI 化候選路徑，並聲明本系列首個 change 不實作任何一條：
 
-- **Option A：Phase 1 deterministic-only**——CI 跑 `python audit_orchestrator.py <file> --phase 1`，只攔 14 個 deterministic check（ai_tells / burstiness / mainland_vocab / placeholder_grep / lexical_diversity / pronoun_consistency / duplicate_sentences / citation_format / discourse_marker_density / hedge_density / imperative_fog / lazy_writer_check / readability_metrics / repetition_fingerprint）能升到 Critical 的情況。低保真但全自動；不滿足 spec PASS 門檻（0 Critical AND 0 High，含 Phase 2 sub-agent 發現）。
+- **Option A：deterministic-only**——CI 跑 14 個 deterministic check（ai_tells / burstiness / mainland_vocab / placeholder_grep / lexical_diversity / pronoun_consistency / duplicate_sentences / citation_format / discourse_marker_density / hedge_density / imperative_fog / lazy_writer_check / readability_metrics / repetition_fingerprint），對「客觀錯誤」類 rule 之 finding 紅燈。低保真但全自動；不滿足 spec PASS 門檻（0 Critical AND 0 High，含 Phase 2 sub-agent 發現）。（註：本 change apply 期確認這 14 個 checker 之最高 severity 為 `high`、無 `critical`，故 gate 改採 rule-allowlist——見 Decisions。）
 - **Option B：verify-committed-summary**——維護者本地跑完整 5 phase（含 LLM）→ commit `audit-summary.md` 顯示 PASS → CI 只驗證該 summary 存在、verdict=PASS、且 outward-facing surface 列表對應 commit。高保真但靠維護者紀律；需要新增 audit-summary 格式 SHALL 條款至 `prose-audit-outward-docs` spec。
 - **Option C：CI 內呼 Claude API**——把 `ANTHROPIC_API_KEY` 放 GitHub secret，CI 直接驅動 Phase 2 sub-agents。最完整但有 cost（每次 PR 19 個檔案 × 4 個 persona = 76 LLM 呼叫）與 secret-management 考量。
 
@@ -16,8 +16,8 @@
 
 **Goals:**
 
-- 把 `~/.claude/skills/humane-prose-audit/` 之 14 個 deterministic checker module + orchestrator Phase-1-only 路徑 vendor 進 `scripts/prose-audit/`，落實 Option A。
-- 在 `.github/workflows/quality-gates.yml` 新增第三個並行 job `prose-audit`，對 PR 改動之 outward-facing markdown 跑 Phase-1 deterministic 子集，任一 Critical finding 即紅燈。
+- 把 `~/.claude/skills/humane-prose-audit/` 之 14 個 deterministic checker module（含其讀的 `config.yaml` 與最小 `_common` 子集）vendor 進 `scripts/prose-audit/`，由新增的 `run.py` wrapper 直接呼叫（不 vendor orchestrator），落實 Option A。
+- 在 `.github/workflows/quality-gates.yml` 新增第三個並行 job `prose-audit`，對 PR 改動之 outward-facing markdown 跑 14 個 deterministic checker，任一 blocking-set rule（`mainland_vocab` / `placeholder_grep` / `citation_format`）有 finding 即紅燈。
 - 擴充 `ci-quality-gates` capability（第 13 條 ADDED Requirement + Branch protection ruleset 之 required-checks 表延伸）。
 - 為 Option B（verify-committed-summary）與 Option C（Claude API）保留明確 follow-up 路徑（不在本 change 實作）。
 - 為 vendor refresh 流程（upstream skill 更新 → repo vendor 跟進）保留明確 follow-up 路徑（不在本 change 實作）。
@@ -62,18 +62,18 @@
 - D 引入 CI runtime fetch 之延遲 + 對 upstream repo 之 availability 依賴；GitHub-hosted runner clone 平均 ~2s，但若 upstream 掛掉就 CI 全紅，不可接受。
 - B 是 trade-off：vendor 即 fork，會有 upstream drift 風險，但**換來 deterministic CI 行為**（CI 之行為只依賴 repo 內檔案，不依賴外部資源）。drift 用 provenance 註解 + Open Question 之「vendor refresh」議題追蹤。
 
-### Wrapper CLI `run.py` 提供，不直接呼 orchestrator
+### `run.py` wrapper vs 在 CI yaml 寫 shell loop
 
 **選項：**
 
-- A: CI workflow yaml 直接呼 `python scripts/prose-audit/scripts/audit_orchestrator.py <file> --phase 1 --no-fuzz`。
-- B: 提供 `scripts/prose-audit/run.py` wrapper，封裝多檔批次 / surface 過濾 / summary 輸出（本 change 採用）。
+- A: CI workflow yaml 自己寫 shell loop 逐檔呼 `python scripts/prose-audit/checks/<rule>.py <file>` 並 aggregate exit code / surface 過濾。
+- B: 提供 `scripts/prose-audit/run.py` wrapper，封裝多檔批次 / 14 checker 派發 / rule-allowlist 判斷 / surface 過濾 / summary 輸出（本 change 採用）。
 
 **選 B 的理由：**
 
-- orchestrator 之 CLI shape 是 single-file 為單位（`<target.md>` positional 只接一檔）。CI 之 PR diff 會給多檔；要嘛 yaml 寫 shell loop（`for f in $CHANGED; do python ... $f; done` + 自己 aggregate exit code），要嘛 wrapper 內部處理。Wrapper 較乾淨，且讓本地等效命令也是同一個 `run.py`。
-- Wrapper 是「對外 stable API」+ orchestrator 是「實作細節」之介面分離。未來 orchestrator CLI shape 變更不會破 CI yaml。
-- Wrapper 同時是 surface 過濾之執行點——CI 不必在 yaml 寫 glob 邏輯，由 wrapper 內部以 fnmatch 處理。
+- 每個 checker 之 CLI 以 single-file 為單位（`<target.md>` positional 只接一檔），且共 14 個。CI 之 PR diff 會給多檔；在 yaml 寫雙層 loop（檔 × checker）+ 自己 parse JSON 算 blocking-set + aggregate exit code 既醜又難測。wrapper 內部處理乾淨得多，且讓本地等效命令也是同一個 `run.py`。
+- Wrapper 是「對外 stable API」+ checker 是「實作細節」之介面分離：未來某個 checker CLI shape 變更、或 blocking set 增減，只改 `run.py` 不破 CI yaml。
+- Wrapper 同時是 surface 過濾與 rule-allowlist 判斷之執行點——CI 不必在 yaml 寫 glob / severity 邏輯，由 wrapper 內部以 fnmatch + `--block-rules` 處理。
 
 ### Scan 範圍：PR-changed `*.md` ∩ outward-facing surface（不掃全 repo）
 
@@ -90,19 +90,36 @@
 - B 是「PR-incremental + 範圍對齊既有 surface 定義」之最小 attack surface。`audit-runs/prose-phase1-ci/summary.json` 顯示掃過幾檔，貢獻者可確認自己改的檔有被掃。
 - B 之 trade-off：rename / move 操作可能漏網（git diff 把 rename 視為 delete + add）。Mitigation：CI 之 `git diff` 加 `-M` flag（rename detection），rename 後之新檔仍會被掃。
 
-### Failure threshold：`--fail-on critical` 而非 `--fail-on high`
+### Failure 政策：rule-allowlist 而非 severity threshold
 
 **選項：**
 
-- A: 對 Critical 才紅燈（本 change 採用）。
-- B: 對 High 以上紅燈。
-- C: 對 Medium 以上紅燈（與 `prose-audit-outward-docs` 之 release-time PASS 條款最接近）。
+- A: severity threshold（`--fail-on critical` / `high` / `medium`）——對某 severity 以上之 finding 紅燈。
+- B: rule-allowlist——只對特定「客觀錯誤」rule 之 finding 紅燈，不論 severity（本 change 採用）。
 
-**選 A 的理由：**
+**選 B 的理由（含為何 A 行不通）：**
 
-- Phase 1 deterministic checker 之 severity 升 High 之 case 偏 stylistic（例如 lexical_diversity MTLD 偏低、burstiness 偏直線），這類 finding 在 PR review 階段擋下會誤殺合理之 commit（重構 / merge / 自動產生段落）。Critical 之 case 多是 mainland_vocab 命中 / placeholder_grep 漏網之類「明確錯」之類型，擋下無誤殺風險。
-- 為了讓 PR-time gate 不要太擾民——後續若統計顯示 High 也鮮少誤殺，再升 threshold 不遲。
-- `prose-audit-outward-docs` 之 release-time PASS（0 Critical AND 0 High）由維護者在 release-time 手動跑完整 audit 守住；PR-time 只擋 Critical 是「最小必要 attack surface」，與 release-time 雙層防線並存。
+- **A 的前提不成立**：直接讀源碼確認，14 個 deterministic checker **沒有任何一個發 `critical`**（最高 `high`：`ai_tells` / `placeholder_grep` / `citation_format`）。`mainland_vocab` 只發 `Medium`、`placeholder_grep` 發 `High`。故 `--fail-on critical` 是一個永遠不會亮紅燈的死 gate；上游 orchestrator 也根本沒有 `--fail-on` flag。
+- severity 在 deterministic checker 之間語意不一致（`burstiness` 偏直線 = `medium`，`mainland_vocab` 命中大陸用語 = `Medium`），所以一個跨 checker 的 severity 門檻無法乾淨地分「客觀錯誤」與「stylistic 訊號」。
+- rule-allowlist 直接點名要擋的 rule：`mainland_vocab`（大陸用語）、`placeholder_grep`（未完成佔位符）、`citation_format`（引用格式錯誤）——這三類在 outward 文件就是「明確錯」，擋下無誤殺風險，且正好涵蓋台灣繁體 / 大陸用語混用這個 repo 最常出包的類型。
+- 其餘 11 個偏 stylistic 之 checker（`burstiness` / `lexical_diversity` / `hedge_density` / `ai_tells` 等）一律 advisory：finding 寫進 `summary.json` 供人讀，但不擋 merge——避免重構 / merge / 自動產生段落被誤殺。
+- gate 是 severity-agnostic，所以**不需要**動到 vendored checker 的 severity 大小寫（見下一個 Decision）；blocking set 由 `run.py` 之 `--block-rules`（預設那三個）控制，未來要加減 rule 改 default 即可。
+- `prose-audit-outward-docs` 之 release-time PASS（0 Critical AND 0 High，含 Phase 2 sub-agent）仍由維護者手動跑完整 audit 守住；PR-time 之 rule-allowlist 是「最小必要 attack surface」，與 release-time 雙層防線並存。
+
+### 直接呼叫 checker vs vendor 整個 orchestrator
+
+**選項：**
+
+- A: vendor `audit_orchestrator.py` 並以 `--phase 1` 跑（原 propose 採用）。
+- B: `run.py` 直接逐一以 subprocess 呼叫 `checks/<rule>.py`，**不** vendor orchestrator（本 change 採用）。
+
+**選 B 的理由：**
+
+- **A 會踩到 orchestrator 的隔離 bug**：orchestrator Phase-1 preflight 會用 strict（小寫 enum）schema 驗證每個 checker 輸出，把發 Title-case severity 的 6 個 checker（含 `mainland_vocab` 發 `Medium`、`placeholder_grep` 發 `High`）當 schema 違規丟進 `_errored.json` 隔離、findings 完全不計。也就是說走 orchestrator，本 change 最仰賴的兩個 checker 反而產不出可用 finding。上游正在 refactor（`.refactor-progress.yaml`），這 6 個 checker 目前在 orchestrator 流程裡是壞的。
+- **B 繞開隔離**：`run.py` 直接讀 checker stdout JSON，不跑那套 strict 驗證，所以 Title-case severity 不會被隔離；又因為 gate 是 rule-identity（非 severity），大小寫對判斷無影響——**vendored checker 因此維持與上游 byte-identical（只多一行 provenance 註解）**，不必逐檔改 severity。
+- B 砍掉 ~1800 LOC 用不到的 Phase 2/3/4/5 程式碼（`audit_orchestrator.py` 985 + `output_aggregator.py` 526 + `journal.py` + `token_estimator.py`）。vendor 量 ~5450 → ~3000 LOC。
+- rule-allowlist 是 wrapper 層政策，本來就該住在 `run.py`、不在不支援它的 orchestrator。`run.py` 自己處理多檔批次 / surface 過濾 / summary 聚合（~150–200 LOC）。
+- trade-off：`run.py` 自行重做「per-check subprocess + 60s timeout + 聚合」這層（orchestrator 原本有），但相對於 vendor + 維護整個 orchestrator 划算。
 
 ### Artifact upload 策略：upload-artifact 而非 PR comment
 
@@ -150,11 +167,10 @@ prose-audit:
         git fetch origin ${{ github.base_ref }}
         CHANGED=$(git diff --name-only --diff-filter=AMR -M origin/${{ github.base_ref }}...HEAD -- '*.md')
         echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
-    - name: Run Phase-1 prose audit
+    - name: Run deterministic prose audit
       run: |
         python scripts/prose-audit/run.py \
           ${{ steps.diff.outputs.files }} \
-          --phase 1 --no-fuzz --fail-on critical \
           --out audit-runs/prose-phase1-ci/ \
           --json-summary audit-runs/prose-phase1-ci/summary.json
     - uses: actions/upload-artifact@<sha> # v5.x.y
@@ -169,59 +185,62 @@ prose-audit:
 
 ```
 python scripts/prose-audit/run.py <file>... \
-  [--phase 1] (default; current change accepts only 1) \
-  [--no-fuzz] (default true) \
-  [--fail-on critical|high|medium] (default critical) \
   [--out <dir>] (default audit-runs/prose-phase1-ci/) \
   [--json-summary <path>] \
-  [--surface <glob>]... (default per prose-audit-outward-docs spec line 13)
+  [--surface <glob>]... (default per prose-audit-outward-docs spec line 13) \
+  [--block-rules <csv>] (default: mainland_vocab,placeholder_grep,citation_format)
 
-Exit 0: no finding at or above --fail-on severity (or no files to audit)
-Exit 1: at least one finding at or above --fail-on severity OR internal error
+對每個檔逐一以 subprocess 跑 14 個 checker（python checks/<rule>.py <file>）、parse stdout JSON。
+Exit 0: 無 blocking-set finding（或無檔可掃）；advisory finding 仍記入 summary。
+Exit 1: 至少一個 blocking-set rule（--block-rules）有 finding（不論 severity）。
+Exit 2: 內部錯誤（checker 非 0 結束 / crash / ImportError）。
 ```
 
 **Per-file 輸出檔結構：**
 
 ```
 audit-runs/prose-phase1-ci/
-├── summary.json                                # 合併 summary（per-file verdict + Critical / High count + by-rule breakdown + overall_exit）
+├── summary.json                                # 合併 summary（files:[{path, blocking_findings, advisory_findings, by_rule}] + overall_exit）
 ├── <file-slug-1>/
-│   └── audit-report.phase1.json                # orchestrator 之 Phase-1 報告
+│   └── findings.json                           # 該檔 14 checker 之 finding（含 blocking / advisory 標記）
 ├── <file-slug-2>/
-│   └── audit-report.phase1.json
+│   └── findings.json
 └── ...
 ```
 
 **失敗模式：**
 
 - `pip install` 階段失敗（PyPI outage / dep 衝突）→ step 紅燈、job 紅燈、上層 workflow 紅燈。
-- `git diff` 算出空清單 → `run.py` exit 0 + skip 訊息；job 綠燈。
-- `run.py` 對至少一檔報 Critical → run.py exit 1、job 紅燈；artifact upload 步驟用 `if: always()` 仍會跑（讓貢獻者下載 audit-runs/ 看 finding）。
-- vendor 之 checker module ImportError → `run.py` 捕捉、報 internal error、exit 2（與 Critical 區分），job 紅燈。
+- `git diff` 算出空清單（或全部不在 surface）→ `run.py` exit 0 + skip 訊息；job 綠燈。
+- `run.py` 對至少一檔之 blocking-set rule 報 finding → run.py exit 1、job 紅燈；artifact upload 步驟用 `if: always()` 仍會跑（讓貢獻者下載 audit-runs/ 看 finding）。
+- 只有 advisory rule 有 finding → run.py exit 0、job 綠燈；finding 仍寫進 summary 供人讀。
+- vendor 之 checker module ImportError / 非 0 結束 → `run.py` 捕捉、報 internal error、exit 2（與 blocking finding 之 exit 1 區分），job 紅燈。
 
 **接受標準（implementer / reviewer 驗證點）：**
 
 - workflow yaml syntax 通過 `actionlint` 或 `gh workflow view`。
-- 本地等效命令 `pip install -r scripts/prose-audit/requirements.txt && python scripts/prose-audit/run.py $(git diff --name-only --diff-filter=AMR -M origin/main...HEAD -- '*.md') --phase 1 --no-fuzz --fail-on critical` 在 Python 3.12 環境跑得通。
-- 對 vendor 之 14 個 checker module，`python scripts/prose-audit/checks/<rule>.py <file>` 仍可獨立 CLI 跑（不破壞 upstream 之 single-check 介面）。
-- 開 throwaway PR 至 `staging`，故意把 `README.md` 加一句「視頻」（中國大陸用語）+ push，PR 上 `Quality Gates / prose-audit` 紅燈、`test` / `build` 綠燈；改回「影片」後三 check 重回 green。
+- 本地等效命令 `pip install -r scripts/prose-audit/requirements.txt && python scripts/prose-audit/run.py $(git diff --name-only --diff-filter=AMR -M origin/main...HEAD -- '*.md')` 在 Python 3.12 環境跑得通。
+- 對 vendor 之 14 個 checker module，`python scripts/prose-audit/checks/<rule>.py <file>` 仍可獨立 CLI 跑（不破壞 upstream 之 single-check 介面；vendor 與 upstream stdout JSON byte-identical，path 欄位除外）。
+- 開 throwaway PR 至 `staging`，故意把 `README.md` 加一句「視頻」（中國大陸用語）+ push，PR 上 `Quality Gates / prose-audit` 紅燈（`mainland_vocab` 是 blocking rule）、`test` / `build` 綠燈；改回「影片」後三 check 重回 green。
+- `citation_format` 在無 references 設定之純文件（README / CONTRIBUTE）上不產 finding、不誤擋（apply 期驗證；若噪音過多則降為 advisory）。
 - `spectra validate prose-audit-phase-1-deterministic --strict` 在 archive 前 PASS。
 
 **Scope 邊界：**
 
-- **In scope**：vendor checker / orchestrator / `run.py` wrapper 至 `scripts/prose-audit/`、新增 `.github/workflows/quality-gates.yml` 之 `prose-audit` job、擴充 `ci-quality-gates/spec.md` 第 13 條 Requirement + Branch protection 表延伸、`.gitignore` 更新、`CONTRIBUTE.md` 與 `README.md` 文件補充。
-- **Out of scope**：`release.yml` 任何修改、`prose-audit-outward-docs` spec 任何條款修改、LLM secret 設定、Option B / Option C 之實作、upstream sync 自動化、pre-commit hook、PR comment 自動回報。
+- **In scope**：vendor 14 checker + `config.yaml` + 最小 `_common` + schema + `run.py` wrapper 至 `scripts/prose-audit/`、新增 `.github/workflows/quality-gates.yml` 之 `prose-audit` job、擴充 `ci-quality-gates/spec.md` 第 13 條 Requirement + Branch protection 表延伸、`CONTRIBUTE.md` 與 `README.md` 文件補充。
+- **Out of scope**：vendor / 呼叫 `audit_orchestrator.py`、`release.yml` 任何修改、`prose-audit-outward-docs` spec 任何條款修改、LLM secret 設定、Option B / Option C 之實作、upstream sync 自動化、pre-commit hook、PR comment 自動回報。（`.gitignore` 既有條款已涵蓋，無需改動。）
 
 ## Risks / Trade-offs
 
 - **[Risk] Vendor 後與 upstream `~/.claude/skills/humane-prose-audit/` drift**——upstream 修 bug 不會自動進 repo；反向亦然。**Mitigation**：每個 vendor 檔頂行加 `# Vendored from ... @ <date>` provenance 註解；Open Questions 段紀錄 vendor refresh 議題；後續 change 評估 pip-installable package 路徑（Option C of vendor strategy）。
-- **[Risk] Phase 1 deterministic-only 之 false-negative**——stylistic AI tells / sub-agent 才能抓的問題會漏。**Mitigation**：`prose-audit-outward-docs` 之 release-time 完整 audit 仍由維護者守住（雙層防線）；Open Questions 段紀錄 Option B / Option C 作為 second-line-of-defense follow-up。
+- **[Risk] deterministic-only 之 false-negative**——stylistic AI tells / sub-agent 才能抓的問題會漏。**Mitigation**：`prose-audit-outward-docs` 之 release-time 完整 audit 仍由維護者守住（雙層防線）；Open Questions 段紀錄 Option B / Option C 作為 second-line-of-defense follow-up。
 - **[Risk] `git diff` rename detection 不完美**——rename + 改內容可能 split 為 delete + add，但 `-M` flag 降低此風險。**Mitigation**：CI 之 diff 步驟加 `-M`；若仍漏，貢獻者可在 PR description 手動 trigger re-run 加上明示 `--surface` flag 之 step。
-- **[Risk] Python 3.12 + 5 個 PyPI 套件之 cold-cache 安裝時間**——估 30–60s，可能拖長 PR 反饋。**Mitigation**：`actions/setup-python@v6` 之 `cache: pip` 命中後降至 ~5s；vendor 不加更多依賴。
-- **[Risk] `tiktoken` 或 `py-readability-metrics` 對 binary wheel 之 platform 依賴**——若 PyPI 上某版只有 macOS wheel 沒 Linux wheel，CI runner 會 fallback 到 source build 拖慢。**Mitigation**：requirements.txt pin 至已知有 Linux wheel 之版本；CI install step timing 監控，若 > 60s 升一個 follow-up。
-- **[Trade-off] Vendor 增加 ≈ 5450–5630 LOC 之 Python 程式碼進 repo**——repo size 增加；後續 review / refactor 範圍變大。可接受，因為 vendor 是 deterministic CI 行為之代價。
-- **[Trade-off] Wrapper CLI `run.py` 是新增介面，不從 upstream skill 取**——後續 upstream `audit_orchestrator.py` CLI 變更時，`run.py` 仍可保留對外 stable shape。維運上需要 `run.py` 與 orchestrator 兩層各自維護；可接受。
-- **[Trade-off] PR-time `--fail-on critical` 而非 high**——Phase 1 之 High 偏 stylistic，擋下會誤殺；用 critical 換低誤殺率。若日後統計顯示 High 也鮮少誤殺，再升 threshold。
+- **[Risk] cold-cache pip 安裝時間**——3 個套件（`pyyaml` / `textstat` / `jsonschema`，皆有 Linux wheel、無 `tiktoken` 之笨重 binary wheel）估 15–25s。**Mitigation**：`actions/setup-python@v6` 之 `cache: pip` 命中後降至 ~5s；vendor 不加更多依賴。
+- **[Risk] `citation_format` 在 blocking set 但對無 references 設定之文件誤報**——它的 finding 只在有引用時才有意義。**Mitigation**：apply 期以 README / CONTRIBUTE 驗證它不產 finding；若噪音過多則把它從 `--block-rules` 預設移出、降為 advisory（改 `run.py` default 一行）。
+- **[Risk] vendor 後與 upstream drift（含 upstream 正在 refactor 那 6 個 Title-case checker）**——upstream 修 severity 大小寫或 bug 不會自動進 repo。**Mitigation**：provenance 註解 + Open Questions 之 vendor-refresh 議題；本 change 因 gate 為 severity-agnostic，不受上游大小寫修正影響。
+- **[Trade-off] Vendor 增加 ≈ 2900–3100 LOC 之 Python 程式碼進 repo**——比原 propose 之 ~5450 LOC 少（不含 orchestrator / aggregator / journal / token_estimator）。repo size 增加但較可控；vendor 是 deterministic CI 行為之代價。
+- **[Trade-off] `run.py` wrapper 自行重做 per-check 派發 / 聚合**——原本是 orchestrator 的職責；換來繞開 orchestrator 隔離 bug + 砍 ~1800 LOC。維運上 `run.py`（~150–200 LOC）與 14 個 vendored checker 各自維護；可接受。
+- **[Trade-off] rule-allowlist 而非 severity threshold**——好處是 severity-agnostic（vendored checker 維持 byte-identical、不必改大小寫）、誤殺低；代價是 blocking set 為人工策展，新增「客觀錯誤」類 checker 時要記得加進 `--block-rules` 預設。
 
 ## Open Questions
 
