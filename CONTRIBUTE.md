@@ -13,14 +13,13 @@ Thanks for your interest in this project! Please read this guide before submitti
 
 ## Branch model
 
-This project follows the **Git Flow** branching strategy:
+This project uses a simple **`main`-based** branching strategy — there is no long-lived integration branch:
 
 | Branch | Purpose | Stability | Based on |
 |------|------|--------|------|
 | `main` | Production release; always deployable | Highest | — |
-| `staging` | Integration branch; merge target for every PR | Medium | `main` |
-| `feature/*` | New feature development | Low | `staging` |
-| `bugfix/*` | Non-urgent bug fixes | Low | `staging` |
+| `feature/*` | New feature development | Low | `main` |
+| `bugfix/*` | Non-urgent bug fixes | Low | `main` |
 | `hotfix/*` | Urgent production fixes | Medium | `main` |
 
 ### Branch naming convention
@@ -33,14 +32,12 @@ hotfix/<short-description>    # e.g. hotfix/patch-wasm-memory-leak
 
 ### Hotfix rules
 
-A `hotfix/*` branch is cut from `main` and, once complete, must merge back into **both** `main` and `staging` so the fix is not lost in the next release:
+A `hotfix/*` branch is cut from `main` and, once complete, merges back into `main` via a pull request:
 
 ```
 main ──────────●──────────────────●── (merge hotfix)
                │                  ↑
-               └─── hotfix/* ─────┤
-                                  ↓
-staging ──────────────────────────●── (merge hotfix)
+               └─── hotfix/* ─────┘
 ```
 
 ## Development workflow
@@ -59,11 +56,11 @@ staging ────────────────────────
    git remote add upstream https://github.com/CXPhoenix/wxl.git
    ```
 
-3. Cut your working branch from `staging`:
+3. Cut your working branch from `main`:
 
    ```bash
-   git checkout staging
-   git pull upstream staging
+   git checkout main
+   git pull upstream main
    git checkout -b feature/<your-feature>
    ```
 
@@ -90,12 +87,7 @@ staging ────────────────────────
 
 ### Target branch
 
-| Scenario | PR target branch |
-|------|------------|
-| New feature, general bugfix | `staging` |
-| Urgent production fix | `main` (open a second PR against `staging` at the same time) |
-
-> **Do not open feature-style PRs directly against `main`.**
+All pull requests — new features, bugfixes, and hotfixes — target `main`. There is no long-lived integration branch.
 
 ### Required PR description sections
 
@@ -121,7 +113,7 @@ Before submitting, confirm:
 
 - [ ] Local tests pass (`pnpm test` & `pnpm wasm:test`).
 - [ ] Commit messages follow the conventions below.
-- [ ] PR target branch is correct (`staging`; for a hotfix, both `main` and `staging`).
+- [ ] PR target branch is `main`.
 - [ ] PR description contains Summary / Motivation / Test Plan.
 
 ## Adding a new challenge
@@ -370,7 +362,7 @@ JSON
 Notes:
 
 - `name=Protect main` / `target=branch` / `enforcement=active` keep the ruleset active immediately.
-- `conditions.ref_name.include=["~DEFAULT_BRANCH"]` scopes the ruleset to the repository's *default* branch, following GitHub's built-in `~DEFAULT_BRANCH` selector. This keeps the ruleset working when the default branch is renamed (e.g., `main` → `trunk`) and lets derived repositories whose default branch is not `main` (`master`, `develop`, etc.) reuse the same payload unchanged. `staging` and other non-default branches are *not* covered by this ruleset (tracked as a separate change).
+- `conditions.ref_name.include=["~DEFAULT_BRANCH"]` scopes the ruleset to the repository's *default* branch, following GitHub's built-in `~DEFAULT_BRANCH` selector. This keeps the ruleset working when the default branch is renamed (e.g., `main` → `trunk`) and lets derived repositories whose default branch is not `main` (`master`, `develop`, etc.) reuse the same payload unchanged. Branches other than the default are not covered by this ruleset.
 - The `deletion` rule prevents the default branch from being deleted at all (`git push --delete origin <default>` is rejected). The `non_fast_forward` rule prevents any history-rewriting push (`git push --force`, `git push --force-with-lease`, force-push from `gh`/IDE, etc.). Both rules apply even to repository administrators, so destructive operations always go through explicit `bypass_actors` invocation and are recorded in the audit log.
 - `bypass_actors` permits the organization admin (`OrganizationAdmin`, `actor_id=1`) and the repository's Admin role (`RepositoryRole`, `actor_id=5`) to bypass via `bypass_mode=pull_request`. This mode allows administrators to self-merge a pull request without waiting for required status checks (an emergency lever), but does **not** permit direct pushes to the default branch — administrators must still open a pull request. The legacy `bypass_mode=always` (which would permit direct push) is intentionally avoided. `RepositoryRole` `actor_id` follows GitHub's built-in role IDs: `1`=Read, `2`=Triage, `3`=Write, `4`=Maintain, `5`=Admin. Every bypass invocation appears in the GitHub audit log.
 - The `pull_request` rule sets `dismiss_stale_reviews_on_push=true` (a new commit invalidates earlier approving reviews — defends against the "approve-then-add-malicious-commit" pattern) and `required_review_thread_resolution=true` (every review-conversation thread must be resolved before merge, even on otherwise-passing PRs). The other three flags — `required_approving_review_count: 0`, `require_code_owner_review: false`, `require_last_push_approval: false` — are written explicitly with their defaults because GitHub's API requires the `pull_request.parameters` block to be all-or-nothing: omitting any of the five flags yields `HTTP 422 — Invalid property /rules/<N>: data matches no possible input`. Both hardening flags are no-ops for solo maintainers and net positive for multi-reviewer teams; they ship in the default payload so use-template forks inherit them automatically.
