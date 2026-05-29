@@ -8,26 +8,25 @@ Defines the content and structure of `CONTRIBUTE.md`, documenting the git flow b
 
 ### Requirement: CONTRIBUTE describes git flow branch model
 
-The `CONTRIBUTE.md` file SHALL describe the git flow branching strategy used in this project, including the purpose and lifetime of `main`, `staging`, `feature/*`, `bugfix/*`, and `hotfix/*` branches.
+The `CONTRIBUTE.md` file SHALL describe the branch model used in this project, including the purpose and lifetime of `main`, `feature/*`, `bugfix/*`, and `hotfix/*` branches. `main` SHALL be the single long-lived branch and the base for every working branch; `feature/*`, `bugfix/*`, and `hotfix/*` SHALL each branch from `main` and target `main` in their pull requests. The branch model SHALL NOT reference a `staging` (or any other long-lived integration) branch.
 
 #### Scenario: Contributor knows which branch to branch from
 
 - **WHEN** a contributor reads the branch model section
-- **THEN** it SHALL be unambiguous which branch to base a feature branch on and which branch to target for a PR
+- **THEN** it SHALL be unambiguous that a working branch is based on `main` and that its pull request targets `main`
 
 #### Scenario: Hotfix branch rules are documented
 
 - **WHEN** a contributor needs to patch a production bug
-- **THEN** the guide SHALL specify that `hotfix/*` branches from `main` and merges into both `main` and `staging`
+- **THEN** the guide SHALL specify that `hotfix/*` branches from `main` and merges back into `main` via a pull request
 
 
 <!-- @trace
-source: write-oss-readme-and-contribute
-updated: 2026-03-15
+source: main-only-branch-flow
+updated: 2026-05-29
 code:
-  - package.json
-  - README.md
   - CONTRIBUTE.md
+  - .github/workflows/quality-gates.yml
 -->
 
 ---
@@ -37,8 +36,8 @@ The `CONTRIBUTE.md` SHALL describe the end-to-end process for submitting a pull 
 
 #### Scenario: PR targets the correct base branch
 
-- **WHEN** a contributor submits a feature PR
-- **THEN** the guide SHALL require that the PR targets `staging`, not `main`
+- **WHEN** a contributor submits a pull request
+- **THEN** the guide SHALL require that the PR targets `main`
 
 #### Scenario: PR description requirements are stated
 
@@ -47,12 +46,11 @@ The `CONTRIBUTE.md` SHALL describe the end-to-end process for submitting a pull 
 
 
 <!-- @trace
-source: write-oss-readme-and-contribute
-updated: 2026-03-15
+source: main-only-branch-flow
+updated: 2026-05-29
 code:
-  - package.json
-  - README.md
   - CONTRIBUTE.md
+  - .github/workflows/quality-gates.yml
 -->
 
 ---

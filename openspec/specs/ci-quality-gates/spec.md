@@ -2,22 +2,22 @@
 
 ## Purpose
 
-Defines the GitHub Actions workflow at `.github/workflows/quality-gates.yml` that enforces repository-wide quality gates—Vitest, Rust/WASM tests, VitePress build, and challenge frontmatter validation—on every pull request targeting `main`/`staging` and on every push to `main`. This makes spec-defined local-PASS requirements (from `code-editor-panel`, `oss-readme`, etc.) CI-enforced rather than purely conventional, and complements the existing release-time pipeline in `release.yml` by adding a PR-time first line of defense.
+Defines the GitHub Actions workflow at `.github/workflows/quality-gates.yml` that enforces repository-wide quality gates—Vitest, Rust/WASM tests, VitePress build, and challenge frontmatter validation—on every pull request targeting `main` and on every push to `main`. This makes spec-defined local-PASS requirements (from `code-editor-panel`, `oss-readme`, etc.) CI-enforced rather than purely conventional, and complements the existing release-time pipeline in `release.yml` by adding a PR-time first line of defense.
 
 ## Requirements
 
-### Requirement: PR-time quality gates SHALL trigger on PRs to `main`/`staging` and pushes to `main`
+### Requirement: PR-time quality gates SHALL trigger on PRs to `main` and pushes to `main`
 
 The repository SHALL define a GitHub Actions workflow at `.github/workflows/quality-gates.yml` that triggers on:
 
-- `pull_request` events whose base branch is `main` or `staging` (event types `opened`, `synchronize`, `reopened` — the default `pull_request` set)
+- `pull_request` events whose base branch is `main` (event types `opened`, `synchronize`, `reopened` — the default `pull_request` set)
 - `push` events to the `main` branch
 
-The workflow SHALL NOT trigger on tag pushes (those belong to `release.yml`). The workflow SHALL NOT trigger on PRs whose base branch is neither `main` nor `staging` (e.g., PRs into feature branches MUST NOT consume PR-time CI budget).
+The workflow SHALL NOT trigger on tag pushes (those belong to `release.yml`). The workflow SHALL NOT trigger on PRs whose base branch is not `main` (e.g., PRs into feature branches MUST NOT consume PR-time CI budget).
 
-#### Scenario: PR opened against `staging` triggers the workflow
+#### Scenario: PR opened against `main` triggers the workflow
 
-- **WHEN** a contributor opens a pull request whose base branch is `staging`
+- **WHEN** a contributor opens a pull request whose base branch is `main`
 - **THEN** GitHub Actions SHALL queue the `Quality Gates` workflow within 60 seconds
 - **AND** both the `test` and `build` jobs SHALL appear as in-progress checks on the PR
 
@@ -33,10 +33,18 @@ The workflow SHALL NOT trigger on tag pushes (those belong to `release.yml`). Th
 - **THEN** the `Quality Gates` workflow SHALL NOT be queued
 - **AND** the existing `release.yml` workflow SHALL handle the tag-triggered flow independently
 
-#### Scenario: PR against a feature branch does not trigger the workflow
+#### Scenario: PR against a non-main branch does not trigger the workflow
 
-- **WHEN** a contributor opens a PR whose base branch is neither `main` nor `staging` (e.g., a stacked PR onto another feature branch)
+- **WHEN** a contributor opens a PR whose base branch is not `main` (e.g., a stacked PR onto another feature branch)
 - **THEN** the `Quality Gates` workflow SHALL NOT be queued for that PR
+
+<!-- @trace
+source: main-only-branch-flow
+updated: 2026-05-29
+code:
+  - CONTRIBUTE.md
+  - .github/workflows/quality-gates.yml
+-->
 
 ---
 ### Requirement: The workflow SHALL define two parallel jobs named `test` and `build`
@@ -373,7 +381,7 @@ The `prose-audit` job SHALL declare permissions equivalent to or narrower than `
 
 #### Scenario: PR-time deterministic audit is triggered on changed outward markdown
 
-- **WHEN** a contributor opens a pull request whose base branch is `main` or `staging` and the diff modifies at least one `*.md` file inside the outward-facing surface
+- **WHEN** a contributor opens a pull request whose base branch is `main` and the diff modifies at least one `*.md` file inside the outward-facing surface
 - **THEN** the `Quality Gates` workflow SHALL queue a `prose-audit` job alongside the existing `test` and `build` jobs within 60 seconds
 - **AND** the job SHALL execute the Phase-1 deterministic checker pipeline against exactly the intersection of the PR diff and the outward-facing surface (no other files SHALL be scanned)
 - **AND** the job's conclusion SHALL appear as a third check on the pull request named `Quality Gates / prose-audit`
@@ -442,7 +450,7 @@ This requirement SHALL NOT add `site-smoke` to the branch-protection ruleset's r
 
 #### Scenario: site-smoke runs as a parallel advisory job
 
-- **WHEN** the workflow is triggered by a pull request to `main`/`staging` or a push to `main`
+- **WHEN** the workflow is triggered by a pull request to `main` or a push to `main`
 - **THEN** GitHub Actions SHALL queue a `site-smoke` job alongside the `test`, `build`, and `prose-audit` jobs without a `needs:` dependency
 - **AND** the job's conclusion SHALL appear as a check named `Quality Gates / site-smoke`
 
