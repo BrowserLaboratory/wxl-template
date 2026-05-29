@@ -1,0 +1,4 @@
+## 1. 對齊 wxl-creator-skill 設定路徑（Requirement: Fix loop has a configurable maximum iteration limit）
+
+- [x] 1.1 確認實作端設定來源已與修正後 spec 一致：`.wxl-creator/config.yaml` 既存且內容為 `max_fix_attempts: 10`，且 wxl-creator skill 與 workflow 文件皆讀此檔而非舊路徑，使「Fix loop has a configurable maximum iteration limit」這條 Requirement 的本文與預設值與實作相符。驗證：`cat .wxl-creator/config.yaml` 顯示 `max_fix_attempts: 10`，且 `rg -n "config\.local\.md" .agent/skills/wxl-creator .agent/workflows/wxl-creator.md` 回傳 0 筆。
+- [x] 1.2 [P] 確認本 change 的 spec delta 已把「Fix loop has a configurable maximum iteration limit」的本文、範例 code block 與兩個 Scenario 一致改為引用 `.wxl-creator/config.yaml`，spec delta 內不再出現 `config.local.md`（proposal.md／tasks.md 為描述此 drift 而提及舊路徑屬正常）。驗證：`rg -n "config\.local\.md" openspec/changes/wxl-creator-config-path-spec-fix/specs/` 回傳 0 筆，且 `spectra validate wxl-creator-config-path-spec-fix` 通過。
