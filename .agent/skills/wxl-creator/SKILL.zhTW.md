@@ -129,6 +129,14 @@ digraph flow {
 
    這是核心步驟。你必須讀 scaffold skeleton 後改寫成真正可 exploit 的漏洞程式碼。
 
+   **3.0. 諮詢 capability-specific reference（如適用）。** 讀 skeleton 前，先把蒐集到的 `vuln` 比對下面的 capability registry table。若命中某個 trigger regex，先讀對應的 `reference/<capability>.md`，讓它的 recognition heuristics 與 per-primitive fix hints 引導你產生的漏洞。
+
+   | Trigger regex | Reference file |
+   |---------------|----------------|
+   | `idor\|jwt\|path.?traversal\|access.?control\|broken.?access`（不分大小寫） | `reference/a01-access-control.md` |
+
+   之後新增的 capability pack 只要在這張表 append 一 row 即可延伸此行為 —— 不需要改動本 workflow 的其他部分。
+
    a. 用 Read tool **讀 skeleton**：
       - Flask/FastAPI：`docs/challenge/<slug>/src/app.py`
       - PHP：`docs/challenge/<slug>/src/index.php`
@@ -235,6 +243,7 @@ digraph flow {
       - flag 不符合 `FLAG{...}` 或 `CTF{...}` → 重寫 flag.txt
       - app 程式碼裡 hardcode `localhost`/`127.0.0.1`/`0.0.0.0` → 移除或替換
       - 缺檔 → 用 Write tool 建檔
+      - 若失敗 challenge 的 `tags` 與某個已註冊 capability 的 taxonomy 相交（見 step 3.0 registry table），提修補前先諮詢該 capability 的 `reference/<capability>.md` 「Per-primitive fix hints」節。A01 —— tags 與 `idor`、`access-control`、`jwt`、`path-traversal`、`broken-access` 相交 —— 讀 `reference/a01-access-control.md`。
 
    d. **套用前**，對使用者描述所有將要改動的內容、解釋原因。
 
