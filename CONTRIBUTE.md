@@ -179,7 +179,24 @@ pnpm challenge:verify <slug> --blind
 pnpm challenge:verify <slug> --layers L1,L3
 ```
 
-L4 picks the host agent CLI via the `WXL_VERIFY_RUNTIME` environment variable (`claude` / `codex` / `gemini`; defaults to `claude`). All ephemeral artefacts live under `tmp/wxl-verify/<slug>/` and are deleted when verify exits — they are never committed.
+L4 picks the host agent CLI via the `WXL_VERIFY_RUNTIME` environment variable (`claude` / `codex` / `gemini`; defaults to `claude`). The variable also accepts a comma-separated list (`claude,codex,gemini`) which triggers multi-agent cross-check — see below. All ephemeral artefacts live under `tmp/wxl-verify/<slug>/` and are deleted when verify exits — they are never committed.
+
+#### L4 multi-agent cross-check (maintainer-only)
+
+Maintainers preparing a release can run the same challenge against multiple runtimes in one invocation to surface cross-agent divergence:
+
+```bash
+# Explicit list (requires --blind)
+pnpm challenge:verify <slug> --blind --agents claude,codex,gemini
+
+# Shortcut bundling the three-runtime sweep
+pnpm challenge:verify:cross <slug>
+
+# Or via list-form env (no flag)
+WXL_VERIFY_RUNTIME=claude,codex pnpm challenge:verify <slug> --blind
+```
+
+Precedence is `--agents` > list-form `WXL_VERIFY_RUNTIME` > default `[claude]`. The aggregate verdict follows fail > pass > inconclusive (exit 1 / 0 / 2). Each runtime gets its own ephemeral workdir at `tmp/wxl-verify/<slug>/<runtime>/`; a single-runtime list keeps the legacy `tmp/wxl-verify/<slug>/` layout byte-for-byte. The cross-agent divergence report is always emitted; add `--json` to get `perAgent[]` and an `aggregate { verdict, divergent }` object. Multi-agent L4 is not run in CI — it requires all three CLIs installed locally.
 
 Run `pnpm challenge:verify <slug>` before opening any PR that touches a challenge. Treat a non-zero exit code as a blocker; do not merge until every gate reports green.
 

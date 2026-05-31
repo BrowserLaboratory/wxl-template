@@ -102,12 +102,48 @@ export function buildRuntimeCommand(opts: SpawnRuntimeOptions): SpawnRuntimeComm
   }
 }
 
-export function resolveRuntime(envValue: string | undefined): RuntimeName {
-  const raw = (envValue ?? 'claude').toLowerCase()
-  if (!(KNOWN_RUNTIMES as readonly string[]).includes(raw)) {
-    throw new UnknownRuntimeError(raw)
+function isKnownRuntime(tok: string): tok is RuntimeName {
+  return (KNOWN_RUNTIMES as readonly string[]).includes(tok)
+}
+
+/**
+ * Parse `WXL_VERIFY_RUNTIME` into an ordered list of runtimes.
+ *
+ * Per the `wxl-blind-solve-verification` MODIFIED spec: split on commas,
+ * trim per-element whitespace, lowercase, drop empties, and remove duplicates
+ * while preserving first-occurrence order. Empty / unset / whitespace-only
+ * resolves to `['claude']` (the documented default). Any token outside
+ * `KNOWN_RUNTIMES` triggers `UnknownRuntimeError`.
+ */
+export function resolveRuntimes(envValue: string | undefined): RuntimeName[] {
+  const tokens = (envValue ?? '')
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length > 0)
+  if (tokens.length === 0) {
+    return ['claude']
   }
-  return raw as RuntimeName
+  const seen = new Set<RuntimeName>()
+  const out: RuntimeName[] = []
+  for (const tok of tokens) {
+    if (!isKnownRuntime(tok)) {
+      throw new UnknownRuntimeError(tok)
+    }
+    if (!seen.has(tok)) {
+      seen.add(tok)
+      out.push(tok)
+    }
+  }
+  return out
+}
+
+/**
+ * Single-runtime resolver kept for back-compat with callers that only need one
+ * runtime. Delegates to `resolveRuntimes` and returns its first element, so a
+ * list-form env var like `claude,codex` resolves to `'claude'` here.
+ */
+export function resolveRuntime(envValue: string | undefined): RuntimeName {
+  return resolveRuntimes(envValue)[0]
 }
 
 export interface SpawnDeps {

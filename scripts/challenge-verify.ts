@@ -10,7 +10,7 @@
  *   L4  blind solve via scripts/challenge-verify-blind.ts (opt-in, --blind)
  *
  * Usage:
- *   pnpm challenge:verify <slug> [--blind] [--layers L1,L2,L3,L4] [--json]
+ *   pnpm challenge:verify <slug> [--blind] [--agents <list>] [--layers L1,L2,L3,L4] [--json]
  *
  * Exit codes:
  *   0  every requested layer passed
@@ -29,6 +29,14 @@ import {
   validateChallenge as analyzeValidate,
   discoverChallenges as discoverForAnalyze,
 } from './challenge-analyze.ts'
+import {
+  KNOWN_RUNTIMES,
+  resolveRuntimes,
+  UnknownRuntimeError,
+  type RuntimeName,
+} from './wxl-solver/spawn-runtime.ts'
+import type { PerAgentOutcome } from './wxl-solver/aggregate-cross-agent.ts'
+import type { Verdict } from './wxl-solver/extract-flag.ts'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -39,16 +47,26 @@ export const ALL_LAYERS: readonly LayerName[] = ['L1', 'L2', 'L3', 'L4']
 
 export type LayerStatus = 'pass' | 'fail' | 'inconclusive' | 'skip'
 
+export interface L4Aggregate {
+  verdict: Verdict
+  divergent: boolean
+  exitCode: number
+}
+
 export interface LayerOutcome {
   layer: LayerName
   status: LayerStatus
   reason: string | null
+  /** Populated only on multi-runtime L4 outcomes. */
+  perAgent?: PerAgentOutcome[]
+  aggregate?: L4Aggregate
 }
 
 export interface VerifyArgs {
   slug: string
   blind: boolean
   layers?: LayerName[]
+  agents?: RuntimeName[]
   json: boolean
 }
 
@@ -61,10 +79,18 @@ export interface VerifyResult {
   exitCode: number
 }
 
+export interface VerifyJsonResultEntry {
+  layer: LayerName
+  status: LayerStatus
+  reason: string | null
+  perAgent?: PerAgentOutcome[]
+  aggregate?: L4Aggregate
+}
+
 export interface VerifyJsonOutput {
   slug: string
   layers_run: LayerName[]
-  results: { layer: LayerName; status: LayerStatus; reason: string | null }[]
+  results: VerifyJsonResultEntry[]
   summary: 'verified' | 'failed' | 'inconclusive'
   failed_at: LayerName | null
 }
@@ -78,6 +104,28 @@ export class VerifyArgError extends Error {
 
 // ─── CLI parsing ────────────────────────────────────────────────────────────
 
+function parseAgentsList(raw: string): RuntimeName[] {
+  const tokens = raw
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => t.length > 0)
+  const seen = new Set<RuntimeName>()
+  const out: RuntimeName[] = []
+  for (const tok of tokens) {
+    if (!(KNOWN_RUNTIMES as readonly string[]).includes(tok)) {
+      throw new VerifyArgError(
+        `Invalid --agents entry "${tok}". Accepted: ${KNOWN_RUNTIMES.join(', ')}.`,
+        1,
+      )
+    }
+    if (!seen.has(tok as RuntimeName)) {
+      seen.add(tok as RuntimeName)
+      out.push(tok as RuntimeName)
+    }
+  }
+  return out
+}
+
 export function parseVerifyArgs(argv: string[]): VerifyArgs {
   const { values, positionals } = parseArgs({
     args: argv,
@@ -85,6 +133,7 @@ export function parseVerifyArgs(argv: string[]): VerifyArgs {
     options: {
       blind: { type: 'boolean', default: false },
       layers: { type: 'string' },
+      agents: { type: 'string' },
       json: { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h' },
     },
@@ -115,10 +164,22 @@ export function parseVerifyArgs(argv: string[]): VerifyArgs {
     }
   }
 
+  let agents: RuntimeName[] | undefined
+  if (values.agents !== undefined) {
+    agents = parseAgentsList(values.agents)
+    if (values.blind !== true) {
+      throw new VerifyArgError(
+        '`--agents` requires `--blind`. Multi-runtime cross-check only applies to L4.',
+        1,
+      )
+    }
+  }
+
   return {
     slug,
     blind: values.blind === true,
     layers,
+    agents,
     json: values.json === true,
   }
 }
@@ -129,6 +190,8 @@ function formatHelp(): string {
     '',
     'Flags:',
     '  --blind                            Include the L4 blind-solve gate',
+    '  --agents <list>                    Comma-separated runtimes for L4 cross-check',
+    '                                     (requires --blind). Accepted: claude, codex, gemini.',
     '  --layers L1,L2,L3,L4               Run only the listed subset (debug)',
     '  --json                             Emit a single JSON object instead of human stdout',
     '  -h, --help                         Show this help',
@@ -147,13 +210,42 @@ export function selectLayers(args: VerifyArgs): LayerName[] {
   return args.blind ? ['L1', 'L2', 'L3', 'L4'] : ['L1', 'L2', 'L3']
 }
 
+// ─── Agent resolution ───────────────────────────────────────────────────────
+
+/**
+ * Resolve the runtime list for L4 using the precedence:
+ *   1. `--agents` (highest)
+ *   2. list-form `WXL_VERIFY_RUNTIME`
+ *   3. default `['claude']`
+ *
+ * Throws `VerifyArgError` on an unknown runtime supplied via env.
+ */
+export function resolveAgentsForL4(
+  fromFlag: RuntimeName[] | undefined,
+  fromEnv: string | undefined,
+): RuntimeName[] {
+  if (fromFlag && fromFlag.length > 0) return fromFlag
+  try {
+    return resolveRuntimes(fromEnv)
+  } catch (err) {
+    if (err instanceof UnknownRuntimeError) {
+      throw new VerifyArgError(err.message, 1)
+    }
+    throw err
+  }
+}
+
 // ─── Default layer runners ──────────────────────────────────────────────────
+
+export interface L4RunnerOpts {
+  agents?: RuntimeName[]
+}
 
 export interface LayerRunners {
   L1: (slug: string) => Promise<LayerOutcome>
   L2: (slug: string) => Promise<LayerOutcome>
   L3: (slug: string) => Promise<LayerOutcome>
-  L4: (slug: string) => Promise<LayerOutcome>
+  L4: (slug: string, opts?: L4RunnerOpts) => Promise<LayerOutcome>
 }
 
 interface DefaultRunnerDeps {
@@ -164,6 +256,12 @@ interface DefaultRunnerDeps {
     stderr: string | Buffer
     error?: Error
   }
+}
+
+function l4StatusFromExit(code: number): LayerStatus {
+  if (code === 0) return 'pass'
+  if (code === 2) return 'inconclusive'
+  return 'fail'
 }
 
 export function makeDefaultRunners(deps: Partial<DefaultRunnerDeps> = {}): LayerRunners {
@@ -245,19 +343,99 @@ export function makeDefaultRunners(deps: Partial<DefaultRunnerDeps> = {}): Layer
       return { layer: 'L3', status: 'pass', reason: null }
     },
 
-    L4: async (slug) => {
-      const blindScript = resolve(projectRoot, 'scripts', 'challenge-verify-blind.ts')
+    L4: async (slug, opts) => {
+      // Resolve runtime list (precedence: --agents > list-form env > [claude]).
+      let agents: RuntimeName[]
+      try {
+        agents = resolveAgentsForL4(opts?.agents, process.env.WXL_VERIFY_RUNTIME)
+      } catch (err) {
+        if (err instanceof VerifyArgError) {
+          return { layer: 'L4', status: 'fail', reason: err.message }
+        }
+        throw err
+      }
+      const isMulti = agents.length > 1
+
+      // Spawn env: when --agents was supplied (or precedence picked it up),
+      // pin WXL_VERIFY_RUNTIME for the child so it sees the same list. Pass
+      // WXL_VERIFY_BLIND_JSON=1 for multi-runtime so blind emits structured
+      // output we can re-export through --json. Single-runtime path leaves env
+      // untouched to preserve byte-for-byte back-compat.
+      const spawnEnv: NodeJS.ProcessEnv | undefined = isMulti
+        ? {
+            ...process.env,
+            WXL_VERIFY_RUNTIME: agents.join(','),
+            WXL_VERIFY_BLIND_JSON: '1',
+          }
+        : opts?.agents
+          ? { ...process.env, WXL_VERIFY_RUNTIME: agents.join(',') }
+          : undefined
+
       const child = spawn('pnpm', ['challenge:verify:blind', slug], {
         cwd: projectRoot,
         encoding: 'utf8',
+        ...(spawnEnv ? { env: spawnEnv } : {}),
       })
+
       if (child.error) {
-        return { layer: 'L4', status: 'inconclusive', reason: `blind spawn error: ${child.error.message}` }
+        return {
+          layer: 'L4',
+          status: 'inconclusive',
+          reason: `blind spawn error: ${child.error.message}`,
+        }
+      }
+
+      if (!isMulti) {
+        // Single-runtime — legacy behavior, byte-identical with pre-change.
+        const code = child.status ?? 2
+        if (code === 0) return { layer: 'L4', status: 'pass', reason: null }
+        if (code === 2)
+          return {
+            layer: 'L4',
+            status: 'inconclusive',
+            reason: String(child.stderr).trim() || 'see run.log',
+          }
+        return {
+          layer: 'L4',
+          status: 'fail',
+          reason: String(child.stderr).trim() || `blind exit ${code}`,
+        }
+      }
+
+      // Multi-runtime: parse the JSON line blind emitted on stdout.
+      const stdout = String(child.stdout).trim()
+      const lastLine = stdout.split('\n').filter((l) => l.trim().length > 0).pop() ?? ''
+      let parsed: { perAgent?: PerAgentOutcome[]; aggregate?: L4Aggregate } | null = null
+      try {
+        const obj = JSON.parse(lastLine)
+        if (obj && Array.isArray(obj.perAgent) && obj.aggregate) {
+          parsed = obj
+        }
+      } catch {
+        parsed = null
+      }
+      if (!parsed) {
+        return {
+          layer: 'L4',
+          status: 'inconclusive',
+          reason: 'blind did not emit a parseable cross-agent JSON line',
+        }
       }
       const code = child.status ?? 2
-      if (code === 0) return { layer: 'L4', status: 'pass', reason: null }
-      if (code === 2) return { layer: 'L4', status: 'inconclusive', reason: String(child.stderr).trim() || 'see run.log' }
-      return { layer: 'L4', status: 'fail', reason: String(child.stderr).trim() || `blind exit ${code}` }
+      const status = l4StatusFromExit(code)
+      const reason =
+        status === 'pass'
+          ? null
+          : parsed.aggregate!.divergent
+            ? 'divergent: see cross-agent report'
+            : `blind aggregate ${parsed.aggregate!.verdict}`
+      return {
+        layer: 'L4',
+        status,
+        reason,
+        perAgent: parsed.perAgent,
+        aggregate: parsed.aggregate,
+      }
     },
   }
 }
@@ -272,7 +450,10 @@ export async function runVerify(args: VerifyArgs, runners: LayerRunners): Promis
   let exitCode = 0
 
   for (const layer of layersToRun) {
-    const outcome = await runners[layer](args.slug)
+    const outcome =
+      layer === 'L4'
+        ? await runners.L4(args.slug, { agents: args.agents })
+        : await runners[layer](args.slug)
     results.push(outcome)
     if (outcome.status === 'fail') {
       failedAt = layer
@@ -313,6 +494,16 @@ export function formatHuman(result: VerifyResult): string[] {
     } else {
       lines.push(`✗ ${r.layer} failed: ${r.reason ?? '(no reason)'}`)
     }
+    // Surface per-agent breakdown when L4 ran multi-runtime.
+    if (r.layer === 'L4' && r.perAgent && r.aggregate) {
+      lines.push('  === Cross-Agent Report ===')
+      for (const p of r.perAgent) {
+        const flag = p.flag ?? '(no flag)'
+        const reason = p.reason ? ` — ${p.reason}` : ''
+        lines.push(`    ${p.runtime}: ${p.verdict}  ${flag}${reason}`)
+      }
+      lines.push(`    Aggregate: ${r.aggregate.verdict} (divergent: ${r.aggregate.divergent})`)
+    }
   }
   if (result.summary === 'verified') {
     lines.push(`verified: ${result.slug} (${result.layersRun.join(' ')})`)
@@ -328,7 +519,12 @@ export function formatJson(result: VerifyResult): VerifyJsonOutput {
   return {
     slug: result.slug,
     layers_run: result.layersRun,
-    results: result.results.map((r) => ({ layer: r.layer, status: r.status, reason: r.reason })),
+    results: result.results.map((r) => {
+      const entry: VerifyJsonResultEntry = { layer: r.layer, status: r.status, reason: r.reason }
+      if (r.perAgent) entry.perAgent = r.perAgent
+      if (r.aggregate) entry.aggregate = r.aggregate
+      return entry
+    }),
     summary: result.summary,
     failed_at: result.failedAt,
   }
