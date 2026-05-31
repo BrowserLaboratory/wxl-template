@@ -129,6 +129,14 @@ digraph flow {
 
    This is the core step. You SHALL read the scaffold skeleton and rewrite it with real, exploitable vulnerability code.
 
+   **3.0. Consult capability-specific reference (if applicable).** Before reading the skeleton, match the collected `vuln` against the capability registry table below. If it matches a trigger regex, read the mapped `reference/<capability>.md` first and let its recognition heuristics and per-primitive fix hints shape the vulnerability you generate.
+
+   | Trigger regex | Reference file |
+   |---------------|----------------|
+   | `idor\|jwt\|path.?traversal\|access.?control\|broken.?access` (case-insensitive) | `reference/a01-access-control.md` |
+
+   New capability packs extend this behavior by appending a row to this table — no other change to this workflow is required.
+
    a. **Read the skeleton file** using the Read tool:
       - Flask/FastAPI: `docs/challenge/<slug>/src/app.py`
       - PHP: `docs/challenge/<slug>/src/index.php`
@@ -265,6 +273,7 @@ digraph flow {
       - Hardcoded `localhost`/`127.0.0.1`/`0.0.0.0` in app code → remove or replace
       - Missing files → create them using Write tool
       - Spec assertion failure (L3) → revise `docs/challenge/<slug>/src/<app>` so the exploit returns the flag; do not edit `tests/challenges/<slug>.spec.ts`
+      - If the failing challenge's `tags` intersect a registered capability's taxonomy (see the step 3.0 registry table), consult that capability's `reference/<capability>.md` "Per-primitive fix hints" section before proposing the fix. For A01 — tags intersecting `idor`, `access-control`, `jwt`, `path-traversal`, or `broken-access` — read `reference/a01-access-control.md`.
 
    d. **Before applying**, describe ALL proposed changes to the user. Show what will change and why.
 
