@@ -88,32 +88,49 @@ tests:
 ---
 ### Requirement: Runtime CLI dispatch via environment variable
 
-The L4 subsystem SHALL select the host agent runtime to spawn based on the `WXL_VERIFY_RUNTIME` environment variable. The accepted values SHALL be `claude`, `codex`, and `gemini`. If `WXL_VERIFY_RUNTIME` is unset or empty, the subsystem SHALL default to `claude`. If `WXL_VERIFY_RUNTIME` is set to any value other than the three accepted runtimes, the subsystem SHALL exit with code 1 and emit an error message listing the accepted values.
+The L4 subsystem SHALL select the host agent runtime(s) to spawn based on the `WXL_VERIFY_RUNTIME` environment variable, which SHALL accept either a single runtime name or a comma-separated list of runtime names. The accepted values SHALL be `claude`, `codex`, and `gemini`. If `WXL_VERIFY_RUNTIME` is unset or empty, the subsystem SHALL default to a single-element list containing `claude`.
 
-For each accepted runtime, the subsystem SHALL spawn the corresponding non-interactive CLI session with these contracts:
+The subsystem SHALL resolve the variable into an ordered runtime list by splitting on commas, trimming surrounding whitespace from each element, and removing duplicate runtimes while preserving first-occurrence order. If ANY resolved element is not one of the accepted runtimes, the subsystem SHALL exit with code 1 and emit an error message listing the accepted values. When the resolved list contains exactly one runtime, the subsystem's selection behavior SHALL be identical to the prior single-runtime behavior. When the resolved list contains more than one runtime, the subsystem SHALL run each selected runtime as defined by the `l4-multi-agent-cross-check` capability.
+
+For each selected runtime, the subsystem SHALL spawn the corresponding non-interactive CLI session with these contracts:
 
 - **claude**: `claude --print --output-format json --add-dir <player-package-dir> --max-turns <turn_budget> "<prompt>"`. The `--add-dir` flag restricts file system access to the player package directory.
 - **codex**: `codex exec --output-format json --working-dir <player-package-dir> --max-turns <turn_budget> "<prompt>"`. The `--working-dir` flag confines the session to the player package directory.
 - **gemini**: `gemini -p "<prompt>" --working-dir <player-package-dir> --max-turns <turn_budget> --output-format json`. The `--working-dir` flag confines the session to the player package directory.
 
-The subsystem SHALL stream the spawned process's stdout into `tmp/wxl-verify/<slug>/run.log` for diagnostic purposes (this log file is also ephemeral and is removed when the verify run ends).
+The subsystem SHALL stream each spawned process's stdout into a `run.log` file under that runtime's ephemeral working directory for diagnostic purposes (this log file is ephemeral and is removed when the verify run ends). When exactly one runtime is selected, that working directory SHALL be `tmp/wxl-verify/<slug>/`; the per-runtime working-directory layout for multi-runtime runs is defined by the `l4-multi-agent-cross-check` capability.
 
-If the chosen CLI binary is not found on `PATH`, the subsystem SHALL exit with code 2 and emit `runtime <name> CLI not found on PATH`.
+If a selected runtime's CLI binary is not found on `PATH`, the subsystem SHALL exit with code 2 and emit `runtime <name> CLI not found on PATH`.
 
 #### Scenario: Default runtime is claude
 
 - **WHEN** the subsystem is invoked without `WXL_VERIFY_RUNTIME` set
-- **THEN** the subsystem SHALL spawn the `claude --print ...` command
+- **THEN** the subsystem SHALL resolve the runtime list to `[claude]` and spawn the `claude --print ...` command
 
 #### Scenario: Codex runtime selected
 
 - **WHEN** the subsystem is invoked with `WXL_VERIFY_RUNTIME=codex`
 - **THEN** the subsystem SHALL spawn the `codex exec ...` command
 
+#### Scenario: Comma-separated list resolves to multiple runtimes
+
+- **WHEN** the subsystem is invoked with `WXL_VERIFY_RUNTIME=claude,codex`
+- **THEN** the subsystem SHALL resolve the runtime list to `[claude, codex]` and run both runtimes
+
+#### Scenario: Duplicates are removed while order is preserved
+
+- **WHEN** the subsystem is invoked with `WXL_VERIFY_RUNTIME=gemini, claude , gemini`
+- **THEN** the subsystem SHALL resolve the runtime list to `[gemini, claude]`
+
 #### Scenario: Unknown runtime value
 
 - **WHEN** the subsystem is invoked with `WXL_VERIFY_RUNTIME=copilot`
 - **THEN** the subsystem SHALL exit with code 1 and emit `unknown WXL_VERIFY_RUNTIME: copilot; accepted: claude, codex, gemini`
+
+#### Scenario: Unknown runtime within a list
+
+- **WHEN** the subsystem is invoked with `WXL_VERIFY_RUNTIME=claude,copilot`
+- **THEN** the subsystem SHALL exit with code 1 and emit an error message listing the accepted values `claude, codex, gemini`
 
 #### Scenario: Runtime CLI missing from PATH
 
@@ -122,44 +139,22 @@ If the chosen CLI binary is not found on `PATH`, the subsystem SHALL exit with c
 
 
 <!-- @trace
-source: wxl-creator-v2-cross-agent-pipeline
-updated: 2026-05-21
+source: l4-multi-agent-cross-check
+updated: 2026-06-01
 code:
-  - .vitepress/theme/layouts/ChallengeLayout.vue
-  - scripts/wxl-solver/spawn-runtime.ts
-  - -
-  - .mcp.json
   - CONTRIBUTE.md
-  - package.json
-  - playwright.config.ts
-  - scripts/challenge-verify.ts
-  - scripts/wxl-solver/build-player-package.ts
-  - scripts/wxl-solver/extract-flag.ts
   - README.md
-  - .codex/skills/wxl-creator/SKILL.md
-  - scripts/challenge-retype.ts
+  - scripts/challenge-verify.ts
   - scripts/challenge-verify-blind.ts
+  - scripts/wxl-solver/spawn-runtime.ts
+  - package.json
+  - scripts/wxl-solver/aggregate-cross-agent.ts
 tests:
-  - tests/unit/scripts/challenge-retype-metadata.test.ts
-  - tests/unit/scripts/challenge-verify-blind-prompt.test.ts
-  - tests/unit/scripts/challenge-retype-same-family.test.ts
-  - tests/unit/scripts/challenge-verify-L3.test.ts
-  - tests/unit/scripts/challenge-verify-layers-filter.test.ts
-  - tests/unit/scripts/challenge-retype-errors.test.ts
-  - tests/unit/scripts/challenge-verify-L2.test.ts
-  - tests/unit/scripts/challenge-retype-spec-sync.test.ts
-  - tests/unit/scripts/challenge-verify-blind-orchestration.test.ts
-  - tests/unit/scripts/challenge-verify-blind-cleanup.test.ts
-  - tests/unit/scripts/wxl-solver/build-player-package.test.ts
-  - tests/unit/scripts/wxl-solver/extract-flag-compare.test.ts
-  - tests/unit/scripts/challenge-verify-L1.test.ts
-  - tests/unit/scripts/challenge-verify-json.test.ts
+  - tests/unit/scripts/wxl-solver/aggregate-cross-agent.test.ts
   - tests/unit/scripts/challenge-verify-L4-dispatch.test.ts
-  - tests/unit/scripts/challenge-retype-cross-family.test.ts
-  - tests/unit/scripts/challenge-verify-orchestration.test.ts
-  - tests/unit/scripts/wxl-solver/extract-flag.test.ts
+  - tests/unit/scripts/challenge-verify-json.test.ts
+  - tests/unit/scripts/challenge-verify-blind-orchestration.test.ts
   - tests/unit/scripts/challenge-verify-args.test.ts
-  - tests/challenges/door-is-open.spec.ts
   - tests/unit/scripts/wxl-solver/spawn-runtime.test.ts
 -->
 
