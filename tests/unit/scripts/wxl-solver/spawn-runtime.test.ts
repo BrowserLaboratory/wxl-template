@@ -5,6 +5,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import {
   buildRuntimeCommand,
   resolveRuntime,
+  resolveRuntimes,
   spawnRuntime,
   UnknownRuntimeError,
 } from '../../../../scripts/wxl-solver/spawn-runtime'
@@ -76,6 +77,40 @@ describe('resolveRuntime (task 5.2)', () => {
 
   it('throws on unknown runtime', () => {
     expect(() => resolveRuntime('davinci')).toThrow(UnknownRuntimeError)
+  })
+})
+
+describe('resolveRuntimes (l4-multi-agent-cross-check task 1.1)', () => {
+  it('resolves a single runtime to a one-element list', () => {
+    expect(resolveRuntimes('claude')).toEqual(['claude'])
+  })
+
+  it('resolves a comma-separated list to multiple runtimes in given order', () => {
+    expect(resolveRuntimes('claude,codex,gemini')).toEqual(['claude', 'codex', 'gemini'])
+  })
+
+  it('trims whitespace and removes duplicates while preserving first-occurrence order', () => {
+    expect(resolveRuntimes('gemini, claude , gemini')).toEqual(['gemini', 'claude'])
+  })
+
+  it('defaults to [claude] when the env value is undefined', () => {
+    expect(resolveRuntimes(undefined)).toEqual(['claude'])
+  })
+
+  it('defaults to [claude] when the env value is the empty string', () => {
+    expect(resolveRuntimes('')).toEqual(['claude'])
+  })
+
+  it('defaults to [claude] when the env value is only whitespace and commas', () => {
+    expect(resolveRuntimes('  , ,  ')).toEqual(['claude'])
+  })
+
+  it('throws UnknownRuntimeError when any element of the list is not a known runtime', () => {
+    expect(() => resolveRuntimes('claude,copilot')).toThrow(UnknownRuntimeError)
+  })
+
+  it('accepts mixed-case entries (matching resolveRuntime behavior)', () => {
+    expect(resolveRuntimes('CODEX, Gemini')).toEqual(['codex', 'gemini'])
   })
 })
 

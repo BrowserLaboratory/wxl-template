@@ -76,6 +76,7 @@ The dev server starts at `http://localhost:5173` by default.
 | `pnpm challenge:retype` | Mutate an existing challenge's backend / difficulty / tags / category |
 | `pnpm challenge:verify` | Run the layered verify gate (L1 lint, L2 build, L3 Playwright e2e) on a challenge |
 | `pnpm challenge:verify:blind` | Run the L4 blind-solve sub-routine standalone (also reached via `pnpm challenge:verify <slug> --blind`) |
+| `pnpm challenge:verify:cross` | Maintainer-only L4 multi-agent cross-check — runs the blind gate against `claude,codex,gemini` and aggregates verdicts |
 
 ## Architecture
 

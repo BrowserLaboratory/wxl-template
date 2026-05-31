@@ -33,6 +33,7 @@
     "challenge:retype": "tsx scripts/challenge-retype.ts",
     "challenge:verify": "tsx scripts/challenge-verify.ts",
     "challenge:verify:blind": "tsx scripts/challenge-verify-blind.ts",
+    "challenge:verify:cross": "tsx scripts/challenge-verify.ts --blind --agents claude,codex,gemini",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {

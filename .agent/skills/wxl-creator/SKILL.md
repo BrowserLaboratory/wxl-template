@@ -364,6 +364,29 @@ The Mutate stage is invocation-only; it does not chain into the auto-fix loop. I
 - You SHALL track the fix loop counter and respect `max_fix_attempts`.
 - You SHALL NOT use host-agent-specific primitives in this skill. Question blocks are plain text; do not invoke any platform-specific question, plan-mode, or task-tracking primitive.
 
+---
+
+**L4 multi-agent cross-check (maintainer-only)**
+
+`pnpm challenge:verify <slug> --blind` runs the L4 blind-solve gate against one runtime (`claude` by default; pick another with `WXL_VERIFY_RUNTIME=codex` or `=gemini`). Before a release, maintainers can run the same challenge against several runtimes in one go to surface cross-agent divergence:
+
+```bash
+pnpm challenge:verify <slug> --blind --agents claude,codex,gemini
+# Shortcut bundling the same three-runtime sweep:
+pnpm challenge:verify:cross <slug>
+# Or via list-form env (no flag):
+WXL_VERIFY_RUNTIME=claude,codex pnpm challenge:verify <slug> --blind
+```
+
+- Precedence: `--agents` > list-form `WXL_VERIFY_RUNTIME` > default `[claude]`.
+- `--agents` requires `--blind` (multi-agent only applies to L4); supplying `--agents` without `--blind` exits with a non-zero code.
+- Each runtime runs in its own ephemeral workdir (`tmp/wxl-verify/<slug>/<runtime>/`); the legacy single-runtime path keeps `tmp/wxl-verify/<slug>/` byte-for-byte.
+- Aggregate verdict precedence: **fail > pass > inconclusive**. A single runtime emitting a non-canonical flag (suspected non-intended solve) fails the whole run.
+- The cross-agent divergence report is always emitted. Add `--json` for machine-readable output containing `perAgent[]` and `aggregate { verdict, divergent }`.
+- Not run in CI — three CLIs must be installed locally. Maintainer-only.
+
+See `.agent/skills/wxl-creator/reference/runtime-cli.md` for the full dispatch table, precedence rules, and per-runtime CLI argv contracts.
+
 **Quick Reference**
 
 | Command | Purpose |
@@ -371,6 +394,8 @@ The Mutate stage is invocation-only; it does not chain into the auto-fix loop. I
 | `pnpm create:challenge --name <slug> --backend <type>` | Scaffold + keygen |
 | `pnpm challenge:retype <slug> [--backend/--difficulty/--tags/--category]` | Mutate stage |
 | `pnpm challenge:verify <slug>` | Release-blocking gate (L1+L2+L3); add `--blind` for L4 |
+| `pnpm challenge:verify <slug> --blind --agents claude,codex,gemini` | L4 multi-agent cross-check (maintainer-only) |
+| `pnpm challenge:verify:cross <slug>` | Shortcut for the three-runtime L4 cross-check |
 
 | Backend | App File | Language |
 |---------|----------|----------|

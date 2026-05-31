@@ -311,6 +311,29 @@ digraph flow {
 - 一定要追蹤 fix loop counter，遵守 `max_fix_attempts`。
 - 不可在本技巧內使用任何 host-agent-specific 原語。問句區塊一律 plain text；不要呼叫任何平台專屬的問句 / plan-mode / task-tracking 原語。
 
+---
+
+**L4 多 agent 交叉驗證（maintainer 專用）**
+
+`pnpm challenge:verify <slug> --blind` 跑 L4 盲解 gate，預設用 `claude` runtime；用 `WXL_VERIFY_RUNTIME=codex` 或 `=gemini` 切換。發 release 前，maintainer 可一次對多個 runtime 跑同一題，揭露 agent 間的解題分歧：
+
+```bash
+pnpm challenge:verify <slug> --blind --agents claude,codex,gemini
+# 或一次跑三個 runtime 的便利 shortcut：
+pnpm challenge:verify:cross <slug>
+# 或用 list 形式環境變數（不用旗標）：
+WXL_VERIFY_RUNTIME=claude,codex pnpm challenge:verify <slug> --blind
+```
+
+- 優先序：`--agents` > list 形式 `WXL_VERIFY_RUNTIME` > 預設 `[claude]`。
+- `--agents` 須搭 `--blind`（多 agent 只在 L4 有意義）；沒 `--blind` 而給 `--agents` 會以非零 exit 報錯。
+- 每個 runtime 用自己的 ephemeral workdir（`tmp/wxl-verify/<slug>/<runtime>/`）；單 runtime 既有路徑維持 `tmp/wxl-verify/<slug>/` 逐位元相同。
+- Aggregate verdict 優先序：**fail > pass > inconclusive**。任一 runtime 給出非 canonical flag（疑似非預期解）就整批 fail。
+- 不論結果都會印 cross-agent 分歧報告。加 `--json` 取機器可讀輸出，含 `perAgent[]` 與 `aggregate { verdict, divergent }`。
+- 不在 CI 跑 —— 需本機裝三個 CLI；maintainer 專用。
+
+完整 runtime dispatch table、precedence 規則、與各 runtime 的 CLI argv 契約，見 `.agent/skills/wxl-creator/reference/runtime-cli.md`。
+
 **Quick Reference**
 
 | Command | 用途 |
@@ -318,6 +341,9 @@ digraph flow {
 | `pnpm create:challenge --name <slug> --backend <type>` | Scaffold + keygen |
 | `pnpm challenge:analyze <slug>` | 內容分析 + warning |
 | `pnpm challenge:validate <slug>` | 結構 + frontmatter 驗證 |
+| `pnpm challenge:verify <slug>` | Release-blocking gate（L1+L2+L3）；加 `--blind` 跑 L4 |
+| `pnpm challenge:verify <slug> --blind --agents claude,codex,gemini` | L4 多 agent 交叉驗證（maintainer 專用） |
+| `pnpm challenge:verify:cross <slug>` | 三 runtime L4 交叉驗證 shortcut |
 
 | Backend | App File | Language |
 |---------|----------|----------|

@@ -44,3 +44,50 @@ describe('verify --json output (task 4.7)', () => {
     expect(json.layers_run).toEqual(['L1', 'L2'])
   })
 })
+
+describe('verify --json includes perAgent + aggregate when L4 ran multi-runtime (task 4.1)', () => {
+  it('exposes perAgent[] and aggregate object on the L4 result entry', async () => {
+    const runners: LayerRunners = {
+      L1: async () => ({ layer: 'L1', status: 'pass', reason: null }),
+      L2: async () => ({ layer: 'L2', status: 'pass', reason: null }),
+      L3: async () => ({ layer: 'L3', status: 'pass', reason: null }),
+      L4: async () => ({
+        layer: 'L4',
+        status: 'fail',
+        reason: 'divergent: see cross-agent report',
+        perAgent: [
+          { runtime: 'claude', verdict: 'pass', reason: 'match', flag: 'FLAG{x}' },
+          { runtime: 'codex', verdict: 'fail', reason: 'flag mismatch', flag: 'FLAG{wrong}' },
+          { runtime: 'gemini', verdict: 'inconclusive', reason: 'no flag', flag: null },
+        ],
+        aggregate: { verdict: 'fail', divergent: true, exitCode: 1 },
+      }),
+    }
+    const result = await runVerify(
+      parseVerifyArgs(['door-is-open', '--blind', '--agents', 'claude,codex,gemini']),
+      runners,
+    )
+    const json = formatJson(result)
+    const l4 = json.results.find((r) => r.layer === 'L4')!
+    expect(Array.isArray(l4.perAgent)).toBe(true)
+    expect(l4.perAgent).toHaveLength(3)
+    expect(Object.keys(l4.perAgent![0]).sort()).toEqual(['flag', 'reason', 'runtime', 'verdict'])
+    expect(l4.aggregate).toBeTypeOf('object')
+    expect(l4.aggregate!.verdict).toBe('fail')
+    expect(l4.aggregate!.divergent).toBe(true)
+  })
+
+  it('omits perAgent + aggregate when L4 ran single-runtime (back-compat)', async () => {
+    const runners: LayerRunners = {
+      L1: async () => ({ layer: 'L1', status: 'pass', reason: null }),
+      L2: async () => ({ layer: 'L2', status: 'pass', reason: null }),
+      L3: async () => ({ layer: 'L3', status: 'pass', reason: null }),
+      L4: async () => ({ layer: 'L4', status: 'pass', reason: null }),
+    }
+    const result = await runVerify(parseVerifyArgs(['door-is-open', '--blind']), runners)
+    const json = formatJson(result)
+    const l4 = json.results.find((r) => r.layer === 'L4')!
+    expect(l4.perAgent).toBeUndefined()
+    expect(l4.aggregate).toBeUndefined()
+  })
+})

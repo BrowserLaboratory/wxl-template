@@ -40,3 +40,32 @@ describe('parseVerifyArgs (task 4.1)', () => {
     expect(selectLayers(args)).toEqual(['L1', 'L3'])
   })
 })
+
+describe('parseVerifyArgs --agents (l4-multi-agent-cross-check task 4.1)', () => {
+  it('parses --agents claude,codex,gemini into a 3-element list', () => {
+    const args = parseVerifyArgs(['door-is-open', '--blind', '--agents', 'claude,codex,gemini'])
+    expect(args.agents).toEqual(['claude', 'codex', 'gemini'])
+  })
+
+  it('trims whitespace and removes duplicates while preserving first-occurrence order', () => {
+    const args = parseVerifyArgs(['door-is-open', '--blind', '--agents', 'gemini, claude , gemini'])
+    expect(args.agents).toEqual(['gemini', 'claude'])
+  })
+
+  it('rejects --agents without --blind', () => {
+    expect(() =>
+      parseVerifyArgs(['door-is-open', '--agents', 'claude,codex']),
+    ).toThrow(VerifyArgError)
+  })
+
+  it('rejects --agents with an unknown runtime', () => {
+    expect(() =>
+      parseVerifyArgs(['door-is-open', '--blind', '--agents', 'claude,copilot']),
+    ).toThrow(VerifyArgError)
+  })
+
+  it('leaves args.agents undefined when --agents is not provided', () => {
+    const args = parseVerifyArgs(['door-is-open', '--blind'])
+    expect(args.agents).toBeUndefined()
+  })
+})
