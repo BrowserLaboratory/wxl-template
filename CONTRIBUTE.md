@@ -45,15 +45,15 @@ main ──────────●──────────────
 1. Fork the repository and clone your fork:
 
    ```bash
-   git clone https://github.com/<your-username>/wxl.git
-   cd wxl
+   git clone https://github.com/<your-username>/wxl-template.git
+   cd wxl-template
    pnpm install
    ```
 
 2. Add the upstream remote:
 
    ```bash
-   git remote add upstream https://github.com/CXPhoenix/wxl.git
+   git remote add upstream https://github.com/BrowserLaboratory/wxl-template.git
    ```
 
 3. Cut your working branch from `main`:
@@ -278,7 +278,7 @@ BREAKING CHANGE: `backend_url` 欄位不再支援，請改用 `backend: flask|fa
 
 ## Reporting issues
 
-File an issue at [GitHub Issues](https://github.com/CXPhoenix/wxl/issues).
+File an issue at [GitHub Issues](https://github.com/BrowserLaboratory/wxl-template/issues).
 
 ### Bug reports
 

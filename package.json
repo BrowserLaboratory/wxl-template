@@ -6,12 +6,12 @@
   "keywords": [],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/CXPhoenix/wxl.git"
+    "url": "git+https://github.com/BrowserLaboratory/wxl-template.git"
   },
   "bugs": {
-    "url": "https://github.com/CXPhoenix/wxl/issues"
+    "url": "https://github.com/BrowserLaboratory/wxl-template/issues"
   },
-  "homepage": "https://github.com/CXPhoenix/wxl#readme",
+  "homepage": "https://github.com/BrowserLaboratory/wxl-template#readme",
   "author": "CXPh03n1x",
   "license": "LicenseRef-LICENSE",
   "packageManager": "pnpm@10.28.0",

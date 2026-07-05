@@ -53,7 +53,7 @@ export default defineConfig({
           ],
         },
         socialLinks: [
-          { icon: 'github', link: 'https://github.com/CXPhoenix/wxl' }
+          { icon: 'github', link: 'https://github.com/BrowserLaboratory/wxl-template' }
         ],
       },
     },
@@ -76,7 +76,7 @@ export default defineConfig({
           ],
         },
         socialLinks: [
-          { icon: 'github', link: 'https://github.com/CXPhoenix/wxl' }
+          { icon: 'github', link: 'https://github.com/BrowserLaboratory/wxl-template' }
         ],
       },
     },

@@ -29,7 +29,7 @@
 
 Node ≤ 22 此問題以 `ERR_REQUIRE_ESM` 形式表現，仍會失敗但訊息明確；Node 22+ 的 `--experimental-require-module` 預設啟用使其退化為更難診斷的 class-extends error。
 
-**修復**：自 `devDependencies` 移除 `"wasm-pack": "^0.14.0"`；`pnpm wasm:build` 之 `wasm-pack` 改由系統 PATH（`/Users/phoenix/.cargo/bin/wasm-pack 0.14.0`）解析。`pnpm-lock.yaml` 隨之更新。
+**修復**：自 `devDependencies` 移除 `"wasm-pack": "^0.14.0"`；`pnpm wasm:build` 之 `wasm-pack` 改由系統 PATH（例如 `~/.cargo/bin/wasm-pack 0.14.0`）解析。`pnpm-lock.yaml` 隨之更新。
 
 **Prerequisite（新 contributor 必看）**：fork 或 clone 此 template 後，**首次** `pnpm wasm:build` 之前必須先：
 
@@ -173,7 +173,7 @@ e9a8d95 ✨ feat: 將 WXL 前端 WebAssembly 靶場平台初始化為可重用 t
 ```
 
 - emoji 開頭 + `type: 描述` 格式，使用台灣繁體中文。
-- 全域 `/Users/phoenix/.claude/CLAUDE.md` 強制規定所有 `git commit` 必須透過 `/tw-emoji-commit` skill；嚴禁直接 `git commit -m` 或 heredoc 自行撰寫；嚴禁中國大陸用語與簡體字。
+- 全域使用者層級設定（`~/.claude/CLAUDE.md`）強制規定所有 `git commit` 必須透過 `/tw-emoji-commit` skill；嚴禁直接 `git commit -m` 或 heredoc 自行撰寫；嚴禁中國大陸用語與簡體字。
 - Change 1 後續 stage commits 採對應 emoji：📝 docs（Stage 1）、📋 plan（Stage 2）、🗑️ refactor（Stage 3）、✅ test（Stage 4）。
 
 ### D.2 Pre-commit Hook 行為

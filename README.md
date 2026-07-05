@@ -47,8 +47,8 @@
 
 ```bash
 # 1. Clone the project
-git clone https://github.com/CXPhoenix/wxl.git
-cd wxl
+git clone https://github.com/BrowserLaboratory/wxl-template.git
+cd wxl-template
 
 # 2. Install Node.js dependencies
 pnpm install

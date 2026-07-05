@@ -108,9 +108,9 @@
 
 ```bash
 # 1. 確認 e2e 測試僅引用 demo slug 字串，不引用 docs/challenge 路徑
-rg -l 'docs/challenge/(sqli-demo|php-demo|fastapi-demo)' /Users/phoenix/dev/edu-projects/wxl-template/tests/e2e/   # 應為零比對
+rg -l 'docs/challenge/(sqli-demo|php-demo|fastapi-demo)' tests/e2e/   # 應為零比對
 # 2. 確認 e2e 測試無讀檔行為
-rg -nE 'readFile|readFileSync|fs\.|loadFixture' /Users/phoenix/dev/edu-projects/wxl-template/tests/e2e/flask-sqli.test.ts /Users/phoenix/dev/edu-projects/wxl-template/tests/e2e/php-demo.test.ts   # 應為零比對
+rg -nE 'readFile|readFileSync|fs\.|loadFixture' tests/e2e/flask-sqli.test.ts tests/e2e/php-demo.test.ts   # 應為零比對
 ```
 
 **驗收（負面）**：`rg "sqli-demo|php-demo|fastapi-demo" tests/ chall-wasm/ openspec/changes/archive/` 仍**會有**比對結果，這是預期的。不視為失敗。
