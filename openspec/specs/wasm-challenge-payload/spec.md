@@ -191,17 +191,17 @@ The build script SHALL produce one `.wasm` file per challenge by copying `templa
 source: harden-wasm-challenge-payload-pipeline
 updated: 2026-04-04
 code:
-  - .agents/skills/spectra-apply/SKILL.md
-  - .agents/skills/spectra-archive/SKILL.md
+  - .agent/skills/spectra-apply/SKILL.md
+  - .agent/skills/spectra-archive/SKILL.md
   - scripts/challenge-keygen.ts
   - .vitepress/theme/composables/usePhpRuntime.ts
-  - .agents/skills/spectra-ingest/SKILL.md
-  - .agents/skills/spectra-discuss/SKILL.md
-  - .agents/skills/spectra-propose/SKILL.md
-  - .agents/skills/spectra-debug/SKILL.md
+  - .agent/skills/spectra-ingest/SKILL.md
+  - .agent/skills/spectra-discuss/SKILL.md
+  - .agent/skills/spectra-propose/SKILL.md
+  - .agent/skills/spectra-debug/SKILL.md
   - .github/workflows/release.yml
-  - .agents/skills/spectra-ask/SKILL.md
-  - .agents/skills/spectra-audit/SKILL.md
+  - .agent/skills/spectra-ask/SKILL.md
+  - .agent/skills/spectra-audit/SKILL.md
 tests:
   - tests/unit/scripts/challenge-keygen.test.ts
   - tests/unit/composables/usePhpRuntime-cookie.test.ts
@@ -262,17 +262,17 @@ After injecting the custom section, the build pipeline SHALL continue to strip s
 source: harden-wasm-challenge-payload-pipeline
 updated: 2026-04-04
 code:
-  - .agents/skills/spectra-apply/SKILL.md
-  - .agents/skills/spectra-archive/SKILL.md
+  - .agent/skills/spectra-apply/SKILL.md
+  - .agent/skills/spectra-archive/SKILL.md
   - scripts/challenge-keygen.ts
   - .vitepress/theme/composables/usePhpRuntime.ts
-  - .agents/skills/spectra-ingest/SKILL.md
-  - .agents/skills/spectra-discuss/SKILL.md
-  - .agents/skills/spectra-propose/SKILL.md
-  - .agents/skills/spectra-debug/SKILL.md
+  - .agent/skills/spectra-ingest/SKILL.md
+  - .agent/skills/spectra-discuss/SKILL.md
+  - .agent/skills/spectra-propose/SKILL.md
+  - .agent/skills/spectra-debug/SKILL.md
   - .github/workflows/release.yml
-  - .agents/skills/spectra-ask/SKILL.md
-  - .agents/skills/spectra-audit/SKILL.md
+  - .agent/skills/spectra-ask/SKILL.md
+  - .agent/skills/spectra-audit/SKILL.md
 tests:
   - tests/unit/scripts/challenge-keygen.test.ts
   - tests/unit/composables/usePhpRuntime-cookie.test.ts
@@ -317,17 +317,17 @@ The keygen script SHALL skip a challenge only when all of the following are true
 source: harden-wasm-challenge-payload-pipeline
 updated: 2026-04-04
 code:
-  - .agents/skills/spectra-apply/SKILL.md
-  - .agents/skills/spectra-archive/SKILL.md
+  - .agent/skills/spectra-apply/SKILL.md
+  - .agent/skills/spectra-archive/SKILL.md
   - scripts/challenge-keygen.ts
   - .vitepress/theme/composables/usePhpRuntime.ts
-  - .agents/skills/spectra-ingest/SKILL.md
-  - .agents/skills/spectra-discuss/SKILL.md
-  - .agents/skills/spectra-propose/SKILL.md
-  - .agents/skills/spectra-debug/SKILL.md
+  - .agent/skills/spectra-ingest/SKILL.md
+  - .agent/skills/spectra-discuss/SKILL.md
+  - .agent/skills/spectra-propose/SKILL.md
+  - .agent/skills/spectra-debug/SKILL.md
   - .github/workflows/release.yml
-  - .agents/skills/spectra-ask/SKILL.md
-  - .agents/skills/spectra-audit/SKILL.md
+  - .agent/skills/spectra-ask/SKILL.md
+  - .agent/skills/spectra-audit/SKILL.md
 tests:
   - tests/unit/scripts/challenge-keygen.test.ts
   - tests/unit/composables/usePhpRuntime-cookie.test.ts

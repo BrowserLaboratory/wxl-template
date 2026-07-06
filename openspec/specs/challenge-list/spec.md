@@ -372,8 +372,8 @@ code:
   - uno.config.ts
   - docs/challenges.md
   - .spectra.yaml
-  - .agents/skills/spectra-discuss/SKILL.md
-  - .agents/skills/spectra-propose/SKILL.md
+  - .agent/skills/spectra-discuss/SKILL.md
+  - .agent/skills/spectra-propose/SKILL.md
   - .github/skills/spectra-discuss/SKILL.md
   - .github/skills/spectra-propose/SKILL.md
   - .vitepress/theme/components/HomeContent.vue
@@ -384,10 +384,10 @@ code:
   - .github/skills/spectra-ask/SKILL.md
   - .github/prompts/spectra-discuss.prompt.md
   - .github/prompts/spectra-ingest.prompt.md
-  - .agents/skills/spectra-ingest/SKILL.md
-  - .agents/skills/spectra-apply/SKILL.md
+  - .agent/skills/spectra-ingest/SKILL.md
+  - .agent/skills/spectra-apply/SKILL.md
   - .github/skills/spectra-apply/SKILL.md
-  - .agents/skills/spectra-ask/SKILL.md
+  - .agent/skills/spectra-ask/SKILL.md
 tests:
   - tests/unit/components/ChallengeList.test.ts
 -->

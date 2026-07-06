@@ -58,4 +58,9 @@
 
 ### 4.4 spec 對齊
 
-跑 `spectra validate authoring-skill-pattern` 確認本 skill 的安裝不破壞 capability。
+authoring-skill-pattern capability 的多數 Requirement 已由 4.1–4.3 涵蓋（thin pointer body ≤ 3 行、host-agent-neutral 措辭、`_template` 未被啟用）。再補一項「Minimum source files」Requirement 的檢查，確認 canonical `SKILL.md` 與 `AGENTS.md` 皆存在：
+
+    test -f .agent/skills/<SKILL-NAME>/SKILL.md && test -f .agent/skills/<SKILL-NAME>/AGENTS.md \
+      && echo "OK: canonical 最小 source 檔齊全" || echo "FAIL: 缺 SKILL.md 或 AGENTS.md"
+
+註：`spectra` CLI 無法以 spec 名稱單獨 validate 一個 capability——`spectra validate <name>` 會把 `<name>` 當成 change 名解析並回報 `Change '<name>' not found`。若要檢視或列出 spec，改用 `spectra show authoring-skill-pattern`（顯示 spec 全文）或 `spectra list --specs`（列出所有 spec，應含 `authoring-skill-pattern`）。

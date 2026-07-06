@@ -49,14 +49,14 @@ The release workflow SHALL execute the full build pipeline in order: install Rus
 source: tighten-github-release-gates
 updated: 2026-04-04
 code:
-  - .agents/skills/spectra-propose/SKILL.md
-  - .agents/skills/spectra-ingest/SKILL.md
-  - .agents/skills/spectra-archive/SKILL.md
-  - .agents/skills/spectra-apply/SKILL.md
-  - .agents/skills/spectra-debug/SKILL.md
-  - .agents/skills/spectra-discuss/SKILL.md
-  - .agents/skills/spectra-ask/SKILL.md
-  - .agents/skills/spectra-audit/SKILL.md
+  - .agent/skills/spectra-propose/SKILL.md
+  - .agent/skills/spectra-ingest/SKILL.md
+  - .agent/skills/spectra-archive/SKILL.md
+  - .agent/skills/spectra-apply/SKILL.md
+  - .agent/skills/spectra-debug/SKILL.md
+  - .agent/skills/spectra-discuss/SKILL.md
+  - .agent/skills/spectra-ask/SKILL.md
+  - .agent/skills/spectra-audit/SKILL.md
   - scripts/challenge-keygen.ts
   - .vitepress/theme/composables/usePhpRuntime.ts
   - .github/workflows/release.yml
