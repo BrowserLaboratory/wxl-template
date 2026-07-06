@@ -117,7 +117,7 @@ audit-runs/
 .claude/scheduled_tasks.lock
 
 # ===========================
-# wxl-creator L4 blind-solve
+# wxl-crosscheck L4 blind-solve
 # ===========================
 # Ephemeral player-package and run.log produced by `pnpm challenge:verify --blind`.
 # Deleted automatically on verify exit; never committed.

@@ -3,7 +3,7 @@
  *
  * Dispatcher that spawns a fresh agent CLI session for L4 blind solve.
  * Selection is driven by the WXL_VERIFY_RUNTIME environment variable
- * (default: claude). The mapping table mirrors `.agent/skills/wxl-creator/reference/runtime-cli.md`.
+ * (default: claude). The mapping table mirrors `.agent/skills/wxl-crosscheck/reference/runtime-cli.md`.
  */
 
 import { appendFileSync, openSync, closeSync } from 'node:fs'

@@ -1,8 +1,8 @@
 # A01 — Broken Access Control template pack
 
-Reference content the wxl-creator workflow consults when the requested `vuln`
+Reference content the wxl-create workflow consults when the requested `vuln`
 is an OWASP **A01 (Broken Access Control)** class. This file is data, not a
-standalone skill: the wxl-creator `SKILL.md` registry table points the
+standalone skill: the wxl-create `SKILL.md` registry table points the
 code-generation step here, and the fix loop reads the
 "Per-primitive fix hints" section when a failing challenge's tags intersect
 the A01 taxonomy.
@@ -10,7 +10,7 @@ the A01 taxonomy.
 ## Recognition heuristics
 
 Treat a challenge as A01 (Broken Access Control) when the requested `vuln`
-matches this trigger regex, kept byte-for-byte in sync with the wxl-creator
+matches this trigger regex, kept byte-for-byte in sync with the wxl-create
 `SKILL.md` registry table:
 
     idor|jwt|path.?traversal|access.?control|broken.?access

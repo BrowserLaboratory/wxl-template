@@ -1,6 +1,6 @@
 # Shared tool matrix — Claude Code / Codex CLI / Gemini CLI
 
-The `wxl-creator` skill is host-agent-neutral, so its prose only references tools that are available in all three supported runtimes. This document is the authoritative list.
+The `wxl-create` skill (and its sibling `wxl-mutate`, `wxl-verify`, and `wxl-crosscheck` skills) is host-agent-neutral, so its prose only references tools that are available in all three supported runtimes. This document is the authoritative list.
 
 ## Always-available shared tools
 
@@ -18,7 +18,7 @@ These seven tools form the host-agent-neutral baseline. Skill prose may invoke t
 
 ## Forbidden categories of primitives
 
-Skill prose under `.agent/skills/wxl-creator/` MUST NOT reference any of the following host-agent-specific primitive categories. Each row lists the cross-runtime substitute that skill prose uses instead.
+Skill prose under `.agent/skills/wxl-create/` (and the sibling `.agent/skills/wxl-mutate/`, `.agent/skills/wxl-verify/`, `.agent/skills/wxl-crosscheck/` directories) MUST NOT reference any of the following host-agent-specific primitive categories. Each row lists the cross-runtime substitute that skill prose uses instead.
 
 | Forbidden category | Cross-runtime substitute |
 |--------------------|--------------------------|
