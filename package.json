@@ -30,6 +30,7 @@
     "create:challenge": "node --experimental-strip-types scripts/create-challenge.ts",
     "challenge:validate": "node --experimental-strip-types scripts/challenge-validate.ts",
     "challenge:analyze": "node --experimental-strip-types scripts/challenge-analyze.ts",
+    "fork:init": "tsx scripts/fork-init.ts",
     "challenge:retype": "tsx scripts/challenge-retype.ts",
     "challenge:verify": "tsx scripts/challenge-verify.ts",
     "challenge:verify:blind": "tsx scripts/challenge-verify-blind.ts",
