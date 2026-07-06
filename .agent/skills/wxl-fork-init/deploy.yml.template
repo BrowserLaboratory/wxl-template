@@ -1,0 +1,75 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# WXL fork — GitHub Pages 部署 workflow 範本
+#
+# 用法：fork 後把本檔複製成 .github/workflows/deploy.yml（去掉 .template）：
+#   cp .agent/skills/wxl-fork-init/deploy.yml.template .github/workflows/deploy.yml
+#
+# ⚠️ base path（最容易踩的雷）：
+#   GitHub Pages「專案站」的網址是 https://<owner>.github.io/<repo>/，
+#   因此必須在 .vitepress/config.mts 設 `base: '/<repo>/'`，否則所有 asset 會 404。
+#   若是使用者/組織站（<owner>.github.io 這個 repo）或自訂網域掛在根目錄，
+#   則維持預設 base（'/'）即可，不要加 base。
+#
+# 建置前置：本專案 build 需 Rust toolchain + wasm-pack + binaryen（wasm-opt），
+#   下方步驟已完整安裝，對照 .github/workflows/release.yml 的既有 CI 路徑。
+# ─────────────────────────────────────────────────────────────────────────────
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# GitHub Pages 官方部署所需權限
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時只跑一個部署，且不取消進行中的部署
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Install binaryen (wasm-opt)
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build (WASM + keygen + VitePress)
+        run: pnpm build
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .vitepress/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
