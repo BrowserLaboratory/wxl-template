@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the OWASP A01 (Broken Access Control) challenge-type pack for the wxl platform: the canonical set of reference challenges covering every supported runtime (IDOR on FastAPI, JWT alg:none bypass on Flask, path traversal on PHP), the A01 reference document the wxl-creator skill consults during code generation and repair, the dispatch trigger regex and tag taxonomy that route A01-class vulnerabilities to that guidance, and the per-primitive fix hints authors apply. This capability is the template that subsequent OWASP-category packs (A02–A10) copy and adapt.
+Defines the OWASP A01 (Broken Access Control) challenge-type pack for the wxl platform: the canonical set of reference challenges covering every supported runtime (IDOR on FastAPI, JWT alg:none bypass on Flask, path traversal on PHP), the A01 reference document the wxl-create skill consults during code generation and (via wxl-verify) repair, the dispatch trigger regex and tag taxonomy that route A01-class vulnerabilities to that guidance, and the per-primitive fix hints authors apply. This capability is the template that subsequent OWASP-category packs (A02–A10) copy and adapt.
 
 ## Requirements
 

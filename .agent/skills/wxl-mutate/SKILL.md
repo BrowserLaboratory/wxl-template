@@ -48,8 +48,8 @@ digraph mutate {
 ### Step 3: Hand off to wxl-verify
 
 - **What**: Confirm the mutation did not break the challenge.
-- **How**: Run `pnpm challenge:verify <slug>` following the `wxl-verify` skill. If verify fails, offer to start the `wxl-verify` auto-fix loop the same way a fresh Create flow would.
-- **Verification**: `pnpm challenge:verify <slug>` exits 0, or `wxl-verify` surfaces the remaining issues.
+- **How**: Run `pnpm challenge:verify <slug>` following the `wxl-verify` skill's gate. The Mutate stage is **invocation-only**: if the gate is not clean, do NOT auto-enter the fix loop — first ask the user (plain-text) whether to start `wxl-verify`'s auto-fix loop, and on confirmation run that same loop. This confirmation gate is a deliberate Mutate-specific deviation from the Create flow, which defers to `wxl-verify` automatically.
+- **Verification**: `pnpm challenge:verify <slug>` exits 0, or — after the user opts in — `wxl-verify` surfaces the remaining issues.
 
 ## Anti-patterns
 
@@ -59,8 +59,9 @@ digraph mutate {
 - ❌ **Retrying after exit code 2.**
   - ✅ Surface the `manual retype required` reason and abort; a cross-language swap needs a manual rewrite.
   - **Why**: The script cannot auto-preserve the vuln body across language families.
-- ❌ **Chaining straight into the auto-fix loop.**
-  - ✅ The Mutate stage is invocation-only; if verify fails, ask before starting the fix loop.
+- ❌ **Auto-chaining into the fix loop after a failed verify.**
+  - ✅ The Mutate stage is invocation-only; ask the user before entering `wxl-verify`'s fix loop (unlike Create, which defers to `wxl-verify` automatically).
+  - **Why**: A retype is a targeted metadata change; the author should decide whether an automated repair pass is warranted.
 
 ## Verification
 
