@@ -9,6 +9,13 @@ import { extractMarkdownBody } from './challenge/plugin'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   srcDir: "docs",
+  // GitHub Pages project site lives at /<repo>/, so the deployed build needs a
+  // matching base or every asset/JS/WASM URL 404s. Only the Pages deploy sets
+  // SITE_BASE (see .github/workflows/deploy.yml); locally and in CI (dev server,
+  // vitepress preview, Playwright site-smoke + challenge L3, the release zip)
+  // it is unset, so the site serves at root and test navigation stays
+  // base-agnostic. `pnpm fork:init --base` rewrites this to a plain literal.
+  base: process.env.SITE_BASE ?? '/',
   vite: {
     plugins: [UnoCSS(), wasm(), topLevelAwait()],
     optimizeDeps: {
