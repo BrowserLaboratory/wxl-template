@@ -290,11 +290,16 @@ export function runForkInit(
     if (args.rebrand) scanResidual(PKG_REL, pkgNext)
   }
 
-  // ── A + B on every active text file, computed in memory, written once. The deploy target is
-  //   handled below (it may not exist yet on a fresh fork). ──
+  // Read the deploy template up front: it decides whether the deploy target is handled by the
+  // dedicated block below. Only skip DEPLOY_REL in the walk when that block will handle it — so
+  // if the template is absent, an existing deploy.yml is still inventoried like any active file
+  // (never silently omitted -> no false "clean").
+  const tmplRaw = readIf(join('.agent', 'skills', 'wxl-fork-init', 'deploy.yml.template'))
+
+  // ── A + B on every active text file, computed in memory, written once. ──
   for (const rel of walkTextFiles(root)) {
     if (rel === PKG_REL) continue // structured above
-    if (rel === DEPLOY_REL) continue // handled with the deploy copy below
+    if (rel === DEPLOY_REL && tmplRaw !== null) continue // handled with the deploy copy below
     const raw = readIf(rel)
     if (raw === null) continue
     const { next, keysHit } = transformText(rel, raw)
@@ -307,7 +312,6 @@ export function runForkInit(
   //   `wxl` in the tool-created workflow is never omitted from the honest inventory. Handled
   //   here (not in the walk) because on a fresh fork the target does not exist yet; never
   //   clobbers a customized deploy.yml. ──
-  const tmplRaw = readIf(join('.agent', 'skills', 'wxl-fork-init', 'deploy.yml.template'))
   if (tmplRaw) {
     const { next: deployContent, keysHit } = transformText(DEPLOY_REL, tmplRaw)
     const existing = readIf(DEPLOY_REL)

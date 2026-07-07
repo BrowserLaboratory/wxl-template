@@ -309,6 +309,18 @@ describe('runForkInit — B mode (rebrand: sensitive keys + honest inventory)', 
     expect(second.residualFiles).toContain('.github/workflows/deploy.yml')
   })
 
+  it('inventories an EXISTING deploy.yml even when the template is absent (no false clean)', () => {
+    // Edge: the walk only skips deploy.yml when the template exists (the deploy block handles it
+    // then). With the template removed but an on-disk deploy.yml still carrying wxl, the walk must
+    // scan it — otherwise it escapes both paths and the run falsely reports clean.
+    rmSync(join(root, '.agent/skills/wxl-fork-init/deploy.yml.template'), { force: true })
+    mkdirSync(join(root, '.github/workflows'), { recursive: true })
+    writeFileSync(join(root, '.github/workflows/deploy.yml'), '# WXL fork deploy (left over)\nname: Deploy\n')
+    const res = runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    expect(res.residualFiles).toContain('.github/workflows/deploy.yml')
+    expect(res.message).toMatch(/rebrand NOT complete/)
+  })
+
   it('does NOT blind-rename the wxlsh subsystem token (only full self-contained tokens change)', () => {
     // wxlsh contains "wxl" but must survive — it is a different identifier family.
     runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
