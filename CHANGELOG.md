@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## ✨ [1.1.0] - 2026-07-07
+
+> WXL 自身工具鏈精進（wxl-creator 依 verb 拆為 4 個細粒度 skill、fork-init 改為確定性 CLI），並落地 prose-audit、Playwright site-smoke、L4 多 agent 交叉驗證等 CI 與驗證強化。
+
+### ✨ 新增 (Added)
+
+- L4 盲解 gate 由單一 runtime 擴充為多 agent 交叉驗證並聚合裁決（多 runtime 盲解結果 aggregate 後產生最終 verdict） ([#30])
+- prose-audit Phase-1 deterministic gate — rule-allowlist + 直接呼叫 checker 的中文文件品質 CI 閘門，涵蓋大陸用語偵測、placeholder、可讀性指標、詞彙多樣性、代名詞一致性等 checks ([#17])
+- Playwright site-smoke advisory CI 閘門 — 對建置後站台做 smoke 測試，作為 advisory 品質訊號 ([#21])
+- 新 capability `authoring-skill-pattern` 與 cross-agent skill starter template — 標準化跨三家 host agent 撰寫 skill 的樣板與規範 ([#28])
+- `pnpm fork:init`（`scripts/fork-init.ts`）— 確定性 fork 初始化 CLI，取代 LLM 逐檔手改以節省 token：A（沿用品牌）／B（rebrand）雙模式、掃描式上游 slug 原子替換、B 模式對四個 runtime 敏感鍵做結構化改名並以誠實 `file:line` residual inventory 列出待人工判斷項（永不誤報 clean） ([#34])
+
+### 🔄 變更 (Changed)
+
+- 單體 `wxl-creator` skill 依 CLI verb 拆成 4 個細粒度 skill：`wxl-create`（出題管線）、`wxl-mutate`（`challenge:retype`）、`wxl-verify`（L1–L3 gate + auto-fix loop）、`wxl-crosscheck`（L4 多 agent 盲解交叉驗證，maintainer-only）；「出題／create challenge」觸發詞改綁 `wxl-create`。底層 scripts 不變，僅重組 skill 層 ([#34])
+- 將 `wxl-template` 收斂為 main-only branch flow ([#23])
+- 溶解 `challenge-ui` monolith spec，將獨有 Requirement 收斂回 4 個 atomic spec ([#27])
+- 收斂三支 backend runtime spec 為單一 `challenge-runtimes` capability ([#26])
+- skills agent-usability 稽核與強化：wxl-fork-init skill、`skill-agent-usability` spec、cross-agent `_template` 修復、`@trace` 路徑修正 ([#33])
+- 完成 repo 遷移收尾至 `BrowserLaboratory/wxl-template`，並將文件內絕對路徑改為可攜寫法 ([#32])
+
+### 🐛 修復 (Fixed)
+
+- 將 `confidential-files` 挑戰補成真正的 PHP path-traversal LFI 範例，並修綠 prose-audit ([#29])
+
+### 🔒 安全性 (Security)
+
+- 套用 wxl-ruleset-strict-hardening（branch protection ruleset 強化），並 reconcile prose-audit 為 required check ([#19])
+
+### 🗑️ 移除 (Removed)
+
+- 移除舊的單體 `wxl-creator` skill（`.agent/skills/wxl-creator` canonical 與 `.claude/skills/wxl-creator` thin pointer 皆刪除），功能由上述 4 個細粒度 skill 取代
+  - 遷移方式：下游若直接引用 `wxl-creator`，改用對應的 `wxl-create`／`wxl-mutate`／`wxl-verify`／`wxl-crosscheck`；底層 `create-challenge.ts`／`challenge-retype.ts`／`challenge-verify.ts`／`challenge-verify-blind.ts` 路徑與行為不變 ([#34])
+
 ## ✨ [1.0.0] - 2026-05-28
 
 > 跨三家 host agent 的 wxl-creator 技巧（Create / Mutate / Verify 三階段管線、L4 盲解驗證）、Branch protection ruleset 對齊、Node 24 強制升級、CI 供應鏈安全強化。
@@ -56,7 +90,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/release.yml` — `v*` tag push 觸發；跑全 gate + 打包 source zip + 透過 `softprops/action-gh-release` 自動建立 GitHub release ([#1])
 - `openspec/specs/ci-quality-gates/` spec — 初始 8 條 Requirement 涵蓋 trigger / parallel jobs / 共用 setup / Node version pin / wasm-pack via action / test + build gate / scope 邊界 ([#1])
 
-[Unreleased]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.0.0-rc.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/BrowserLaboratory/wxl-template/releases/tag/v1.0.0-rc.1
 [#1]: https://github.com/BrowserLaboratory/wxl-template/pull/1
@@ -69,3 +104,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#10]: https://github.com/BrowserLaboratory/wxl-template/pull/10
 [#12]: https://github.com/BrowserLaboratory/wxl-template/pull/12
 [#13]: https://github.com/BrowserLaboratory/wxl-template/pull/13
+[#17]: https://github.com/BrowserLaboratory/wxl-template/pull/17
+[#19]: https://github.com/BrowserLaboratory/wxl-template/pull/19
+[#21]: https://github.com/BrowserLaboratory/wxl-template/pull/21
+[#23]: https://github.com/BrowserLaboratory/wxl-template/pull/23
+[#26]: https://github.com/BrowserLaboratory/wxl-template/pull/26
+[#27]: https://github.com/BrowserLaboratory/wxl-template/pull/27
+[#28]: https://github.com/BrowserLaboratory/wxl-template/pull/28
+[#29]: https://github.com/BrowserLaboratory/wxl-template/pull/29
+[#30]: https://github.com/BrowserLaboratory/wxl-template/pull/30
+[#32]: https://github.com/BrowserLaboratory/wxl-template/pull/32
+[#33]: https://github.com/BrowserLaboratory/wxl-template/pull/33
+[#34]: https://github.com/BrowserLaboratory/wxl-template/pull/34
