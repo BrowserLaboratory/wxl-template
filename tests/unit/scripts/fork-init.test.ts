@@ -130,6 +130,15 @@ describe('parseForkInitArgs', () => {
     expect(() => parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'fooWXLbar'])).toThrow(ForkInitArgError)
     expect(() => parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'WXL2'])).toThrow(ForkInitArgError)
   })
+
+  it('rejects a --rebrand value with injection-risk characters (quote/$/backtick/space/empty)', () => {
+    const bad = ["x'+process.env.SECRET+'", 'a$b', 'a`b`', 'has space', '', 'semi;colon']
+    for (const r of bad) {
+      expect(() => parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', r])).toThrow(ForkInitArgError)
+    }
+    // a plain identifier stays accepted
+    expect(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme-2.0_x']).rebrand).toBe('acme-2.0_x')
+  })
 })
 
 describe('runForkInit — A mode (identity, base, URLs, deploy)', () => {

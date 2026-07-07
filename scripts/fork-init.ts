@@ -83,8 +83,18 @@ export function parseForkInitArgs(argv: string[]): ForkInitArgs {
   if (!REPO_RE.test(values.repo)) {
     throw new ForkInitArgError(`--repo must be in owner/repo form, got: ${values.repo}`)
   }
-  if (values.rebrand && values.rebrand.toLowerCase().includes('wxl')) {
-    throw new ForkInitArgError('--rebrand name must not contain "wxl" (case-insensitive; would reintroduce the token and break idempotent rename)')
+  if (values.rebrand !== undefined) {
+    // --rebrand is substituted verbatim into executable TS modules and CI YAML, so it
+    // must be a plain identifier — reject quotes/$/backtick/whitespace that could break
+    // out of a string literal and execute at build time (same posture as --base).
+    if (!/^[A-Za-z0-9._-]+$/.test(values.rebrand)) {
+      throw new ForkInitArgError(
+        `--rebrand must be a plain identifier ([A-Za-z0-9._-], no spaces/quotes/$), got: ${JSON.stringify(values.rebrand)}`,
+      )
+    }
+    if (values.rebrand.toLowerCase().includes('wxl')) {
+      throw new ForkInitArgError('--rebrand name must not contain "wxl" (case-insensitive; would reintroduce the token and break idempotent rename)')
+    }
   }
 
   let base: string | null | undefined
@@ -316,7 +326,7 @@ function walkTextFiles(root: string, rel = ''): string[] {
       if (EXCLUDED_FILE.has(entry.name)) continue
       if (SELF_EXCLUDE.has(childRel)) continue
       if (childRel.startsWith(EXCLUDED_PATH_FRAGMENT)) continue
-      // skip binary-looking files (null byte in first chunk)
+      // skip binary-looking files (any null byte in the file)
       const buf = readFileSync(join(root, childRel))
       if (buf.includes(0)) continue
       out.push(childRel)
