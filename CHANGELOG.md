@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## 🐛 [1.1.1] - 2026-07-07
+
+> 讓專案站台正式部署到 GitHub Pages，並修好挑戰 runtime 在 base 子路徑下無法載入 WASM 的問題。
+
+### 🔄 變更 (Changed)
+
+- 新增 GitHub Pages 部署 workflow（`.github/workflows/deploy.yml`）：由 `v*` release tag push 與 `workflow_dispatch` 觸發，照既有 CI 硬化慣例全 SHA-pin（Node 24、wasm-pack 0.14.0 via taiki-e/install-action），發佈到 `github-pages` environment ([#36])
+- VitePress `base` 改為 env 條件式（`process.env.SITE_BASE ?? '/'`）：僅 Pages build 設 `SITE_BASE=/wxl-template/`，本機與其他 CI 維持 root，測試導覽保持 base-agnostic ([#36])
+- 強化 `pnpm fork:init` 的 `setViteBase`：既有 base 行為 env 條件式時仍能被 `--base` 正確收斂為純字面值，確保下游 fork 行為不變 ([#36])
+
+### 🐛 修復 (Fixed)
+
+- 修正部署到 GitHub Pages（`/wxl-template/` 專案站）時挑戰無法啟動、顯示「No chall-data section found in WASM binary」的問題：per-challenge WASM 的 fetch 與導覽連結改用 VitePress `withBase`，避免 root 絕對路徑繞過 base 改寫而打到 404 ([#37])
+
 ## ✨ [1.1.0] - 2026-07-07
 
 > WXL 自身工具鏈精進（wxl-creator 依 verb 拆為 4 個細粒度 skill、fork-init 改為確定性 CLI），並落地 prose-audit、Playwright site-smoke、L4 多 agent 交叉驗證等 CI 與驗證強化。
@@ -90,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `.github/workflows/release.yml` — `v*` tag push 觸發；跑全 gate + 打包 source zip + 透過 `softprops/action-gh-release` 自動建立 GitHub release ([#1])
 - `openspec/specs/ci-quality-gates/` spec — 初始 8 條 Requirement 涵蓋 trigger / parallel jobs / 共用 setup / Node version pin / wasm-pack via action / test + build gate / scope 邊界 ([#1])
 
-[Unreleased]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/BrowserLaboratory/wxl-template/compare/v1.0.0-rc.1...v1.0.0
 [1.0.0-rc.1]: https://github.com/BrowserLaboratory/wxl-template/releases/tag/v1.0.0-rc.1
@@ -116,3 +131,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [#32]: https://github.com/BrowserLaboratory/wxl-template/pull/32
 [#33]: https://github.com/BrowserLaboratory/wxl-template/pull/33
 [#34]: https://github.com/BrowserLaboratory/wxl-template/pull/34
+[#36]: https://github.com/BrowserLaboratory/wxl-template/pull/36
+[#37]: https://github.com/BrowserLaboratory/wxl-template/pull/37
