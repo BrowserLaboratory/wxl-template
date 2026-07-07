@@ -384,8 +384,18 @@ function setViteBase(cfg: string, base: string | null | undefined): string {
     return baseIdx >= 0 ? lines.filter((_, i) => i !== baseIdx).join('\n') : cfg
   }
   if (baseIdx >= 0) {
-    // function replacer so any `$` in `base` is never reinterpreted by String.replace
-    lines[baseIdx] = lines[baseIdx].replace(/base:\s*['"][^'"]*['"]/, () => `base: '${base}'`)
+    const literalRe = /base:\s*['"][^'"]*['"]/
+    if (literalRe.test(lines[baseIdx])) {
+      // function replacer so any `$` in `base` is never reinterpreted by String.replace
+      lines[baseIdx] = lines[baseIdx].replace(literalRe, () => `base: '${base}'`)
+    } else {
+      // Non-literal base declaration (e.g. the upstream env-conditional form
+      // `base: process.env.SITE_BASE ?? '/'`): collapse the whole line to a
+      // plain literal so the fork's --base actually takes effect and the config
+      // matches the single-literal shape the rest of the tooling expects.
+      const indent = lines[baseIdx].match(/^\s*/)?.[0] ?? '  '
+      lines[baseIdx] = `${indent}base: '${base}',`
+    }
     return lines.join('\n')
   }
   // insert before the first `title:` line, matching its indentation

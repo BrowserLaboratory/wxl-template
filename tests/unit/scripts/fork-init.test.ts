@@ -238,6 +238,27 @@ describe('runForkInit — A mode (identity, base, URLs, deploy)', () => {
     expect(cfg).toContain("title: 'Web eXploitation Laboratory'") // untouched
   })
 
+  it('collapses an env-conditional base line to a plain literal (upstream shape)', () => {
+    // The upstream .vitepress/config.mts declares `base: process.env.SITE_BASE ?? '/'`
+    // so its own tests/preview stay at root while the Pages build sets SITE_BASE.
+    // A downstream `--base /path/` must still rewrite this to a plain literal.
+    writeFileSync(
+      join(root, '.vitepress/config.mts'),
+      [
+        'export default {',
+        "  base: process.env.SITE_BASE ?? '/',",
+        "  title: 'Web eXploitation Laboratory',",
+        '}',
+        '',
+      ].join('\n'),
+    )
+    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--base', '/myfork/']), { projectRoot: root })
+    const cfg = readFileSync(join(root, '.vitepress/config.mts'), 'utf8')
+    expect(cfg).toMatch(/^\s*base:\s*'\/myfork\/',\s*$/m)
+    expect(cfg).not.toContain('process.env.SITE_BASE')
+    expect(cfg).toContain("title: 'Web eXploitation Laboratory'") // untouched
+  })
+
   it('--base none strips an existing base line, leaving the rest intact', () => {
     writeConfigWithBase(root, '/wxl-template/')
     runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--base', 'none']), { projectRoot: root })
