@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, shallowRef, computed, onMounted, onUnmounted } from 'vue'
-import { useData } from 'vitepress'
+import { useData, withBase } from 'vitepress'
 import { Content } from 'vitepress/client'
 import BrowserPanel from '../components/BrowserPanel.vue'
 import WxlshPanel from '../components/WxlshPanel.vue'
@@ -225,8 +225,11 @@ async function initRuntime(): Promise<void> {
     return
   }
 
-  // 1. Fetch per-challenge WASM binary and extract custom section payload
-  const wasmResponse = await fetch(wasmModule)
+  // 1. Fetch per-challenge WASM binary and extract custom section payload.
+  //    wasmModule is a base-agnostic root path (e.g. /challenge/<slug>/runtime.wasm);
+  //    withBase() prepends the VitePress base so it resolves under a project-site
+  //    deployment (/wxl-template/...) as well as at root locally.
+  const wasmResponse = await fetch(withBase(wasmModule))
   const wasmBytes = new Uint8Array(await wasmResponse.arrayBuffer())
   const payloadBytes = extractCustomSection(wasmBytes, 'chall-data')
 

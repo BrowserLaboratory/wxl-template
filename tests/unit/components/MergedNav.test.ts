@@ -17,6 +17,7 @@ vi.mock('vitepress', () => ({
     },
   })),
   useRouter: vi.fn(() => ({ go: vi.fn(), route: { path: '/' } })),
+  withBase: (url: string) => url,
 }))
 
 import MergedNav from '../../../.vitepress/theme/components/MergedNav.vue'
