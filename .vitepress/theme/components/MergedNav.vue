@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useData } from 'vitepress'
+import { useData, withBase } from 'vitepress'
 import LocaleSwitcher from './LocaleSwitcher.vue'
 
 const props = defineProps<{
@@ -56,7 +56,7 @@ const categoryBadge: Record<string, string> = {
 
         <!-- Back link -->
         <a
-          href="/challenges/"
+          :href="withBase('/challenges/')"
           class="text-[0.8125em] color-[var(--ch-accent)] no-underline whitespace-nowrap hover:underline shrink-0"
         >
           <span class="hidden lg:inline">← Challenges</span>
@@ -197,8 +197,8 @@ const categoryBadge: Record<string, string> = {
       data-hamburger-menu
       class="md:hidden border-t border-[var(--ch-border)] bg-[var(--ch-bg-soft)] px-3 py-2 flex flex-col gap-1"
     >
-      <a href="/" class="text-[0.8125em] color-[var(--ch-text-1)] no-underline py-1 hover:color-[var(--ch-accent)]">Home</a>
-      <a href="/docs/" class="text-[0.8125em] color-[var(--ch-text-1)] no-underline py-1 hover:color-[var(--ch-accent)]">Docs</a>
+      <a :href="withBase('/')" class="text-[0.8125em] color-[var(--ch-text-1)] no-underline py-1 hover:color-[var(--ch-accent)]">Home</a>
+      <a :href="withBase('/docs/')" class="text-[0.8125em] color-[var(--ch-text-1)] no-underline py-1 hover:color-[var(--ch-accent)]">Docs</a>
       <a
         v-if="githubLink"
         :href="githubLink"

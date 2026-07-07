@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
 // Mock vitepress useData and Content
@@ -18,7 +18,7 @@ vi.mock('vitepress', () => ({
     },
     page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
   })),
-  withBase: (url: string) => url,
+  withBase: vi.fn((url: string) => url),
 }))
 
 vi.mock('vitepress/client', () => ({
@@ -121,6 +121,38 @@ describe('ChallengeLayout (VitePress layout)', () => {
     expect(nav.exists()).toBe(true)
     const backLink = nav.find('a[href="/challenges/"]')
     expect(backLink.exists()).toBe(true)
+  })
+
+  it('fetches the per-challenge WASM through withBase so it resolves under a deployed base', async () => {
+    // Regression: wasmModule frontmatter is a base-agnostic root path
+    // (/challenge/<slug>/runtime.wasm). On a GitHub Pages project site the file
+    // is served under the base (/wxl-template/...), so a raw fetch(wasmModule)
+    // 404s → "No chall-data section". The fetch MUST route through withBase.
+    const { useData, withBase } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo',
+          difficulty: 'easy',
+          category: 'web',
+          backend: 'flask',
+          slug: 'sqli-demo',
+          description: 'x',
+          markdownBody: '# x',
+          wasmModule: '/challenge/sqli-demo/runtime.wasm',
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const fetchSpy = vi.fn().mockResolvedValue({ arrayBuffer: async () => new ArrayBuffer(8) })
+    vi.stubGlobal('fetch', fetchSpy)
+
+    mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+    await flushPromises()
+
+    expect(vi.mocked(withBase)).toHaveBeenCalledWith('/challenge/sqli-demo/runtime.wasm')
+    expect(fetchSpy).toHaveBeenCalledWith('/challenge/sqli-demo/runtime.wasm')
+    vi.unstubAllGlobals()
   })
 
   it('does not render a separate header element', () => {
