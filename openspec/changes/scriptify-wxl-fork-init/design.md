@@ -28,7 +28,7 @@
 
 ### 排除範圍、路徑邊界、與誠實 residual inventory
 
-text pass 只掃作用中檔案，排除 `pnpm-lock.yaml`、`node_modules`、`.git`、`openspec/changes/archive/**`、**重生的 build 產物 `.vitepress/dist/**`／`.vitepress/cache/**`**、**Spectra 內部狀態 `.spectra/**`**、結構性 skill 目錄 `.agent`/`.claude`/`.codex`/`.gemini`（識別字為目錄名與 thin-pointer 路徑引用，content-only rename 會破壞）、以及工具自身 `scripts/fork-init.ts` 與 `tests/unit/scripts/fork-init.test.ts`（需保留 `wxl` probe／fixture）。路徑排除以 **path-segment 邊界**比對（`=== frag` 或 `startsWith(frag + sep)`），故 `openspec/changes/archive-notes.md` 這類現役同名前綴檔不會被誤判為封存。因只 rename 可證明的 token，script 於結尾輸出**誠實 residual inventory**：**由實際寫入的最終內容重算**（非 pre-edit 快照），逐一列出仍含 case-insensitive `wxl` 的 `file:line`（品牌散字、`wxlsh` 子系統、Title-case `Wxlsh`、路徑引用如 `chall-wasm/wxlsh-parser` 等），並**在仍有 `wxl` 殘留時明確聲明 rebrand 未完成、絕不誤報 clean**。residual 計算僅剝除使用者自己的 `--repo` slug（必含 `/`，不可能是裸品牌 token 或 `wxlsh` 的子字串，剝除安全）；**`--author` 不剝除**，故裸 `--author wxl` 無法遮蔽真實殘留。冪等：敏感鍵與 slug 改完後重跑零變更，且永不 double-rename（`acme` 不會變 `acacmeme`）。
+text pass 只掃作用中檔案，排除 `pnpm-lock.yaml`、`node_modules`、`.git`、`openspec/changes/archive/**`、**重生的 build 產物 `.vitepress/dist/**`／`.vitepress/cache/**`**、**Spectra 內部狀態 `.spectra/**`**、結構性 skill 目錄 `.agent`/`.claude`/`.codex`/`.gemini`（識別字為目錄名與 thin-pointer 路徑引用，content-only rename 會破壞）、以及工具自身 `scripts/fork-init.ts` 與 `tests/unit/scripts/fork-init.test.ts`（需保留 `wxl` probe／fixture）。路徑排除以 **path-segment 邊界**比對（`=== frag` 或 `startsWith(frag + sep)`），故 `openspec/changes/archive-notes.md` 這類現役同名前綴檔不會被誤判為封存。因只 rename 可證明的 token，script 於結尾輸出**誠實 residual inventory**：**由實際寫入的最終內容重算**（非 pre-edit 快照），**涵蓋工具自己建立的檔案（複製出的 `deploy.yml`，於複製時同樣套 transform 並掃描，不因「walk 之後才建立」而漏掉）**，逐一列出仍含 case-insensitive `wxl` 的 `file:line`（品牌散字、`wxlsh` 子系統、Title-case `Wxlsh`、路徑引用如 `chall-wasm/wxlsh-parser` 等），並**在仍有 `wxl` 殘留時明確聲明 rebrand 未完成、絕不誤報 clean**。residual 計算**不做任何剝除／遮蔽**：任何 substring 剝除都可能誤消掉「恰好以使用者 slug 為前綴或子字串的無關 token」（如 `--repo wasm/wxlsh` 之於 `chall-wasm/wxlsh-parser`），或被裸 `--author wxl` 濫用而遮蔽全部殘留——因此改為「一律列出、不減任何項」，使用者自己的 slug 也照列（warning 註明為刻意身分）。`--rebrand` 須以字母開頭，env var 形式（`<UPPER>_VERIFY_RUNTIME`）以大寫並將 `-`／`.` 收斂為 `_` 產生，確保恆為合法 identifier（`my-ctf`→`MY_CTF_VERIFY_RUNTIME`，非壞掉的 `MY-CTF_...`）。冪等：敏感鍵與 slug 改完後重跑零變更，且永不 double-rename（`acme` 不會變 `acacmeme`）。
 
 ### dry-run 與變更摘要
 
@@ -68,7 +68,7 @@ text pass 只掃作用中檔案，排除 `pnpm-lock.yaml`、`node_modules`、`.g
 - 敏感鍵更名改變 storage／env／release 契約 → 明確分類並結尾報告，讓影響可見；fresh fork 無既有使用者，風險低。
 - B 模式**不**幫使用者完成整個品牌改名（Title-case、`wxlsh`、目錄名等留待人工）→ 這是刻意的誠實取捨：deterministic 工具無法安全做 namespace 判斷；residual inventory 逐 `file:line` 列出，並警示目錄未改名前 build 無法執行，把「不完整 rebrand」從靜默變成可見待辦。
 - 含敏感鍵 token 或 sentinel 樣式的 `--repo`／`--author` 被誤改 → 已移除 sentinel 機制；敏感鍵 rename 在 slug swap 前對原始內容執行，身分寫入後不再被任何 pass 觸及（由建構保證，並有 `me/wxl-locale`、`me/wxl__FORKINIT_KEEP_1__` 專門測試）。
-- residual 報告誤報 clean（RC2）→ 一律由**實際寫入的最終內容**重算；只剝除使用者自己的 `--repo` slug（含 `/`，剝除安全），`--author` 不剝除，故裸 `--author wxl` 無法遮蔽殘留。
+- residual 報告誤報 clean（RC2）→ 一律由**實際寫入的最終內容**重算，且**涵蓋工具自建的 `deploy.yml`**；residual **不做任何 substring 剝除**（剝除會誤消「以使用者 slug 為前綴的無關 token」或被裸 `--author wxl` 濫用遮蔽），使用者自己的 slug 也照列、warning 註明為刻意身分。
 - CLI 契約與 skill prose 需一致 → 由 spec Requirement 綁定 flag 集合，skill 只描述呼叫方式不重述細節。
 
 ## Migration Plan

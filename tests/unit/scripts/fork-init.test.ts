@@ -59,7 +59,9 @@ function writeFixture(root: string) {
       '',
     ].join('\n'),
   )
-  w('.agent/skills/wxl-fork-init/deploy.yml.template', 'name: Deploy\njobs: {}\n')
+  // the real template carries `wxl` in a comment + a skill path — the created deploy.yml must
+  // therefore be inventoried like any other active file (not silently omitted).
+  w('.agent/skills/wxl-fork-init/deploy.yml.template', '# WXL fork deploy — from .agent/skills/wxl-fork-init/deploy.yml.template\nname: Deploy\njobs: {}\n')
 
   // runtime-sensitive keys
   w('.vitepress/theme/i18n/index.ts', "export const LOCALE_STORAGE_KEY = 'wxl-locale'\n")
@@ -150,6 +152,15 @@ describe('parseForkInitArgs', () => {
     }
     // a plain identifier stays accepted
     expect(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme-2.0_x']).rebrand).toBe('acme-2.0_x')
+  })
+
+  it('rejects a --rebrand that does not start with a letter (its uppercase seeds a JS/env identifier)', () => {
+    // (a leading `-` is rejected earlier by node's parseArgs; these reach our own validation)
+    for (const r of ['2cool', '.x', '_x', '3d-ctf']) {
+      expect(() => parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', r])).toThrow(ForkInitArgError)
+    }
+    // letter-first with interior dashes/dots is fine (interior is sanitized for the env var)
+    expect(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'my-ctf']).rebrand).toBe('my-ctf')
   })
 })
 
@@ -274,6 +285,30 @@ describe('runForkInit — B mode (rebrand: sensitive keys + honest inventory)', 
     expect(reported).toEqual(['WXL_VERIFY_RUNTIME', 'release-asset', 'tmp/wxl-verify', 'wxl-locale'].sort())
   })
 
+  it('renames WXL_VERIFY_RUNTIME to a VALID identifier for a kebab/dotted --rebrand', () => {
+    // Regression: --rebrand my-ctf must not yield `MY-CTF_VERIFY_RUNTIME` (a JS SyntaxError in
+    // unquoted key / property positions). The env-var seed is sanitized to `_`.
+    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'my-ctf']), { projectRoot: root })
+    const blind = readFileSync(join(root, 'scripts/challenge-verify-blind.ts'), 'utf8')
+    expect(blind).toContain('MY_CTF_VERIFY_RUNTIME')
+    expect(blind).not.toContain('MY-CTF_VERIFY_RUNTIME')
+    // the localStorage/tmp/release forms keep the dash (string/path/filename contexts)
+    expect(readFileSync(join(root, '.vitepress/theme/i18n/index.ts'), 'utf8')).toContain('my-ctf-locale')
+    expect(readFileSync(join(root, '.gitignore'), 'utf8')).toContain('tmp/my-ctf-verify')
+  })
+
+  it('inventories the tool-created deploy.yml (never omitted from the honest report)', () => {
+    // Regression: deploy.yml is written after the walk; its `wxl` must still be scanned so the
+    // inventory is honest and idempotent (no false clean from an unscanned tool-created file).
+    const res = runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    expect(existsSync(join(root, '.github/workflows/deploy.yml'))).toBe(true)
+    expect(res.residualFiles).toContain('.github/workflows/deploy.yml')
+    // second run: deploy.yml now exists and is still inventoried the same way (idempotent report)
+    const second = runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    expect(second.changedFiles).not.toContain('.github/workflows/deploy.yml')
+    expect(second.residualFiles).toContain('.github/workflows/deploy.yml')
+  })
+
   it('does NOT blind-rename the wxlsh subsystem token (only full self-contained tokens change)', () => {
     // wxlsh contains "wxl" but must survive — it is a different identifier family.
     runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
@@ -307,12 +342,23 @@ describe('runForkInit — B mode (rebrand: sensitive keys + honest inventory)', 
       { projectRoot: root },
     )
     const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+    // identity is never corrupted (no rename touches it — safety by construction, no sentinel)
     expect(pkg.repository.url).toBe('git+https://github.com/myorg/wxl-ctf.git')
     expect(pkg.author).toBe('wxlfan')
     expect(readFileSync(join(root, 'README.md'), 'utf8')).toContain('myorg/wxl-ctf')
-    // the fork's own slug is intentional, so it is NOT flagged as unfinished work
-    expect(res.residualFiles).not.toContain('README.md')
     expect(res.exitCode).toBe(0)
+  })
+
+  it('does not over-strip: a distinct token that merely shares the --repo prefix is still inventoried', () => {
+    // Regression: stripping the raw --repo slug from the residual check hid `myorg/wxl-ctf-mirror`
+    // (a distinct project) because it shares the `myorg/wxl-ctf` prefix. No stripping now -> honest.
+    writeFileSync(join(root, 'NOTES.md'), 'Mirror lives at myorg/wxl-ctf-mirror (a different project).\n')
+    const res = runForkInit(
+      parseForkInitArgs(['--author', 'me', '--repo', 'myorg/wxl-ctf', '--rebrand', 'acme']),
+      { projectRoot: root },
+    )
+    expect(res.residualFiles).toContain('NOTES.md')
+    expect(res.message).toMatch(/rebrand NOT complete/)
   })
 
   it('does NOT collapse when --author is the bare brand token (no sentinel machinery)', () => {

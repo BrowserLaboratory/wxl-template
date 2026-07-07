@@ -100,9 +100,12 @@ export function parseForkInitArgs(argv: string[]): ForkInitArgs {
     // --rebrand is substituted verbatim into the sensitive-key replacements, which land in
     // executable TS modules and CI YAML, so it must be a plain identifier — reject
     // quotes/$/backtick/whitespace that could break out of a string literal at build time.
-    if (!/^[A-Za-z0-9._-]+$/.test(values.rebrand)) {
+    // It MUST start with a letter: the uppercased form seeds an env-var / JS-identifier
+    // (`<UPPER>_VERIFY_RUNTIME`), which cannot begin with a digit. (Interior `-`/`.` are
+    // allowed for the brand short-name and sanitized to `_` when building that identifier.)
+    if (!/^[A-Za-z][A-Za-z0-9._-]*$/.test(values.rebrand)) {
       throw new ForkInitArgError(
-        `--rebrand must be a plain identifier ([A-Za-z0-9._-], no spaces/quotes/$), got: ${JSON.stringify(values.rebrand)}`,
+        `--rebrand must start with a letter and contain only [A-Za-z0-9._-] (no spaces/quotes/$), got: ${JSON.stringify(values.rebrand)}`,
       )
     }
     if (values.rebrand.toLowerCase().includes('wxl')) {
@@ -225,28 +228,49 @@ export function runForkInit(
     if (!args.dryRun) writeFileSync(abs(rel), next)
   }
 
-  const renames = args.rebrand
-    ? sensitiveRenames(args.rebrand, args.rebrand.toUpperCase())
-    : []
+  // The env-var / JS-identifier seed for the WXL_VERIFY_RUNTIME rename: uppercased, with any
+  // `-`/`.` (legal in the brand short-name) collapsed to `_` so `<UPPER>_VERIFY_RUNTIME` is
+  // always a valid identifier (e.g. `--rebrand my-ctf` -> `MY_CTF_VERIFY_RUNTIME`, not the
+  // syntax-breaking `MY-CTF_VERIFY_RUNTIME`). --rebrand is required to start with a letter.
+  const upperEnv = args.rebrand ? args.rebrand.toUpperCase().replace(/[^A-Z0-9_]/g, '_') : ''
+  const renames = args.rebrand ? sensitiveRenames(args.rebrand, upperEnv) : []
   const recordSensitive = (key: string, rel: string) => {
     if (!sensitiveMap.has(key)) sensitiveMap.set(key, new Set())
     sensitiveMap.get(key)!.add(rel)
   }
-  // The user's own repo slug legitimately contains `wxl` and is intentional. Stripping it
-  // from the residual check is SAFE (it always contains a `/`, so it can neither be the bare
-  // brand token nor a substring of `wxlsh`/brand prose — it can only hide the exact user
-  // identity). `--author` is deliberately NOT stripped: a bare `--author wxl` would otherwise
-  // mask every occurrence and re-introduce a false "clean". Computed on the FINAL content.
-  const identityMask = /wxl/i.test(args.repo) ? args.repo : null
+  // Honest residual inventory: scan the ACTUAL final content for any case-insensitive `wxl`,
+  // with NO masking/stripping. Because the tool no longer renames the general brand token,
+  // every remaining `wxl` is genuinely un-handled and must be surfaced — brand prose, the
+  // `wxlsh` subsystem, skill/spec dir refs, and even the user's own `--repo`/`--author` slug
+  // (intentional identity, called out in the warning). Never subtracting anything is what
+  // guarantees a bare `--author wxl`, or a slug that is a substring of another token, can never
+  // mask real residual work (a subtraction-based mask silently hid such cases).
   const scanResidual = (rel: string, finalContent: string) => {
     const lines = finalContent.split('\n')
     for (let i = 0; i < lines.length; i++) {
-      const probe = identityMask ? lines[i].split(identityMask).join('') : lines[i]
-      if (/wxl/i.test(probe)) {
+      if (/wxl/i.test(lines[i])) {
         residualHits.push({ file: rel, line: i + 1, text: lines[i].trim().slice(0, 200) })
       }
     }
   }
+  // A + B text transform for one file: sensitive-key rename (B, on original content) ->
+  // upstream-slug swap (A) -> VitePress base (config only). Returns the keys hit so the caller
+  // records them ONLY when it actually commits this content.
+  const transformText = (rel: string, raw: string): { next: string; keysHit: string[] } => {
+    let next = raw
+    const keysHit: string[] = []
+    for (const { key, from, to } of renames) {
+      if (next.includes(from)) {
+        next = next.split(from).join(to)
+        keysHit.push(key)
+      }
+    }
+    next = next.split(UPSTREAM_SLUG).join(args.repo)
+    if (rel === CONFIG_REL) next = setViteBase(next, args.base)
+    return { next, keysHit }
+  }
+
+  const DEPLOY_REL = join('.github', 'workflows', 'deploy.yml')
 
   // ── A-mode: package.json identity (structured) ──
   const pkgRaw = readIf(PKG_REL)
@@ -266,42 +290,44 @@ export function runForkInit(
     if (args.rebrand) scanResidual(PKG_REL, pkgNext)
   }
 
-  // ── A + B on every active text file, computed entirely in memory, written once. ──
-  //   Per file: sensitive-key rename (B, on original content) -> upstream-slug swap (A) ->
-  //   VitePress base (A, config only). Residual inventory (B) is taken from the final content,
-  //   so it is honest for dry-run and never hides a token the tool claims to have changed.
+  // ── A + B on every active text file, computed in memory, written once. The deploy target is
+  //   handled below (it may not exist yet on a fresh fork). ──
   for (const rel of walkTextFiles(root)) {
     if (rel === PKG_REL) continue // structured above
+    if (rel === DEPLOY_REL) continue // handled with the deploy copy below
     const raw = readIf(rel)
     if (raw === null) continue
-    let next = raw
-    for (const { key, from, to } of renames) {
-      if (next.includes(from)) {
-        next = next.split(from).join(to)
-        recordSensitive(key, rel)
-      }
-    }
-    next = next.split(UPSTREAM_SLUG).join(args.repo)
-    if (rel === CONFIG_REL) next = setViteBase(next, args.base)
+    const { next, keysHit } = transformText(rel, raw)
     applyEdit(rel, next, raw)
+    for (const k of keysHit) recordSensitive(k, rel)
     if (args.rebrand) scanResidual(rel, next)
   }
 
-  // ── A-mode: copy deploy workflow (idempotent, never clobbers a customized one) ──
-  const tmplRaw = readIf('.agent/skills/wxl-fork-init/deploy.yml.template')
+  // ── A-mode: copy deploy workflow — transformed like any active file, then inventoried, so a
+  //   `wxl` in the tool-created workflow is never omitted from the honest inventory. Handled
+  //   here (not in the walk) because on a fresh fork the target does not exist yet; never
+  //   clobbers a customized deploy.yml. ──
+  const tmplRaw = readIf(join('.agent', 'skills', 'wxl-fork-init', 'deploy.yml.template'))
   if (tmplRaw) {
-    const target = '.github/workflows/deploy.yml'
-    const existing = readIf(target)
+    const { next: deployContent, keysHit } = transformText(DEPLOY_REL, tmplRaw)
+    const existing = readIf(DEPLOY_REL)
     if (existing === null) {
-      changedFiles.push(target)
+      changedFiles.push(DEPLOY_REL)
       if (!args.dryRun) {
-        mkdirSync(dirname(abs(target)), { recursive: true })
-        writeFileSync(abs(target), tmplRaw)
+        mkdirSync(dirname(abs(DEPLOY_REL)), { recursive: true })
+        writeFileSync(abs(DEPLOY_REL), deployContent)
       }
-    } else if (existing !== tmplRaw) {
-      warnings.push(
-        `${target} already exists with different content — left untouched; merge the deploy workflow manually if needed.`,
-      )
+      for (const k of keysHit) recordSensitive(k, DEPLOY_REL)
+      if (args.rebrand) scanResidual(DEPLOY_REL, deployContent)
+    } else {
+      // Already present: never clobber. Warn only if it diverges from our generated content,
+      // and inventory the file that is actually on disk (honest about its real content).
+      if (existing !== deployContent) {
+        warnings.push(
+          `${DEPLOY_REL} already exists with different content — left untouched; merge the deploy workflow manually if needed.`,
+        )
+      }
+      if (args.rebrand) scanResidual(DEPLOY_REL, existing)
     }
   }
 
