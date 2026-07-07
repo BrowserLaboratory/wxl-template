@@ -11,11 +11,24 @@
  *                  [--rebrand <newshortname>] [--dry-run]
  *
  * Modes:
- *   A (default)          minimal fork: identity fields, base, GitHub URLs, deploy workflow.
- *   B (--rebrand <name>) A + classified `wxl` short-name rename with runtime-sensitive-key report.
+ *   A (default)          minimal fork: identity fields, base, upstream-slug swap, deploy workflow.
+ *   B (--rebrand <name>) A + deterministic rename of the four runtime-sensitive keys, plus an
+ *                        HONEST residual inventory of every remaining case-insensitive `wxl`
+ *                        (which is NOT auto-renamed — see "Why not rename every wxl?" below).
+ *
+ * Why not rename every `wxl`?
+ *   In this repo the substring `wxl` spans several unrelated identifier families that a
+ *   deterministic text tool cannot tell apart: the brand short-name, the `wxlsh` challenge
+ *   subsystem / `X-Wxlsh-*` wire headers, the four runtime-sensitive keys, the upstream repo
+ *   slug, and path-referenced skill/spec directory names. A blind `wxl`->`x` replace corrupts
+ *   the ones that must survive (e.g. `wxlsh`->`xsh`, or a dead `.../x-template` link) and does
+ *   so silently. So B-mode renames ONLY what it can prove is a full, self-contained token (the
+ *   upstream slug + the 4 keys) and reports everything else as a manual, namespace-aware to-do,
+ *   computed from the bytes actually written. It never claims the rebrand is complete while a
+ *   `wxl` remains.
  *
  * Exit codes:
- *   0  success
+ *   0  success (A mode complete; B mode: deterministic edits done — a residual inventory may remain)
  *   1  user input error (missing/invalid flag)
  */
 
@@ -27,7 +40,7 @@ import {
   mkdirSync,
   readdirSync,
 } from 'node:fs'
-import { dirname, resolve, join } from 'node:path'
+import { dirname, resolve, join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -84,9 +97,9 @@ export function parseForkInitArgs(argv: string[]): ForkInitArgs {
     throw new ForkInitArgError(`--repo must be in owner/repo form, got: ${values.repo}`)
   }
   if (values.rebrand !== undefined) {
-    // --rebrand is substituted verbatim into executable TS modules and CI YAML, so it
-    // must be a plain identifier — reject quotes/$/backtick/whitespace that could break
-    // out of a string literal and execute at build time (same posture as --base).
+    // --rebrand is substituted verbatim into the sensitive-key replacements, which land in
+    // executable TS modules and CI YAML, so it must be a plain identifier — reject
+    // quotes/$/backtick/whitespace that could break out of a string literal at build time.
     if (!/^[A-Za-z0-9._-]+$/.test(values.rebrand)) {
       throw new ForkInitArgError(
         `--rebrand must be a plain identifier ([A-Za-z0-9._-], no spaces/quotes/$), got: ${JSON.stringify(values.rebrand)}`,
@@ -127,37 +140,68 @@ export interface SensitiveKeyEdit {
   files: string[]
 }
 
+export interface ResidualHit {
+  file: string
+  line: number
+  text: string
+}
+
 export interface ForkInitResult {
   exitCode: number
   message: string
   changedFiles: string[]
+  /** runtime-sensitive keys ACTUALLY renamed, verified against the bytes written. */
   sensitiveKeys: SensitiveKeyEdit[]
-  /** Files that still contain a case-insensitive `wxl` the exact-case rename did not cover. */
+  /** active files that still contain a case-insensitive `wxl` after all deterministic edits. */
   residualFiles: string[]
+  /** honest, per-occurrence inventory of the remaining `wxl` (from the final content). */
+  residualHits: ResidualHit[]
   warnings: string[]
 }
 
 const UPSTREAM_SLUG = 'BrowserLaboratory/wxl-template'
 
-// Directories/files never touched by the rebrand rename.
+// Directories/files never touched by any rewrite.
 // `.agent` and the host-config dirs `.claude`/`.codex`/`.gemini` are excluded because
 // skill identifiers (e.g. `wxl-create`) are structural: they name directories under
 // `.agent` and the host thin pointers reference those exact paths, so a content-only
-// rename would break them without a coordinated path rename (out of scope; see warning).
-const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.agent', '.claude', '.codex', '.gemini'])
+// rename would break them without a coordinated path rename (out of scope; see inventory).
+// `.spectra` holds Spectra's internal state and historical spec snapshots (like an archive).
+const EXCLUDED_DIRS = new Set(['.git', 'node_modules', '.agent', '.claude', '.codex', '.gemini', '.spectra'])
 const EXCLUDED_FILE = new Set(['pnpm-lock.yaml', 'pnpm-lock.yml'])
-const EXCLUDED_PATH_FRAGMENT = join('openspec', 'changes', 'archive')
-// This tool's own source must not be rewritten — it needs the literal `wxl`/`WXL`
-// probes to keep detecting sensitive keys on subsequent runs.
-const SELF_EXCLUDE = new Set([join('scripts', 'fork-init.ts')])
-
-// Runtime-sensitive keys: (report label -> substring that identifies it in original content).
-const SENSITIVE_KEYS: ReadonlyArray<{ key: string; probe: RegExp }> = [
-  { key: 'wxl-locale', probe: /wxl-locale/ },
-  { key: 'WXL_VERIFY_RUNTIME', probe: /WXL_VERIFY_RUNTIME/ },
-  { key: 'tmp/wxl-verify', probe: /tmp\/wxl-verify/ },
-  { key: 'release-asset', probe: /wxl-\$\{/ },
+// Path prefixes (matched at a path-segment boundary, so `archive-notes.md` is NOT excluded by
+// `openspec/changes/archive`): historical archives and regenerated build output/cache.
+const EXCLUDED_PATH_FRAGMENTS = [
+  join('openspec', 'changes', 'archive'),
+  join('.vitepress', 'dist'),
+  join('.vitepress', 'cache'),
 ]
+// This tool's own source + test must not be rewritten — they need the literal `wxl`/`WXL`
+// probes, fixtures, and UPSTREAM_SLUG to keep working on subsequent runs.
+const SELF_EXCLUDE = new Set([
+  join('scripts', 'fork-init.ts'),
+  join('tests', 'unit', 'scripts', 'fork-init.test.ts'),
+])
+// package.json is edited structurally, never via text passes.
+const PKG_REL = 'package.json'
+const CONFIG_REL = join('.vitepress', 'config.mts')
+
+/**
+ * The four runtime-sensitive keys, as EXACT full-token rename rules (structure-aware, so
+ * `wxlsh` and other `wxl`-containing tokens are never touched). Applied to original template
+ * content BEFORE the slug swap writes user identity, so a `--repo`/`--author` that happens to
+ * contain a key token can never be corrupted.
+ */
+function sensitiveRenames(lower: string, upper: string): ReadonlyArray<{ key: string; from: string; to: string }> {
+  return [
+    { key: 'wxl-locale', from: 'wxl-locale', to: `${lower}-locale` },
+    { key: 'WXL_VERIFY_RUNTIME', from: 'WXL_VERIFY_RUNTIME', to: `${upper}_VERIFY_RUNTIME` },
+    { key: 'tmp/wxl-verify', from: 'tmp/wxl-verify', to: `tmp/${lower}-verify` },
+    // release-asset prefix in release.yml, e.g. `wxl-${GITHUB_REF_NAME}.zip`. Built with
+    // concatenation so the literal `${` is never parsed as an interpolation here.
+    { key: 'release-asset', from: 'wxl-' + '${', to: lower + '-' + '${' },
+  ]
+}
 
 // ─── core ────────────────────────────────────────────────────────────────────
 
@@ -169,6 +213,7 @@ export function runForkInit(
   const changedFiles: string[] = []
   const warnings: string[] = []
   const sensitiveMap = new Map<string, Set<string>>()
+  const residualHits: ResidualHit[] = []
 
   const abs = (rel: string) => join(root, rel)
   const readIf = (rel: string): string | null =>
@@ -180,8 +225,31 @@ export function runForkInit(
     if (!args.dryRun) writeFileSync(abs(rel), next)
   }
 
-  // ── A-mode: package.json identity ──
-  const pkgRaw = readIf('package.json')
+  const renames = args.rebrand
+    ? sensitiveRenames(args.rebrand, args.rebrand.toUpperCase())
+    : []
+  const recordSensitive = (key: string, rel: string) => {
+    if (!sensitiveMap.has(key)) sensitiveMap.set(key, new Set())
+    sensitiveMap.get(key)!.add(rel)
+  }
+  // The user's own repo slug legitimately contains `wxl` and is intentional. Stripping it
+  // from the residual check is SAFE (it always contains a `/`, so it can neither be the bare
+  // brand token nor a substring of `wxlsh`/brand prose — it can only hide the exact user
+  // identity). `--author` is deliberately NOT stripped: a bare `--author wxl` would otherwise
+  // mask every occurrence and re-introduce a false "clean". Computed on the FINAL content.
+  const identityMask = /wxl/i.test(args.repo) ? args.repo : null
+  const scanResidual = (rel: string, finalContent: string) => {
+    const lines = finalContent.split('\n')
+    for (let i = 0; i < lines.length; i++) {
+      const probe = identityMask ? lines[i].split(identityMask).join('') : lines[i]
+      if (/wxl/i.test(probe)) {
+        residualHits.push({ file: rel, line: i + 1, text: lines[i].trim().slice(0, 200) })
+      }
+    }
+  }
+
+  // ── A-mode: package.json identity (structured) ──
+  const pkgRaw = readIf(PKG_REL)
   if (pkgRaw) {
     const pkg = JSON.parse(pkgRaw)
     pkg.version = '0.1.0'
@@ -193,21 +261,30 @@ export function runForkInit(
     if (args.rebrand) pkg.name = args.name ?? args.rebrand
     else if (args.name) pkg.name = args.name
     if (args.description) pkg.description = args.description
-    applyEdit('package.json', JSON.stringify(pkg, null, 2) + '\n', pkgRaw)
+    const pkgNext = JSON.stringify(pkg, null, 2) + '\n'
+    applyEdit(PKG_REL, pkgNext, pkgRaw)
+    if (args.rebrand) scanResidual(PKG_REL, pkgNext)
   }
 
-  // ── A-mode: VitePress base + GitHub URL swap ──
-  const cfgRaw = readIf('.vitepress/config.mts')
-  if (cfgRaw) {
-    let cfg = cfgRaw.split(UPSTREAM_SLUG).join(args.repo)
-    cfg = setViteBase(cfg, args.base)
-    applyEdit('.vitepress/config.mts', cfg, cfgRaw)
-  }
-
-  // ── A-mode: README / CONTRIBUTE GitHub URLs ──
-  for (const rel of ['README.md', 'CONTRIBUTE.md']) {
+  // ── A + B on every active text file, computed entirely in memory, written once. ──
+  //   Per file: sensitive-key rename (B, on original content) -> upstream-slug swap (A) ->
+  //   VitePress base (A, config only). Residual inventory (B) is taken from the final content,
+  //   so it is honest for dry-run and never hides a token the tool claims to have changed.
+  for (const rel of walkTextFiles(root)) {
+    if (rel === PKG_REL) continue // structured above
     const raw = readIf(rel)
-    if (raw) applyEdit(rel, raw.split(UPSTREAM_SLUG).join(args.repo), raw)
+    if (raw === null) continue
+    let next = raw
+    for (const { key, from, to } of renames) {
+      if (next.includes(from)) {
+        next = next.split(from).join(to)
+        recordSensitive(key, rel)
+      }
+    }
+    next = next.split(UPSTREAM_SLUG).join(args.repo)
+    if (rel === CONFIG_REL) next = setViteBase(next, args.base)
+    applyEdit(rel, next, raw)
+    if (args.rebrand) scanResidual(rel, next)
   }
 
   // ── A-mode: copy deploy workflow (idempotent, never clobbers a customized one) ──
@@ -228,44 +305,16 @@ export function runForkInit(
     }
   }
 
-  // ── B-mode: classified rebrand rename ──
+  // ── B-mode residual summary ──
   const residualFiles: string[] = []
   if (args.rebrand) {
-    const lower = args.rebrand
-    const upper = args.rebrand.toUpperCase()
-    // Protect user-supplied identity that legitimately contains "wxl" (e.g. a fork
-    // named owner/wxl-ctf) so the blind rename does not corrupt the repo/author.
-    const protectedStrings = [args.repo, args.author].filter((s) => /wxl/i.test(s))
-    const files = walkTextFiles(root)
-    for (const rel of files) {
-      const raw = readFileSync(abs(rel), 'utf8')
-      for (const { key, probe } of SENSITIVE_KEYS) {
-        if (probe.test(raw)) {
-          if (!sensitiveMap.has(key)) sensitiveMap.set(key, new Set())
-          sensitiveMap.get(key)!.add(rel)
-        }
-      }
-      // Sentinel token contains no `wxl`/`WXL` (else the rename would mangle it) and
-      // is vanishingly unlikely to appear in source.
-      const sentinels = protectedStrings.map((s, i) => ({ s, token: `__FORKINIT_KEEP_${i}__` }))
-      let work = raw
-      for (const { s, token } of sentinels) work = work.split(s).join(token)
-      work = work.split('wxl').join(lower).split('WXL').join(upper)
-      for (const { s, token } of sentinels) work = work.split(token).join(s)
-      applyEdit(rel, work, raw)
-      // Residual scan: only exact-case `wxl`/`WXL` are auto-renamed. Surface every
-      // remaining case-insensitive `wxl` (Title-case compounds like Wxlsh, path-
-      // referencing dirs like chall-wasm/wxlsh-parser) so the user finishes manually.
-      let resCheck = work
-      for (const { s } of sentinels) resCheck = resCheck.split(s).join('')
-      if (/wxl/i.test(resCheck)) residualFiles.push(rel)
-    }
+    for (const h of residualHits) if (!residualFiles.includes(h.file)) residualFiles.push(h.file)
     warnings.push(
-      'Rebrand renames only exact-case "wxl"/"WXL". It skips .agent/.claude/.codex/.gemini (structural skill identifiers) and this tool\'s own source. Directory/path names (e.g. chall-wasm/wxlsh-parser) are NOT auto-renamed — the build will not run until you rename those dirs, and Title-case tokens (Wxlsh, X-Wxlsh-*) need a manual pass.',
+      'Rebrand renamed only the upstream slug and the 4 runtime-sensitive keys — the tokens it can prove are self-contained. Every other `wxl` is left as a deliberate, namespace-aware decision: the brand short-name vs the `wxlsh` subsystem / `X-Wxlsh-*` wire headers vs path-referenced skill/spec directory names cannot be told apart automatically. Directory names (e.g. chall-wasm/wxlsh-parser) are NOT auto-renamed and the build will not run until you rename those dirs manually.',
     )
     if (residualFiles.length) {
       warnings.push(
-        `${residualFiles.length} file(s) still contain a case-insensitive "wxl" — run \`git grep -i wxl\` and finish the rebrand manually.`,
+        `${residualFiles.length} file(s) still contain a case-insensitive "wxl" — the rebrand is NOT complete; run \`git grep -in wxl\` and finish it manually (occurrences of your own --repo/--author are intentional).`,
       )
     }
   }
@@ -275,17 +324,21 @@ export function runForkInit(
     files: [...files].sort(),
   }))
 
-  // de-dupe changedFiles (a file may be edited by both A and B stages)
   const uniqueChanged = [...new Set(changedFiles)]
+
+  const message = args.dryRun
+    ? `dry-run: ${uniqueChanged.length} file(s) would change`
+    : args.rebrand && residualFiles.length
+      ? `fork:init done (rebrand) — ${uniqueChanged.length} file(s) changed; ${residualFiles.length} file(s) still contain "wxl" and need manual, namespace-aware handling (rebrand NOT complete)`
+      : `fork:init done — ${uniqueChanged.length} file(s) changed`
 
   return {
     exitCode: 0,
-    message: args.dryRun
-      ? `dry-run: ${uniqueChanged.length} file(s) would change`
-      : `fork:init done — ${uniqueChanged.length} file(s) changed`,
+    message,
     changedFiles: uniqueChanged,
     sensitiveKeys,
     residualFiles,
+    residualHits,
     warnings,
   }
 }
@@ -313,19 +366,26 @@ function setViteBase(cfg: string, base: string | null | undefined): string {
   return lines.join('\n')
 }
 
-/** Recursively list repo-relative text files eligible for the rebrand rename. */
+/** True when `childRel` equals an excluded fragment or is a path segment beneath one. */
+function isExcludedPath(childRel: string): boolean {
+  return EXCLUDED_PATH_FRAGMENTS.some(
+    (frag) => childRel === frag || childRel.startsWith(frag + sep),
+  )
+}
+
+/** Recursively list repo-relative text files eligible for the text passes. */
 function walkTextFiles(root: string, rel = ''): string[] {
   const out: string[] = []
   for (const entry of readdirSync(join(root, rel), { withFileTypes: true })) {
     const childRel = rel ? join(rel, entry.name) : entry.name
     if (entry.isDirectory()) {
       if (EXCLUDED_DIRS.has(entry.name)) continue
-      if (childRel.startsWith(EXCLUDED_PATH_FRAGMENT)) continue
+      if (isExcludedPath(childRel)) continue
       out.push(...walkTextFiles(root, childRel))
     } else if (entry.isFile()) {
       if (EXCLUDED_FILE.has(entry.name)) continue
       if (SELF_EXCLUDE.has(childRel)) continue
-      if (childRel.startsWith(EXCLUDED_PATH_FRAGMENT)) continue
+      if (isExcludedPath(childRel)) continue
       // skip binary-looking files (any null byte in the file)
       const buf = readFileSync(join(root, childRel))
       if (buf.includes(0)) continue
@@ -360,8 +420,9 @@ function main() {
     for (const k of result.sensitiveKeys) console.log(`  ${k.key} -> in ${k.files.join(', ')}`)
   }
   if (result.residualFiles.length) {
-    console.log(`\n[!] ${result.residualFiles.length} file(s) still contain a case-insensitive "wxl" (finish manually):`)
+    console.log(`\n[!] ${result.residualFiles.length} file(s) still contain a case-insensitive "wxl" (NOT auto-renamed — finish manually):`)
     for (const f of result.residualFiles) console.log(`  ${f}`)
+    console.log('    Run `git grep -in wxl` to review each; decide brand vs wxlsh-subsystem vs skill/spec dir per occurrence.')
   }
   for (const w of result.warnings) console.log(`\n[i] ${w}`)
   process.exit(result.exitCode)

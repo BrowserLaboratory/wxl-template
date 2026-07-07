@@ -20,15 +20,15 @@
 
 ### fork:init CLI 契約與 A/B 兩模式
 
-`scripts/fork-init.ts`（`pnpm fork:init`）以 flags 驅動：`--name`、`--author`、`--repo <owner/repo>`、`--base <path|none>`、`--rebrand <newshortname>`（給定即進 B 模式）、`--dry-run`。A 模式做身分欄位與 URL／base／deploy 的確定性編輯；B 模式在 A 之上再跑分類式 `wxl` 短名 rename。選 flag 驅動而非互動式 prompt，因為互動由 skill 層負責，script 保持純確定性、可測試、可被 CI 或其他 agent 直接呼叫。
+`scripts/fork-init.ts`（`pnpm fork:init`）以 flags 驅動：`--name`、`--author`、`--repo <owner/repo>`、`--base <path|none>`、`--rebrand <newshortname>`（給定即進 B 模式）、`--dry-run`。A 模式做身分欄位、base、deploy 與**掃描式上游 slug 原子替換**的確定性編輯；B 模式在 A 之上，只對「可證明為完整、獨立 token」者做結構感知的定點 rename（見下）。選 flag 驅動而非互動式 prompt，因為互動由 skill 層負責，script 保持純確定性、可測試、可被 CI 或其他 agent 直接呼叫。
 
-### runtime 敏感鍵獨立分類與結尾報告
+### 只改「可證明的 token」，其餘誠實 inventory（不做盲目全域取代）
 
-B 模式的 rename 把四個 runtime 敏感鍵（localStorage key、env 變數、tmp 工作目錄、release 資產名）視為獨立一類，明確 rename 並在結尾單獨列出「已改的敏感鍵」報告，讓使用者清楚 storage／env／release 契約被更名的影響。選擇「明確改並報告」而非「一律保留」，因為真正 rebrand 時這些鍵本就該改名以維持品牌一致；關鍵在可見與可審計，而非盲改。
+在本 repo，子字串 `wxl` 橫跨數個語意獨立的識別子家族，deterministic 文字工具無法分辨：品牌短名、`wxlsh` 子系統／`X-Wxlsh-*` wire header、四個 runtime 敏感鍵、上游 repo slug、路徑引用的 skill/spec 目錄名。**盲目 `wxl`→`<newname>` 全域取代**會腐蝕本該保留者（如 `wxlsh`→`xsh`、或把 `wxl-template` 攪成死連結 `<brand>-template`）且是靜默的。因此 B 模式**不做盲目取代**，只 rename 兩類可證明為完整 token 者：(1) 上游 slug（由 A 模式原子替換整段 `BrowserLaboratory/wxl-template`）與 (2) 四個 runtime 敏感鍵（`wxl-locale`、`WXL_VERIFY_RUNTIME`、`tmp/wxl-verify`、`release.yml` 的 `wxl-` 前綴），以 exact full-token、結構感知的替換完成，並在結尾列出「已改的敏感鍵」報告。敏感鍵 rename 於**原始內容上、在 slug swap 寫入使用者身分之前**執行，故含敏感鍵 token 的 `--repo`／`--author` 絕不會被誤改（由建構保證身分安全，不需 sentinel）。
 
-### rebrand rename 的排除範圍與安全邊界
+### 排除範圍、路徑邊界、與誠實 residual inventory
 
-rename 只掃作用中檔案且只替換 exact-case `wxl`/`WXL`，排除 `pnpm-lock.yaml`、`node_modules`、`.git`、`openspec/changes/archive/**`、結構性 skill 目錄 `.agent`/`.claude`/`.codex`/`.gemini`（其識別字為目錄名與 thin-pointer 路徑引用，content-only rename 會破壞）、以及工具自身 `scripts/fork-init.ts`（需保留 `wxl` probe）。使用者提供的 `--repo`／`--author`（可能合法含 `wxl`）以 sentinel 於 rename 期間保護，確保 fork 身分不被誤改。因只改 exact-case，script 於結尾輸出 **residual 報告**：列出仍含 case-insensitive `wxl` 的作用中檔案（Title-case 如 `Wxlsh`、路徑引用如 `chall-wasm/wxlsh-parser`），提示需手動完成（含目錄改名，否則 build 無法執行）。冪等：exact-case 改完後重跑無殘留 exact-case `wxl`，protected 身分原樣還原。
+text pass 只掃作用中檔案，排除 `pnpm-lock.yaml`、`node_modules`、`.git`、`openspec/changes/archive/**`、**重生的 build 產物 `.vitepress/dist/**`／`.vitepress/cache/**`**、**Spectra 內部狀態 `.spectra/**`**、結構性 skill 目錄 `.agent`/`.claude`/`.codex`/`.gemini`（識別字為目錄名與 thin-pointer 路徑引用，content-only rename 會破壞）、以及工具自身 `scripts/fork-init.ts` 與 `tests/unit/scripts/fork-init.test.ts`（需保留 `wxl` probe／fixture）。路徑排除以 **path-segment 邊界**比對（`=== frag` 或 `startsWith(frag + sep)`），故 `openspec/changes/archive-notes.md` 這類現役同名前綴檔不會被誤判為封存。因只 rename 可證明的 token，script 於結尾輸出**誠實 residual inventory**：**由實際寫入的最終內容重算**（非 pre-edit 快照），逐一列出仍含 case-insensitive `wxl` 的 `file:line`（品牌散字、`wxlsh` 子系統、Title-case `Wxlsh`、路徑引用如 `chall-wasm/wxlsh-parser` 等），並**在仍有 `wxl` 殘留時明確聲明 rebrand 未完成、絕不誤報 clean**。residual 計算僅剝除使用者自己的 `--repo` slug（必含 `/`，不可能是裸品牌 token 或 `wxlsh` 的子字串，剝除安全）；**`--author` 不剝除**，故裸 `--author wxl` 無法遮蔽真實殘留。冪等：敏感鍵與 slug 改完後重跑零變更，且永不 double-rename（`acme` 不會變 `acacmeme`）。
 
 ### dry-run 與變更摘要
 
@@ -48,27 +48,27 @@ rename 只掃作用中檔案且只替換 exact-case `wxl`/`WXL`，排除 `pnpm-l
 
 **Interface / 契約**：
 - CLI flags 如上；未給必要 flag 時以非零 exit 與可讀訊息中止（不 silent）。
-- A 模式編輯集合：package.json（version→`0.1.0`、author、repository.url、bugs.url、homepage、license；B 另含 name〔取自 `--rebrand`／`--name`〕，`description` 僅在給 `--description` 時設）、`.vitepress/config.mts`（依 `--base` 設定或清除 base、GitHub URL swap 涵蓋 socialLinks link）、README.md 與 CONTRIBUTE.md 的 GitHub URLs、複製 `.agent/skills/wxl-fork-init/deploy.yml.template` 至 `.github/workflows/deploy.yml`。無法自動生成的品牌文案（VitePress `title`、package.json `description`）不由 CLI 杜撰，其中的字面 `wxl` 由 rebrand rename pass 處理。
-- B 模式另做 `wxl` → `<newname>` 分類式 rename，敏感鍵四類（`wxl-locale`、`WXL_VERIFY_RUNTIME`、`tmp/wxl-verify`、`wxl-${tag}.zip`）獨立處理並報告；release.yml 的 `wxl-` 前綴一併更新。
+- A 模式編輯集合：package.json 結構化編輯（version→`0.1.0`、author、repository.url、bugs.url、homepage、license；B 另含 name〔取自 `--rebrand`／`--name`〕，`description` 僅在給 `--description` 時設）、`.vitepress/config.mts` 依 `--base` 設定或清除 base、**掃描式上游 slug 原子替換**（把 `BrowserLaboratory/wxl-template` 整段換成 `--repo`，涵蓋 config.mts socialLink、README、CONTRIBUTE、CHANGELOG 及任何未來含 slug 的檔案，非硬編碼清單）、複製 `.agent/skills/wxl-fork-init/deploy.yml.template` 至 `.github/workflows/deploy.yml`。品牌文案（VitePress `title`、package.json `description`）不由 CLI 杜撰。
+- B 模式**只 rename 可證明的完整 token**：上游 slug（同 A 的原子替換）與四個 runtime 敏感鍵（`wxl-locale`、`WXL_VERIFY_RUNTIME`、`tmp/wxl-verify`、`release.yml` 的 `wxl-${tag}` 前綴），以 exact full-token 結構感知替換；**不做盲目 `wxl`→`<newname>` 全域取代**。敏感鍵 rename 在 slug swap 之前、對原始內容執行（身分由建構保證安全，無 sentinel）。其餘 `wxl` 一律進**誠實 residual inventory**（由最終內容重算，`file:line`），仍有殘留時聲明「rebrand 未完成」、不誤報 clean。
 - 新增 `package.json` script：`fork:init`。
 
-**Failure modes**：缺必要 flag、`--repo` 格式非 `owner/repo`、目標檔缺失 → 非零 exit 並印明確原因；`--dry-run` 保證零檔案寫入。
+**Failure modes**：缺必要 flag、`--repo` 格式非 `owner/repo` → 非零 exit 並印明確原因；`--dry-run` 保證零檔案寫入；B 模式若有 residual，exit 0 但訊息明確聲明未完成（不 silent、不誤報 clean）。
 
 **Acceptance criteria**：
-- `pnpm fork:init` 的 vitest 測試（含敏感鍵分類、dry-run 不落地、排除清單）全綠。
-- A 模式跑完後 `git grep BrowserLaboratory/wxl-template` 與 upstream author 於作用中檔案零殘留（deploy.yml 已就位、base 依部署位置設妥）。
-- B 模式跑完後作用中檔案 `wxl` 短名零殘留（敏感鍵已改並列於報告），且 `pnpm build` 可成功。
+- `pnpm fork:init` 的 vitest 測試（含敏感鍵、掃描式 slug、path 邊界、身分保護、bare-token author 不坍縮、誠實 inventory、dry-run 不落地、排除清單）全綠。
+- A 模式跑完後 `git grep BrowserLaboratory/wxl-template` 於作用中檔案零殘留（含 CHANGELOG；deploy.yml 已就位、base 依部署位置設妥）。
+- B 模式跑完後：四個敏感鍵於**實際寫入內容**已改並列於報告；slug 已換成 `--repo`（無 `<brand>-template` 死連結）；剩餘 `wxl` 逐一列於 residual inventory（`file:line`）且訊息聲明未完成；使用者 `--repo`／`--author` 未被誤改。
 - skill SKILL.md 為 script-driven、host-neutral grep exit 1、thin-pointer body ≤3 行不變。
 
-**Scope boundaries**：In，`scripts/fork-init.ts`＋測試、package.json script、fork-init skill 改寫、新 capability spec。Out，GitHub 遠端操作、LICENSE 條款、deploy 範本內容、challenge／其他 skill 功能。
+**Scope boundaries**：In，`scripts/fork-init.ts`＋測試、package.json script、fork-init skill 改寫、新 capability spec。Out，GitHub 遠端操作、LICENSE 條款、deploy 範本內容、challenge／其他 skill 功能、多義 `wxl` 家族（`wxlsh` 子系統、skill/spec 目錄）的自動改名（由 inventory 交人工判斷）。
 
 ## Risks / Trade-offs
 
-- 大範圍 rename 誤傷非預期字串 → exact-case 替換＋排除清單（含 `.agent`/`.claude`/`.codex`/`.gemini`/工具自身）＋使用者身分 sentinel 保護＋`--dry-run` 預覽＋單元測試多重防護。
+- `wxl` 橫跨多個識別子家族，盲目全域取代會腐蝕該保留者 → **不做盲目取代**，只改可證明的完整 token（slug + 4 敏感鍵），其餘誠實 inventory 交人工；工具因此不會靜默腐蝕 `wxlsh` 子系統或 skill/spec 目錄引用。
 - 敏感鍵更名改變 storage／env／release 契約 → 明確分類並結尾報告，讓影響可見；fresh fork 無既有使用者，風險低。
-- exact-case 無法涵蓋 Title-case（`Wxlsh`）與路徑引用目錄（`wxlsh-parser`）→ residual 報告逐檔列出剩餘 case-insensitive `wxl`，並警示目錄未改名前 build 無法執行，把「不完整 rebrand」從靜默變成可見待辦。
-- 含 `wxl` 的 `--repo`／`--author` 被 rename 誤改 → sentinel 於每檔 rename 期間保護、事後還原，並有專門測試覆蓋。
-- script 與 skill 文件本身含 `wxl` 字樣，重跑可能雙重 rename → 冪等處理並在測試覆蓋。
+- B 模式**不**幫使用者完成整個品牌改名（Title-case、`wxlsh`、目錄名等留待人工）→ 這是刻意的誠實取捨：deterministic 工具無法安全做 namespace 判斷；residual inventory 逐 `file:line` 列出，並警示目錄未改名前 build 無法執行，把「不完整 rebrand」從靜默變成可見待辦。
+- 含敏感鍵 token 或 sentinel 樣式的 `--repo`／`--author` 被誤改 → 已移除 sentinel 機制；敏感鍵 rename 在 slug swap 前對原始內容執行，身分寫入後不再被任何 pass 觸及（由建構保證，並有 `me/wxl-locale`、`me/wxl__FORKINIT_KEEP_1__` 專門測試）。
+- residual 報告誤報 clean（RC2）→ 一律由**實際寫入的最終內容**重算；只剝除使用者自己的 `--repo` slug（含 `/`，剝除安全），`--author` 不剝除，故裸 `--author wxl` 無法遮蔽殘留。
 - CLI 契約與 skill prose 需一致 → 由 spec Requirement 綁定 flag 集合，skill 只描述呼叫方式不重述細節。
 
 ## Migration Plan
@@ -76,10 +76,10 @@ rename 只掃作用中檔案且只替換 exact-case `wxl`/`WXL`，排除 `pnpm-l
 1. 先寫 vitest 失敗測試（fixture）。
 2. 實作 `scripts/fork-init.ts` 至測試轉綠；加 `package.json` 的 `fork:init` script。
 3. 改寫 `wxl-fork-init` SKILL.md／AGENTS.md 為 script-driven。
-4. 驗收：測試綠、A/B grep 零殘留、host-neutral、`spectra validate`。
+4. 驗收：測試綠、A slug grep 零殘留、B 敏感鍵已改＋誠實 inventory、host-neutral、`spectra validate`。
 
 Rollback：純新增 script 加 skill 文件改寫，`git revert` 即可還原；無執行期狀態遷移。
 
 ## Open Questions
 
-- `--rebrand` 是否需**自動改名** Title-case 變體（`Wxl`／`Wxlsh`）與結構性目錄（`chall-wasm/wxlsh-parser`）？初版自動處理 exact-case `wxl`/`WXL`，其餘經 residual 報告**明確列出待手動處理**（非靜默略過）；把 Title-case 與目錄改名納入自動化列為後續增強。
+- （已解決）`--rebrand` 是否應**自動改名**多義 `wxl` 家族（Title-case `Wxlsh`、`wxlsh` 子系統、結構性目錄 `chall-wasm/wxlsh-parser`、skill/spec 目錄）？結論：**不自動改**。經三輪對抗式審查 + 多 opus 根因分析確認，deterministic 文字工具無法安全區分這些家族，盲目取代會靜默腐蝕該保留者。工具改為只 rename 可證明的完整 token（slug + 4 敏感鍵），其餘一律以誠實 `file:line` inventory 交人工做 namespace-aware 判斷，並永不誤報 clean。把多義家族的自動改名（含目錄協同 `git mv`）列為後續、需人工把關的增強。

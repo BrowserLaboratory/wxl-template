@@ -16,12 +16,23 @@ The project SHALL provide a `pnpm fork:init` command backed by `scripts/fork-ini
 
 ### Requirement: A-mode rewrites identity fields, base, URLs, and deploy workflow
 
-In both modes, the CLI SHALL deterministically rewrite the project identity so no upstream identity remains in active files. It SHALL update `package.json` (`version` reset to `0.1.0`, `author`, `repository.url`, `bugs.url`, `homepage`, `license`; in rebrand mode also `name` from `--rebrand` or `--name`; and `description` only when `--description` is provided), set or clear the VitePress `base` in `.vitepress/config.mts` per `--base`, rewrite the GitHub URLs in `.vitepress/config.mts`, `README.md`, and `CONTRIBUTE.md` to the new `--repo` (this covers the VitePress `socialLinks` links), and copy `.agent/skills/wxl-fork-init/deploy.yml.template` to `.github/workflows/deploy.yml`. Free-form product copy — the VitePress `title` and the `package.json` `description` — is NOT invented by the CLI; any literal `wxl` short-name inside it is handled by the rebrand rename pass, and `--description` MAY set the description explicitly.
+In both modes, the CLI SHALL deterministically rewrite the project identity so no upstream identity remains in active files. It SHALL update `package.json` via structured edits (`version` reset to `0.1.0`, `author`, `repository.url`, `bugs.url`, `homepage`, `license`; in rebrand mode also `name` from `--rebrand` or `--name`; and `description` only when `--description` is provided), set or clear the VitePress `base` in `.vitepress/config.mts` per `--base`, and copy `.agent/skills/wxl-fork-init/deploy.yml.template` to `.github/workflows/deploy.yml`. It SHALL replace the upstream repository slug `BrowserLaboratory/wxl-template` with the new `--repo` as a single atomic unit across **every** active text file discovered by scanning — not a hand-maintained file list — so that `.vitepress/config.mts` (its `socialLinks` link), `README.md`, `CONTRIBUTE.md`, `CHANGELOG.md`, and any future slug-bearing file are all covered; because the whole slug is rewritten atomically, the `wxl` inside `wxl-template` is never mangled into a dead `<brand>-template` link. Free-form product copy — the VitePress `title` and the `package.json` `description` — is NOT invented by the CLI, and `--description` MAY set the description explicitly.
 
 #### Scenario: Identity fields rewritten
 
 - **WHEN** `pnpm fork:init --author me --repo me/myfork --base /myfork/` completes in A mode
 - **THEN** `package.json` `version` SHALL be `0.1.0`, `author` SHALL be `me`, and `repository.url` / `bugs.url` / `homepage` SHALL point at `me/myfork`; `.vitepress/config.mts` SHALL set `base: '/myfork/'` and its `socialLinks` GitHub links SHALL point at `me/myfork`; and `README.md` / `CONTRIBUTE.md` SHALL contain no `BrowserLaboratory/wxl-template` URL
+
+#### Scenario: Upstream slug swap is scan-driven and covers every active file
+
+- **WHEN** the CLI runs against a tree where `CHANGELOG.md` (a file not in any hardcoded edit list) contains `https://github.com/BrowserLaboratory/wxl-template/...` links
+- **THEN** the CLI SHALL rewrite those links to the new `--repo` and SHALL leave no `BrowserLaboratory/wxl-template` slug in `CHANGELOG.md`, and in rebrand mode SHALL NOT produce a `BrowserLaboratory/<brand>-template` dead link
+
+#### Scenario: An active archive-prefixed sibling is not skipped
+
+- **GIVEN** an active file `openspec/changes/archive-notes.md` and the historical directory `openspec/changes/archive/`
+- **WHEN** the CLI runs
+- **THEN** exclusions SHALL match at a path-segment boundary: the file under `openspec/changes/archive/` SHALL remain untouched while `openspec/changes/archive-notes.md` SHALL be processed like any other active file
 
 #### Scenario: Base cleared for root deployment
 
@@ -39,34 +50,44 @@ In both modes, the CLI SHALL deterministically rewrite the project identity so n
 - **WHEN** `.github/workflows/deploy.yml` already exists with content different from the template
 - **THEN** the CLI SHALL leave it untouched and SHALL emit a warning naming `deploy.yml`, rather than overwriting a customized workflow
 
-### Requirement: Rebrand mode renames the wxl short-name with classified runtime-sensitive-key handling
+### Requirement: Rebrand mode renames only provable tokens and inventories the rest honestly
 
-In rebrand (B) mode, the CLI SHALL rename the exact-case `wxl` and `WXL` short-name to `<newname>` across active files, and SHALL treat the four runtime-sensitive keys as a distinct class that is renamed explicitly and reported separately: the localStorage key `wxl-locale`, the environment variable `WXL_VERIFY_RUNTIME`, the temp working directory `tmp/wxl-verify`, and the release asset prefix `wxl-` in `release.yml`. The rename SHALL exclude `pnpm-lock.yaml`, `node_modules`, `.git`, `openspec/changes/archive/**`, the structural skill directories `.agent`/`.claude`/`.codex`/`.gemini`, and the tool's own source `scripts/fork-init.ts`, and SHALL be idempotent (re-running SHALL NOT double-rename). The CLI SHALL protect the user-supplied `--repo` and `--author` values (which MAY legitimately contain `wxl`) from the rename so identity strings are never corrupted. Because only exact-case `wxl`/`WXL` are renamed, the CLI SHALL surface a residual report listing every active file that still contains a case-insensitive `wxl` (Title-case identifiers such as `Wxlsh`, path-referencing directory names such as `chall-wasm/wxlsh-parser`) so the maintainer can finish the rebrand and any directory renames manually.
+The substring `wxl` in this repo spans several semantically distinct identifier families a deterministic text tool cannot tell apart (the brand short-name, the `wxlsh` subsystem / `X-Wxlsh-*` wire headers, the four runtime-sensitive keys, the upstream repo slug, and path-referenced skill/spec directory names). Therefore, in rebrand (B) mode, the CLI SHALL rename ONLY the tokens it can prove are complete and self-contained — the upstream slug (handled by the A-mode atomic swap) and the four runtime-sensitive keys — using exact full-token, structure-aware replacements, and SHALL NOT perform a blind whole-file `wxl`→`<newname>` substitution. The four keys are the localStorage key `wxl-locale`, the environment variable `WXL_VERIFY_RUNTIME`, the temp working directory `tmp/wxl-verify`, and the release asset prefix `wxl-` in `release.yml`; each SHALL be renamed to its `<newname>` equivalent and reported. The sensitive-key rename SHALL run against the original content BEFORE the slug swap writes user identity, so a `--repo`/`--author` that happens to contain a key token is never corrupted. The rename SHALL exclude `pnpm-lock.yaml`, `node_modules`, `.git`, `openspec/changes/archive/**`, regenerated build output (`.vitepress/dist/**`, `.vitepress/cache/**`), Spectra internal state (`.spectra/**`), the structural skill directories `.agent`/`.claude`/`.codex`/`.gemini`, and the tool's own source and test, and SHALL be idempotent. Because the tool renames only provable tokens, it SHALL surface an HONEST residual inventory — computed from the bytes actually written (never a pre-edit snapshot), listing every remaining case-insensitive `wxl` as `file:line` — and SHALL NOT report the rebrand as complete or "clean" while any `wxl` remains. Occurrences that are solely the user's own `--repo` slug SHALL NOT be flagged (they are intentional identity); the `--author` value SHALL NOT be stripped from the residual check, so a bare `--author wxl` can never mask a real residual.
 
 #### Scenario: Sensitive keys renamed and reported
 
 - **WHEN** `pnpm fork:init --rebrand acme ...` completes
-- **THEN** the four runtime-sensitive keys SHALL be renamed to the `acme` equivalents (`acme-locale`, `ACME_VERIFY_RUNTIME`, `tmp/acme-verify`, `acme-` release prefix) and SHALL each appear in the CLI's end-of-run "sensitive keys" report
+- **THEN** the four runtime-sensitive keys SHALL be renamed to the `acme` equivalents (`acme-locale`, `ACME_VERIFY_RUNTIME`, `tmp/acme-verify`, `acme-` release prefix) and SHALL each appear in the CLI's end-of-run "sensitive keys" report, and a file whose only `wxl` was an actually-renamed key SHALL NOT appear in the residual inventory
+
+#### Scenario: The wxlsh subsystem token is not blind-renamed
+
+- **WHEN** rebrand mode runs against an active file containing `useWxlsh` / `wxlsh`
+- **THEN** the CLI SHALL leave that token byte-for-byte unchanged (it is not a provable brand-only full token) and SHALL instead list the file in the residual inventory for manual, namespace-aware handling
 
 #### Scenario: Excluded paths untouched
 
 - **WHEN** rebrand mode runs
-- **THEN** `pnpm-lock.yaml`, any file under `openspec/changes/archive/`, any file under `.agent`/`.claude`/`.codex`/`.gemini`, and `scripts/fork-init.ts` SHALL NOT be modified
+- **THEN** `pnpm-lock.yaml`, any file under `openspec/changes/archive/`, `.vitepress/dist/`, `.vitepress/cache/`, `.spectra/`, `.agent`/`.claude`/`.codex`/`.gemini`, and the tool's own `scripts/fork-init.ts` / `tests/unit/scripts/fork-init.test.ts` SHALL NOT be modified
 
-#### Scenario: User identity containing "wxl" is protected
+#### Scenario: User identity containing "wxl" is protected and not mis-flagged
 
 - **WHEN** the CLI runs with `--repo myorg/wxl-ctf --author wxlfan --rebrand acme`
-- **THEN** `package.json` `repository.url` SHALL remain `git+https://github.com/myorg/wxl-ctf.git`, `author` SHALL remain `wxlfan`, and the README clone URL SHALL still reference `myorg/wxl-ctf` — the rename SHALL NOT corrupt the fork's own identity
+- **THEN** `package.json` `repository.url` SHALL remain `git+https://github.com/myorg/wxl-ctf.git`, `author` SHALL remain `wxlfan`, and the README clone URL SHALL still reference `myorg/wxl-ctf`; the README SHALL NOT be listed in the residual inventory on account of the user's own slug
 
-#### Scenario: Residual case-insensitive matches are reported
+#### Scenario: A bare-token --author does not collapse the rename
 
-- **WHEN** an active file contains a Title-case brand token such as `useWxlsh` that the exact-case rename does not cover
-- **THEN** the CLI SHALL leave that token unchanged and SHALL list the file in its residual report, and SHALL warn that directory names (e.g. `chall-wasm/wxlsh-parser`) are not auto-renamed and the build will not run until they are renamed manually
+- **WHEN** the CLI runs with `--author wxl --repo me/myfork --rebrand acme`
+- **THEN** the four sensitive keys SHALL still be renamed to their `acme` equivalents (the rename is NOT masked or collapsed), the `author` SHALL be written as `wxl`, and the residual inventory SHALL still surface the remaining brand tokens (no false "clean")
+
+#### Scenario: Residual inventory is honest and the run is not called complete
+
+- **WHEN** rebrand mode leaves any case-insensitive `wxl` in an active file (e.g. a Title-case `useWxlsh`)
+- **THEN** the CLI SHALL list that file (with `file:line`) in the residual inventory computed from the final content, SHALL emit a message stating the rebrand is NOT complete, and SHALL warn that directory names (e.g. `chall-wasm/wxlsh-parser`) are not auto-renamed and the build will not run until they are renamed manually
 
 #### Scenario: Re-running rebrand is idempotent
 
 - **WHEN** `pnpm fork:init --rebrand acme ...` is run twice in succession
-- **THEN** the second run SHALL NOT produce a double-renamed token (e.g. `acme` SHALL NOT become `acacmeme`) and SHALL report no further `wxl` occurrences to change
+- **THEN** the second run SHALL NOT produce a double-renamed token (e.g. `acme` SHALL NOT become `acacmeme`) and SHALL report zero changed files
 
 ### Requirement: Dry-run previews all edits without writing
 

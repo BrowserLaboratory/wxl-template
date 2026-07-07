@@ -14,7 +14,7 @@
 
 | Tool / skill | Relationship |
 |--------------|--------------|
-| `pnpm fork:init` (`scripts/fork-init.ts`) | 本 skill 的核心：收集意圖與參數後呼叫它做確定性 fork 編輯（身分欄位、base、URL swap、deploy workflow、B 模式 rebrand rename）。skill prose 不重述其編輯細節，也不繞過它手改檔案。 |
+| `pnpm fork:init` (`scripts/fork-init.ts`) | 本 skill 的核心：收集意圖與參數後呼叫它做確定性 fork 編輯（身分欄位、base、掃描式上游 slug 原子替換、deploy workflow；B 模式另做敏感鍵結構化改名＋誠實 residual inventory）。skill prose 不重述其編輯細節，也不繞過它手改檔案。 |
 | `.agent/skills/wxl-fork-init/deploy.yml.template` | GitHub Pages 部署 workflow 範本，由 `pnpm fork:init` 複製到 `.github/workflows/deploy.yml`。 |
 
 ## 已知 host-specific 差異

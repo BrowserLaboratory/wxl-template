@@ -12,7 +12,7 @@ description: Use when forking or template-cloning this wxl-template repo into a 
 兩種意圖，工作量差很多：
 
 - **A（沿用 WXL 品牌）**：只是拿 template 加自己的題目 → `pnpm fork:init`（不帶 `--rebrand`）。
-- **B（rebrand 全新產品名）**：另加 `--rebrand <newname>`，CLI 會做分類式 `wxl` 短名 rename 並回報四個 runtime 敏感鍵。
+- **B（rebrand 全新產品名）**：另加 `--rebrand <newname>`。CLI **只自動改**可證明的完整 token——上游 slug 與四個 runtime 敏感鍵——其餘含 `wxl` 者（品牌散字、`wxlsh` 子系統、Title-case、skill/spec 目錄）以誠實的 `file:line` inventory 列出交你人工判斷；**CLI 不會宣稱 rebrand 已完成**，直到 inventory 清空為止。
 
 何時**不適用**：只是在既有 repo 內開發、或只想改幾個字串——直接編輯即可，不需本 skill。
 
@@ -50,8 +50,8 @@ description: Use when forking or template-cloning this wxl-template repo into a 
 ### Step 3: 正式執行
 
 - **What**: 套用確定性編輯。
-- **How**: 執行 `pnpm fork:init <flags>`（不帶 `--dry-run`）。CLI 會改 package.json 身分欄位、依 `--base` 設定或清除 VitePress base、swap README／CONTRIBUTE／config.mts 的 GitHub URLs、複製 `deploy.yml.template` 至 `.github/workflows/deploy.yml`（既有且不同者不覆蓋、改為警示）；B 模式另做 exact-case `wxl`/`WXL` rename、列出敏感鍵報告與 **residual 報告**（仍含 case-insensitive `wxl` 的檔案，如 `Wxlsh`、`chall-wasm/wxlsh-parser` 路徑引用）。含 `wxl` 的 `--repo`／`--author` 會被保護不改。
-- **Verification**: CLI exit 0；結尾摘要列出變更檔與（B）敏感鍵。
+- **How**: 執行 `pnpm fork:init <flags>`（不帶 `--dry-run`）。CLI 會改 package.json 身分欄位、依 `--base` 設定或清除 VitePress base、**掃描式**把上游 slug `BrowserLaboratory/wxl-template` 原子替換成 `--repo`（涵蓋 README／CONTRIBUTE／config.mts／CHANGELOG 及任何含 slug 的檔案）、複製 `deploy.yml.template` 至 `.github/workflows/deploy.yml`（既有且不同者不覆蓋、改為警示）；B 模式另做四個 runtime 敏感鍵的結構化 rename 並列出敏感鍵報告，其餘含 `wxl` 者列於 **residual inventory**（`file:line`，如 `Wxlsh`、`wxlsh` 子系統、`chall-wasm/wxlsh-parser` 路徑引用）。含 `wxl` 的 `--repo`／`--author` 由建構保證不被誤改（無 sentinel）。
+- **Verification**: CLI exit 0；結尾摘要列出變更檔、（B）已改敏感鍵與 residual inventory；有殘留時訊息會聲明 rebrand 未完成。
 
 ### Step 4: 驗收
 
@@ -64,8 +64,8 @@ description: Use when forking or template-cloning this wxl-template repo into a 
   - ✅ 一律 `pnpm fork:init`；機械編輯是確定性的，交給 script 省 token 又不易漏。
   - **Why**: 手改易漏欄位（尤其 `base` 漏設整站 404），且浪費 token。
 - ❌ **rebrand 時用 `sed` 全域盲改 `wxl`。**
-  - ✅ 用 `pnpm fork:init --rebrand`（先 `--dry-run`）。CLI **同樣會改名**這四類 runtime 敏感鍵（localStorage key、env 變數、tmp 目錄、release 資產），但會**分類並在報告中列出**，且 dry-run 讓你在套用前先看到 storage／env／release 契約的影響——相對盲 sed 的安全點是「影響可見、可預覽」，而非幫你保留這些鍵。
-  - **Why**: 盲 sed 會改到這些鍵卻不告知；改名後若涉及既有資料，仍需自行做 storage／env 遷移（fresh fork 無既有使用者則無妨）。`.agent/` skill 識別字與工具自身 `scripts/fork-init.ts` 不在 rename 範圍內（避免破壞 path 引用與偵測邏輯）。
+  - ✅ 用 `pnpm fork:init --rebrand`（先 `--dry-run`）。CLI **刻意不做盲目全域取代**：`wxl` 在本 repo 橫跨多個語意獨立家族（品牌短名、`wxlsh` 子系統／`X-Wxlsh-*` wire header、四個 runtime 敏感鍵、上游 slug、skill/spec 目錄名），盲改會把該保留者攪壞（如 `wxlsh`→`xsh`、slug 變死連結）。CLI 只自動改可證明的完整 token（slug + 4 敏感鍵，結構化替換並分類報告），其餘以 `file:line` inventory 交你按家族人工判斷，並**永不誤報 clean**。
+  - **Why**: 盲 sed 會靜默改壞不同子系統或身分字串；本 CLI 把「哪些安全可自動改、哪些需人工」變成可見、可審計。改名後若涉及既有資料，仍需自行做 storage／env 遷移（fresh fork 無既有使用者則無妨）。`.agent`/`.claude`/`.codex`/`.gemini` skill 識別字、`.vitepress/dist`、`.spectra`、工具自身 `scripts/fork-init.ts` 與其測試不在改寫範圍內。
 - ❌ **刪除 `LICENSE` 或原始 attribution。**
   - ✅ 保留 `LICENSE`（ECL-2.0）與既有著作權標示；改 `package.json.author` 後建議於 README 保留 upstream 出處；有實質修改時於顯著處註明。
   - **Why**: 違反 ECL-2.0（Apache 家族 attribution 要求）。
@@ -81,7 +81,7 @@ git grep -n "BrowserLaboratory/wxl-template" -- . ':(exclude)openspec/changes/ar
 git grep -nE "CXPh03n1x|CXPhoenix" -- . ':(exclude)openspec/changes/archive/**'
 ```
 
-兩條預期回傳你自己的身分或零殘留（`package.json.author` 若刻意保留 upstream attribution 則例外）。B（rebrand）逐一處理 CLI 的 **residual 報告**：exact-case `wxl`/`WXL` 已自動改名；報告中的檔案（Title-case 如 `Wxlsh`、路徑引用如 `chall-wasm/wxlsh-parser`）需手動改，且相關目錄未改名前 `pnpm build` 無法執行。`.agent`/`.claude`/`.codex`/`.gemini` 為結構性 skill 識別字，刻意不由 CLI 改名。
+第一條（slug）預期零殘留；第二條回傳你自己的身分或零殘留（`package.json.author` 若刻意保留 upstream attribution 則例外）。B（rebrand）逐一處理 CLI 的 **residual inventory**（`file:line`）：上游 slug 與四個敏感鍵已自動改名；inventory 列出的檔案（品牌散字、Title-case 如 `Wxlsh`、`wxlsh` 子系統、路徑引用如 `chall-wasm/wxlsh-parser`）需你按家族人工判斷並改名，且相關目錄未改名前 `pnpm build` 無法執行。CLI 在 inventory 非空時會明確聲明 rebrand 未完成，不會誤報 clean。`.agent`/`.claude`/`.codex`/`.gemini` 為結構性 skill 識別字，刻意不由 CLI 改名。
 
 本機能建置＋預覽（若設了 `--base`，asset 不 404 即正確）：
 

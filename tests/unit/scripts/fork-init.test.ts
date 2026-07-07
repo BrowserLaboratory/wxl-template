@@ -50,6 +50,15 @@ function writeFixture(root: string) {
 
   w('README.md', 'git clone https://github.com/BrowserLaboratory/wxl-template.git\n')
   w('CONTRIBUTE.md', 'git remote add upstream https://github.com/BrowserLaboratory/wxl-template.git\n')
+  // CHANGELOG carries upstream-slug links — NOT in any hardcoded file list; the scan must cover it.
+  w(
+    'CHANGELOG.md',
+    [
+      '- fix: see https://github.com/BrowserLaboratory/wxl-template/pull/1',
+      '- feat: see https://github.com/BrowserLaboratory/wxl-template/issues/2',
+      '',
+    ].join('\n'),
+  )
   w('.agent/skills/wxl-fork-init/deploy.yml.template', 'name: Deploy\njobs: {}\n')
 
   // runtime-sensitive keys
@@ -60,7 +69,9 @@ function writeFixture(root: string) {
 
   // excluded paths (must never be touched)
   w('pnpm-lock.yaml', 'wxl: 1.0.0 # lockfile, must stay\n')
-  w('openspec/changes/archive/2026-01-01-old/proposal.md', 'historical wxl reference\n')
+  w('openspec/changes/archive/2026-01-01-old/proposal.md', 'historical wxl reference — https://github.com/BrowserLaboratory/wxl-template\n')
+  // an ACTIVE sibling whose name merely begins with "archive" — must NOT be treated as archived
+  w('openspec/changes/archive-notes.md', 'planning note — https://github.com/BrowserLaboratory/wxl-template\n')
   // .agent skill identifiers are structural (path-referenced) — excluded from rename
   w('.agent/skills/wxl-create/SKILL.md', 'Read .agent/skills/wxl-create/SKILL.md — wxl brand\n')
   // host thin pointers reference the exact .agent/skills/wxl-* paths — excluded too
@@ -88,6 +99,7 @@ function writeConfigWithBase(root: string, basePath: string) {
 }
 
 const A_ARGS = ['--author', 'me', '--repo', 'me/myfork', '--base', '/myfork/']
+const B_ARGS = ['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme']
 
 describe('parseForkInitArgs', () => {
   it('requires --repo and rejects a malformed owner/repo value', () => {
@@ -167,6 +179,24 @@ describe('runForkInit — A mode (identity, base, URLs, deploy)', () => {
     expect(readme + contrib + cfg).toContain('me/myfork')
   })
 
+  it('rewrites the upstream slug in CHANGELOG.md — scan-driven, not a hardcoded file list', () => {
+    // A-mode must reach every slug-bearing active file, not just README/CONTRIBUTE/config.
+    runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    const cl = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+    expect(cl).not.toContain('BrowserLaboratory/wxl-template')
+    expect(cl).toContain('me/myfork/pull/1')
+    expect(cl).toContain('me/myfork/issues/2')
+  })
+
+  it('does not treat an active openspec/changes/archive-* sibling as archived (path-segment boundary)', () => {
+    runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    // the ACTIVE sibling IS processed (slug swapped) ...
+    expect(readFileSync(join(root, 'openspec/changes/archive-notes.md'), 'utf8')).toContain('me/myfork')
+    expect(readFileSync(join(root, 'openspec/changes/archive-notes.md'), 'utf8')).not.toContain('BrowserLaboratory/wxl-template')
+    // ... while the real archive/ directory is still skipped
+    expect(readFileSync(join(root, 'openspec/changes/archive/2026-01-01-old/proposal.md'), 'utf8')).toContain('BrowserLaboratory/wxl-template')
+  })
+
   it('sets base when a path is given and copies the deploy workflow', () => {
     runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
     const cfg = readFileSync(join(root, '.vitepress/config.mts'), 'utf8')
@@ -216,9 +246,16 @@ describe('runForkInit — A mode (identity, base, URLs, deploy)', () => {
     expect(JSON.parse(readFileSync(join(root2, 'package.json'), 'utf8')).description).toBe('Web eXploitation Laboratory — powered by WASM')
     rmSync(root2, { recursive: true, force: true })
   })
+
+  it('A mode produces no residual inventory (rebrand-only concern)', () => {
+    const res = runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    expect(res.residualFiles).toEqual([])
+    expect(res.residualHits).toEqual([])
+    expect(res.sensitiveKeys).toEqual([])
+  })
 })
 
-describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
+describe('runForkInit — B mode (rebrand: sensitive keys + honest inventory)', () => {
   let root: string
   beforeEach(() => {
     root = mkdtempSync(join(tmpdir(), 'fork-init-b-'))
@@ -226,11 +263,8 @@ describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
   })
   afterEach(() => rmSync(root, { recursive: true, force: true }))
 
-  it('renames the four runtime-sensitive keys and reports each', () => {
-    const res = runForkInit(
-      parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme']),
-      { projectRoot: root },
-    )
+  it('renames the four runtime-sensitive keys (structure-aware) and reports each', () => {
+    const res = runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
     expect(res.exitCode).toBe(0)
     expect(readFileSync(join(root, '.vitepress/theme/i18n/index.ts'), 'utf8')).toContain('acme-locale')
     expect(readFileSync(join(root, 'scripts/challenge-verify-blind.ts'), 'utf8')).toContain('ACME_VERIFY_RUNTIME')
@@ -240,8 +274,23 @@ describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
     expect(reported).toEqual(['WXL_VERIFY_RUNTIME', 'release-asset', 'tmp/wxl-verify', 'wxl-locale'].sort())
   })
 
-  it('never touches excluded paths (lockfile, archive, .agent + host skills, and its own source)', () => {
-    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme']), { projectRoot: root })
+  it('does NOT blind-rename the wxlsh subsystem token (only full self-contained tokens change)', () => {
+    // wxlsh contains "wxl" but must survive — it is a different identifier family.
+    runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    expect(readFileSync(join(root, '.vitepress/theme/useWxlsh.ts'), 'utf8')).toContain('useWxlsh')
+  })
+
+  it('rewrites the CHANGELOG slug to the NEW repo, never to a dead <brand>-template link', () => {
+    // Regression: a blind wxl-rename would turn wxl-template into acme-template (dead link).
+    runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    const cl = readFileSync(join(root, 'CHANGELOG.md'), 'utf8')
+    expect(cl).toContain('me/myfork')
+    expect(cl).not.toContain('BrowserLaboratory/acme-template')
+    expect(cl).not.toContain('BrowserLaboratory/wxl-template')
+  })
+
+  it('never touches excluded paths (lockfile, archive/, .agent + host skills, and its own source)', () => {
+    runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
     expect(readFileSync(join(root, 'pnpm-lock.yaml'), 'utf8')).toContain('wxl: 1.0.0')
     expect(readFileSync(join(root, 'openspec/changes/archive/2026-01-01-old/proposal.md'), 'utf8')).toContain('wxl reference')
     // .agent skill identifiers are structural — must remain wxl-* so paths still resolve
@@ -252,7 +301,7 @@ describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
     expect(readFileSync(join(root, 'scripts/fork-init.ts'), 'utf8')).toContain('wxl-locale')
   })
 
-  it('protects a --repo/--author that legitimately contains "wxl" from the rename', () => {
+  it('protects a --repo/--author that legitimately contains "wxl" from any rewrite', () => {
     const res = runForkInit(
       parseForkInitArgs(['--author', 'wxlfan', '--repo', 'myorg/wxl-ctf', '--rebrand', 'acme']),
       { projectRoot: root },
@@ -261,12 +310,44 @@ describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
     expect(pkg.repository.url).toBe('git+https://github.com/myorg/wxl-ctf.git')
     expect(pkg.author).toBe('wxlfan')
     expect(readFileSync(join(root, 'README.md'), 'utf8')).toContain('myorg/wxl-ctf')
-    // the protected identity is not counted as a residual it can't fix
+    // the fork's own slug is intentional, so it is NOT flagged as unfinished work
+    expect(res.residualFiles).not.toContain('README.md')
     expect(res.exitCode).toBe(0)
   })
 
+  it('does NOT collapse when --author is the bare brand token (no sentinel machinery)', () => {
+    // Regression for the sentinel-mask collapse: --author wxl used to make the whole rename a
+    // no-op and falsely report clean. With no blind rename + no mask, the keys still rename and
+    // the un-renamed brand token is still surfaced.
+    const res = runForkInit(parseForkInitArgs(['--author', 'wxl', '--repo', 'me/myfork', '--rebrand', 'acme']), { projectRoot: root })
+    const i18n = readFileSync(join(root, '.vitepress/theme/i18n/index.ts'), 'utf8')
+    expect(i18n).toContain('acme-locale') // actually renamed, not skipped
+    expect(i18n).not.toContain('wxl-locale')
+    expect(readFileSync(join(root, '.gitignore'), 'utf8')).toContain('tmp/acme-verify')
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).author).toBe('wxl')
+    // no false clean: the Title-case brand token is still inventoried
+    expect(res.residualFiles).toContain('.vitepress/theme/useWxlsh.ts')
+  })
+
+  it('writes a --repo that embeds the old sentinel token verbatim, with no corruption', () => {
+    // Regression for sentinel-token injection: the scheme is gone, so an underscore-laden repo
+    // (REPO_RE allows `_`) is written as-is instead of being mangled by a restore pass.
+    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/wxl__FORKINIT_KEEP_1__', '--rebrand', 'acme']), { projectRoot: root })
+    const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
+    expect(pkg.repository.url).toBe('git+https://github.com/me/wxl__FORKINIT_KEEP_1__.git')
+    expect(readFileSync(join(root, 'README.md'), 'utf8')).toContain('me/wxl__FORKINIT_KEEP_1__')
+  })
+
+  it('does not corrupt a --repo whose name collides with a sensitive-key token (rename runs before slug swap)', () => {
+    // `me/wxl-locale` would be mangled to `me/acme-locale` if the sensitive rename ran after the
+    // slug swap wrote it. Ordering rename-before-slug protects the identity by construction.
+    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/wxl-locale', '--rebrand', 'acme']), { projectRoot: root })
+    expect(JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).repository.url).toBe('git+https://github.com/me/wxl-locale.git')
+    expect(readFileSync(join(root, 'README.md'), 'utf8')).toContain('me/wxl-locale')
+  })
+
   it('applies A-mode identity in rebrand mode (name from --rebrand, --name wins)', () => {
-    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme']), { projectRoot: root })
+    runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
     let pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
     expect(pkg.name).toBe('acme')
     expect(pkg.version).toBe('0.1.0')
@@ -274,26 +355,33 @@ describe('runForkInit — B mode (rebrand + sensitive keys)', () => {
     // --name overrides the rebrand-derived name
     const root2 = mkdtempSync(join(tmpdir(), 'fork-init-name-'))
     writeFixture(root2)
-    runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme', '--name', 'pkg-x']), { projectRoot: root2 })
+    runForkInit(parseForkInitArgs([...B_ARGS, '--name', 'pkg-x']), { projectRoot: root2 })
     pkg = JSON.parse(readFileSync(join(root2, 'package.json'), 'utf8'))
     expect(pkg.name).toBe('pkg-x')
     rmSync(root2, { recursive: true, force: true })
   })
 
-  it('reports Title-case residuals the exact-case rename cannot cover (e.g. Wxlsh)', () => {
-    const res = runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme']), { projectRoot: root })
-    // the Title-case file is left as-is (not exact-case wxl/WXL) ...
-    expect(readFileSync(join(root, '.vitepress/theme/useWxlsh.ts'), 'utf8')).toContain('useWxlsh')
-    // ... but surfaced in the residual report so the user finishes manually
+  it('inventories residuals from the FINAL bytes (file:line) and never falsely flags a renamed key', () => {
+    const res = runForkInit(parseForkInitArgs(B_ARGS), { projectRoot: root })
+    // the Title-case token is surfaced with its real line/text
+    const hit = res.residualHits.find((h) => h.file === '.vitepress/theme/useWxlsh.ts')
+    expect(hit).toBeDefined()
+    expect(hit!.line).toBe(1)
+    expect(hit!.text).toContain('Wxlsh')
     expect(res.residualFiles).toContain('.vitepress/theme/useWxlsh.ts')
+    // files whose only wxl was an ACTUALLY-renamed sensitive key are NOT in the inventory
+    expect(res.residualFiles).not.toContain('.gitignore')
+    expect(res.residualFiles).not.toContain('.vitepress/theme/i18n/index.ts')
+    expect(res.residualFiles).not.toContain('.github/workflows/release.yml')
+    // the message is honest — it does not claim "clean" while wxl remains
+    expect(res.message).toMatch(/rebrand NOT complete/)
     expect(res.warnings.some((w) => /case-insensitive "wxl"/.test(w))).toBe(true)
   })
 
-  it('is idempotent: a second run finds nothing left to rename', () => {
-    const args = parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme'])
+  it('is idempotent: a second run finds nothing left to change', () => {
+    const args = parseForkInitArgs(B_ARGS)
     runForkInit(args, { projectRoot: root })
     const second = runForkInit(args, { projectRoot: root })
-    // no wxl short-name remains, so no active file (outside exclusions) still contains it
     expect(readFileSync(join(root, '.gitignore'), 'utf8')).not.toContain('wxl-verify')
     expect(readFileSync(join(root, '.vitepress/theme/i18n/index.ts'), 'utf8')).not.toContain('acacmeme')
     expect(second.changedFiles.length).toBe(0)
@@ -321,7 +409,7 @@ describe('runForkInit — dry-run writes nothing', () => {
   it('previews edits but leaves every file unchanged and creates no deploy.yml', () => {
     const before = readFileSync(join(root, 'package.json'), 'utf8')
     const res = runForkInit(
-      parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--rebrand', 'acme', '--dry-run']),
+      parseForkInitArgs([...B_ARGS, '--dry-run']),
       { projectRoot: root },
     )
     expect(res.exitCode).toBe(0)
@@ -329,5 +417,7 @@ describe('runForkInit — dry-run writes nothing', () => {
     expect(readFileSync(join(root, 'package.json'), 'utf8')).toBe(before)
     expect(existsSync(join(root, '.github/workflows/deploy.yml'))).toBe(false)
     expect(readFileSync(join(root, '.gitignore'), 'utf8')).toContain('tmp/wxl-verify')
+    // the residual inventory is computed from the would-be final bytes, not the on-disk snapshot
+    expect(res.residualFiles).toContain('.vitepress/theme/useWxlsh.ts')
   })
 })
