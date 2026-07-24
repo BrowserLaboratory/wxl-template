@@ -19,9 +19,42 @@ description: 建立 wxl 平台的新題目 —— scaffold 題目目錄、生成
 
 ## Workflow
 
+```dot
+digraph flow {
+    rankdir=LR;
+    node [shape=box];
+    grill     [label="0. Grill\nDesign Intent"];
+    collect   [label="1. Collect\nParameters"];
+    scaffold  [label="2. Scaffold"];
+    generate  [label="3. Generate\nVulnerable Code"];
+    metadata  [label="4. Update\nFrontmatter"];
+    spec      [label="5. Write\nExploit Spec"];
+    selftest  [label="6. Best-effort\nSelf-test"];
+    handoff   [label="7. Hand off to\nwxl-verify", shape=doublecircle];
+    grill -> collect -> scaffold -> generate -> metadata -> spec -> selftest -> handoff;
+}
+```
+
+### Step 0：Grill 收斂題目設計
+
+- **What**：在收集參數之前，先跑一段設計收斂訪談，**以內嵌 prose 的形式**採用 `grilling` 技法（技法來源：`.agents/skills/grilling/` 的 `grilling` skill）。**不要 dispatch 那個 skill** —— 技法內嵌於此，讓流程在 Claude Code／Codex CLI／Gemini CLI 三家都維持 host-agent-neutral。目標是把使用者的*設計意圖*收斂到「生成的漏洞碼能精準命中」的程度，且在此之前不動任何檔案。
+- **How**：
+  1. **一次只問一題。** 發出單一純文字問題、附上你的建議答案，等使用者回覆後再問下一題。一次問多題令人困惑 —— 絕不這麼做。
+  2. **事實自己查，只問決策。** 凡是能從環境查到的 —— `docs/challenge/<slug>/` 是否已存在、canonical reference `docs/challenge/door-is-open/src/app.py` 是否可讀、某類漏洞需要哪些額外套件 —— SHALL 以檢視檔案系統或工具解決，而非拿去問使用者。只把真正屬於使用者的設計決策當成問題。
+  3. **拷問設計，而不只是欄位。** 逐一走設計決策樹、解出決策間相依，至少涵蓋：
+     - **漏洞真實性與非顯而易見性** —— 是否為真實、可利用、非顯而易見的漏洞（絕非裸 `eval(user_input)` / `os.system(input())`）？
+     - **預期攻擊路徑** —— 解題者從 HTML UI 到 `/flag.txt` 的確切步驟為何？這條路徑端到端真的成立嗎？
+     - **難度校準** —— 預期難度是否與情境及攻擊路徑複雜度相符？
+     - **誤導／紅鯡** —— 是否需要誘餌、強度多少？（此項取決於難度決策。）
+     - **flag 位置合理性** —— 從 `/flag.txt` 讀 flag 是否只能經由預期漏洞達成，而非被非預期的捷徑繞過？
+  4. **達成共識前不動手。** 在使用者確認設計已定案前，SHALL NOT 執行 `pnpm create:challenge`、生成程式碼或寫任何檔案。
+  5. **設計已清楚時快速通過。** 若初始訊息已描述出精準、可生成的設計，就複述設計並請使用者一次確認，而非逐維度拷問。
+  6. **結論回饋 Step 1。** 把此處定案的每個設計點 —— 尤其 `slug`、`backend`、`vuln`、`description`、`difficulty` —— 視為已提供的參數，讓 Step 1 跳過它們、只補問 Step 0 未定案的欄位。
+- **Verification**：使用者已確認共識設計；定案參數帶入 Step 1；Step 0 期間未建立或修改任何檔案。
+
 ### Step 1：收集參數
 
-- **What**：收集題目參數，先抓出初始訊息已提供的，只針對缺的提問。
+- **What**：收集題目參數，先抓出初始訊息已提供或 Step 0 已定案的，只針對缺的提問。
 - **How**：先掃描初始引數。缺的參數每輪發一個純文字問題區塊並等使用者下一則訊息；整輪都已知就跳過該輪。
 
 要蒐集的參數：

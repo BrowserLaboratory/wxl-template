@@ -23,6 +23,7 @@ The skill is invoked when the user types the create trigger, says "create challe
 digraph flow {
     rankdir=LR;
     node [shape=box];
+    grill     [label="0. Grill\nDesign Intent"];
     collect   [label="1. Collect\nParameters"];
     scaffold  [label="2. Scaffold"];
     generate  [label="3. Generate\nVulnerable Code"];
@@ -30,13 +31,30 @@ digraph flow {
     spec      [label="5. Write\nExploit Spec"];
     selftest  [label="6. Best-effort\nSelf-test"];
     handoff   [label="7. Hand off to\nwxl-verify", shape=doublecircle];
-    collect -> scaffold -> generate -> metadata -> spec -> selftest -> handoff;
+    grill -> collect -> scaffold -> generate -> metadata -> spec -> selftest -> handoff;
 }
 ```
 
+### Step 0: Grill the challenge design to convergence
+
+- **What**: Before collecting parameters, run a design-convergence interview that applies the `grilling` technique **inline as prose** (technique origin: the `grilling` skill at `.agents/skills/grilling/`). Do NOT dispatch that skill — the method is inlined here so the flow stays host-agent-neutral across Claude Code, Codex CLI, and Gemini CLI. The goal is to converge the user's *design intent* until the generated vulnerability code can hit it precisely, before any file is touched.
+- **How**:
+  1. **Ask one question at a time.** Emit a single plain-text question, include your recommended answer, and wait for the user's reply before asking the next. Batching multiple questions at once is bewildering — never do it.
+  2. **Look up facts, ask only decisions.** Anything resolvable from the environment — whether `docs/challenge/<slug>/` already exists, whether the canonical reference `docs/challenge/door-is-open/src/app.py` is readable, which extra packages a vuln class needs — SHALL be resolved by inspecting the filesystem or tools rather than asked. Reserve questions for genuine design decisions that are the user's to make.
+  3. **Grill the design, not just the fields.** Walk the design decision tree, resolving dependencies between decisions one by one, covering at minimum:
+     - **Vulnerability realism & non-obviousness** — is it a real, exploitable, non-trivial bug (never a bare `eval(user_input)` / `os.system(input())`)?
+     - **Expected exploitation path** — what exact steps take a solver from the HTML UI to `/flag.txt`, and does that path actually hold end-to-end?
+     - **Difficulty calibration** — does the intended difficulty match the scenario and the complexity of the exploitation path?
+     - **Misdirection / red herrings** — are decoys wanted, and how strong? (This depends on the difficulty decision.)
+     - **Flag placement plausibility** — is reading the flag from `/flag.txt` reachable only through the intended vulnerability, not by an unintended shortcut?
+  4. **Do not act until shared understanding.** SHALL NOT run `pnpm create:challenge`, generate code, or write any file until the user confirms the design is agreed.
+  5. **Fast-pass when already clear.** If the initial prompt already describes a precise, generatable design, summarize it back and ask for a single confirmation instead of grilling every dimension.
+  6. **Feed conclusions into Step 1.** Treat every design point settled here — especially `slug`, `backend`, `vuln`, `description`, `difficulty` — as an already-provided parameter, so Step 1 skips those and asks only for what Step 0 left open.
+- **Verification**: The user has confirmed a shared design; the settled parameters are carried into Step 1; no file was created or modified during Step 0.
+
 ### Step 1: Collect parameters
 
-- **What**: Collect the challenge parameters, extracting any already supplied in the initial message and asking only for the rest.
+- **What**: Collect the challenge parameters, extracting any already supplied in the initial message or settled during Step 0, and asking only for the rest.
 - **How**: Scan the initial argument first. For each missing parameter, emit a plain-text question block and wait for the user's next message. Group questions into rounds and skip a whole round when all its parameters are already known.
 
 Parameters:
