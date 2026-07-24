@@ -9,7 +9,7 @@ Constraints:
 - The skill ships profiles `academic / blog / technical-doc / marketing / general`. This repository's docs are technical: API reference, deployment guides, challenge walkthroughs. Profile `technical-doc` is the right fit.
 - Audit run output is per-file and verbose. Committing it would bloat the repo; only the aggregated summary survives.
 
-Stakeholders: maintainer (claude@fhsh.tp.edu.tw); the `prose-audit-outward-docs` capability spec this change ships.
+Stakeholders: maintainer; the `prose-audit-outward-docs` capability spec this change ships.
 
 ## Goals / Non-Goals
 

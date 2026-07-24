@@ -8,7 +8,7 @@ Constraints:
 - Markdown structural elements (relative links, image refs, heading anchors, code fences, frontmatter) MUST survive translation unchanged — they are independently testable contracts.
 - `CONTRIBUTE.md` documents the project's own `/tw-emoji-commit` Traditional Chinese commit convention; example strings inside that section must remain Chinese to faithfully illustrate the convention.
 
-Stakeholders: project maintainer (claude@fhsh.tp.edu.tw), future international contributors, the `oss-readme` and `contributor-guide` capability specs.
+Stakeholders: project maintainer, future international contributors, the `oss-readme` and `contributor-guide` capability specs.
 
 ## Goals / Non-Goals
 
