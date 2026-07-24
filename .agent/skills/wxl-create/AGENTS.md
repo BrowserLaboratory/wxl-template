@@ -20,7 +20,7 @@ Each pointer body reads `Read .agent/skills/wxl-create/SKILL.md for the canonica
 - The user says "create challenge", "new challenge", "出題", or "建立題目".
 - The user describes a challenge to author (e.g. "build a Flask SQLi challenge called login-bypass").
 
-`wxl-create` covers the **Create** verb only: scaffold → generate vulnerable code → frontmatter → Playwright spec → best-effort MCP self-test → hand off to `wxl-verify` for the L1–L3 gate.
+`wxl-create` covers the **Create** verb only: grill design intent to convergence (Step 0) → collect parameters → scaffold → generate vulnerable code → frontmatter → Playwright spec → best-effort MCP self-test → hand off to `wxl-verify` for the L1–L3 gate.
 
 ## Relationship to other skills and CLIs
 
@@ -32,6 +32,7 @@ Each pointer body reads `Read .agent/skills/wxl-create/SKILL.md for the canonica
 | `wxl-crosscheck` (sibling skill) | Independent, maintainer-only. Runs the L4 blind cross-check; Create never triggers L4. |
 | `chrome-devtools-mcp` (MCP server) | Best-effort self-test in Step 6; the prose degrades explicitly when unavailable. |
 | `reference/a01-access-control.md` | Consulted during code generation when `vuln` matches the A01 registry trigger. |
+| `grilling` (technique, `.agents/skills/grilling/`) | **Inlined technique, not a dispatched skill.** Step 0 copies the grilling method (one question at a time, recommend an answer, look up facts, no action until shared understanding) into `wxl-create`'s prose to converge challenge design. The `grilling` skill is never invoked or dispatched — inlining keeps the flow host-agent-neutral. |
 | `spectra-*` skills | Independent. `wxl-create` does not call any spec-driven workflow skill. |
 
 ## Discovery contract (must hold for all three runtimes)

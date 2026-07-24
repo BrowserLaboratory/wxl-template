@@ -41,6 +41,20 @@ describe('validateArgs', () => {
       ).not.toThrow()
     }
   })
+
+  it('throws when --difficulty is an invalid value', () => {
+    expect(() =>
+      validateArgs({ name: 'test-challenge', backend: 'flask', difficulty: 'insane', title: undefined, flag: undefined }),
+    ).toThrow(/difficulty/)
+  })
+
+  it('accepts all valid difficulties', () => {
+    for (const difficulty of ['easy', 'medium', 'hard']) {
+      expect(() =>
+        validateArgs({ name: 'chal', backend: 'flask', difficulty, title: undefined, flag: undefined }),
+      ).not.toThrow()
+    }
+  })
 })
 
 // ─── Task 7.1 (continued): generateFlag format ────────────────────────────────

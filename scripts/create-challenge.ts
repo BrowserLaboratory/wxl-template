@@ -25,6 +25,8 @@ const CHALLENGES = resolve(ROOT, 'docs', 'challenge')
 const VALID_BACKENDS = ['flask', 'fastapi', 'php'] as const
 type Backend = (typeof VALID_BACKENDS)[number]
 
+const VALID_DIFFICULTIES = ['easy', 'medium', 'hard'] as const
+
 /** Slug validation: kebab-case, lowercase alphanumeric and hyphens only. */
 const SLUG_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/
 
@@ -85,6 +87,11 @@ export function validateArgs(args: RawArgs): ScaffoldOptions {
   }
 
   const difficulty = args.difficulty ?? 'easy'
+  if (!(VALID_DIFFICULTIES as readonly string[]).includes(difficulty)) {
+    throw new Error(
+      `Invalid --difficulty "${difficulty}". Must be one of: ${VALID_DIFFICULTIES.join(', ')}.`,
+    )
+  }
   const title = getTitle(slug, args.title)
   const flag = args.flag ?? generateFlag(slug)
 
