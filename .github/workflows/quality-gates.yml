@@ -133,8 +133,21 @@ jobs:
           echo "files=$CHANGED" >> "$GITHUB_OUTPUT"
 
       - name: Run Phase-1 prose audit
+        # SECURITY (CWE-78 script injection): the changed-file list is
+        # attacker-controllable — a fork PR can add a markdown file whose NAME
+        # contains shell metacharacters (git filenames allow any byte but / and
+        # NUL, and `git diff --name-only` does not escape ASCII $ ( ) ; | & `).
+        # It MUST NOT be spliced into `run:` via `${{ }}`, because Actions
+        # macro-expands that into the script body BEFORE bash parses it, so a
+        # name like `x$(curl…|bash)y.md` would execute. Passing it through `env:`
+        # keeps it as DATA: a shell variable's value is never re-parsed for
+        # command substitution. `set -f` disables globbing so the intentional
+        # unquoted word-split (one file → one positional arg) stays data-only.
+        env:
+          CHANGED_FILES: ${{ steps.diff.outputs.files }}
         run: |
-          python scripts/prose-audit/run.py ${{ steps.diff.outputs.files }} \
+          set -f
+          python scripts/prose-audit/run.py $CHANGED_FILES \
             --out audit-runs/prose-phase1-ci/ \
             --json-summary audit-runs/prose-phase1-ci/summary.json
 
