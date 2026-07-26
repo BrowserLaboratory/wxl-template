@@ -48,3 +48,19 @@ The file `docs/guide/network.md` SHALL be a VitePress Markdown page documenting 
 
 - **WHEN** the Network Guide page is built
 - **THEN** it SHALL contain at least one example showing how Network Traffic, Code Editor, and Terminal tools work together in a typical attack scenario
+
+### Requirement: Python Guide page documents Code Editor and Pyodide environment
+
+The file `docs/guide/python.md` SHALL be a VitePress Markdown page documenting the Python Code Editor. It SHALL cover: Code Editor UI overview (editor pane, output pane, run button), available modules (Pyodide standard library, and the real `requests` library the platform installs with micropip), `requests` module usage with examples (`requests.get()`, `requests.post()`, accessing `response.status_code`, `response.text`, `response.json()`), attack script examples (e.g., SQL injection testing, parameter fuzzing), keyboard shortcuts, and save/load functionality.
+
+The guide SHALL describe the `requests` library as the genuine upstream package rather than a hand-written stub, and SHALL attribute the redirection of its traffic to the monkey-patched transport layer (`HTTPAdapter.send`) that routes requests through the platform's dispatch bridge. It SHALL NOT claim that Code Editor requests are routed through the Service Worker.
+
+#### Scenario: Python Guide page documents requests usage
+
+- **WHEN** the Python Guide page is built
+- **THEN** it SHALL contain code examples showing `requests.get()` and `requests.post()` usage with an explanation of how the patched transport layer routes requests through the platform's dispatch bridge
+
+#### Scenario: Python Guide page documents available modules
+
+- **WHEN** the Python Guide page is built
+- **THEN** it SHALL list the available Python modules including the micropip-installed `requests` library and Pyodide standard library modules relevant to security testing (e.g., `json`, `base64`, `hashlib`, `re`)

@@ -46,12 +46,12 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 | 工具名稱 | 面板標籤 | 主要用途 |
 |---|---|---|
-| Code Editor / Pyodide | Code Editor | 在瀏覽器內執行 Python 3 腳本，支援 HTTP 請求模擬 |
+| Code Editor / Pyodide | Code | 在瀏覽器內執行 Python 3 腳本，支援 HTTP 請求模擬 |
 | Terminal / wxlsh | Terminal | 執行內建指令列工具，包含編碼轉換與 curl 等指令 |
 | 內建瀏覽器 | Browser | 直接瀏覽並互動目標挑戰網站 |
 | Network Traffic Log | Network | 記錄並檢視所有 HTTP 請求與回應的完整內容 |
 | HTTP Repeater | Repeater | 修改 HTTP 請求的方法、標頭、參數後重新送出 |
-| Pentest Notes | Notes | 自由記錄測試過程、觀察與破解思路 |
+| Pentest Notes | —（導覽列按鈕，開啟 modal） | 自由記錄測試過程、觀察與破解思路 |
 
 ## 常見問題 FAQ
 
@@ -61,7 +61,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 **Q：Python 腳本執行後沒有輸出，怎麼辦？**
 
-請確認腳本中有使用 `print()` 輸出結果。此外，Pyodide 初始化需要一些時間，若剛進入頁面就立即執行，可能會看到「Pyodide 尚未就緒」的提示，請稍等幾秒後再試。
+請確認腳本中有使用 `print()` 輸出結果。此外，Pyodide 初始化需要一些時間，但你不會不小心提早執行：在 runtime 就緒前，Run 按鈕是停用狀態並顯示「Loading…」。等它變成「▶ Run」再執行即可。
 
 **Q：Network Traffic Log 看不到任何請求？**
 
@@ -69,7 +69,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 **Q：關閉頁面後，Pentest Notes 的內容會消失嗎？**
 
-不會。已儲存的筆記存放在瀏覽器的 IndexedDB，尚未儲存的草稿則暫存於 `localStorage`。只要不清除瀏覽器資料，關閉後重新開啟仍可看到先前的筆記。
+只有你明確儲存過的筆記會留下。儲存時會把筆記寫入瀏覽器的 IndexedDB，只要不清除瀏覽器資料，下次開啟頁面仍看得到。還留在編輯區、尚未儲存的文字並沒有被存到任何地方，關閉或重新整理頁面就會消失——離開前請先儲存。
 
 **Q：可以在 Code Editor 中 import 第三方套件嗎？**
 

@@ -111,14 +111,12 @@ In the Browser panel, open `http://target.local/login`, enter test credentials, 
 
 ### Step 2: Analyse in the Network Traffic Log
 
-In the Network Traffic Log panel, locate the `POST /login` request entry. After expanding it you see:
+In the Network Traffic Log panel, locate the `POST /login` row — method `POST`, path `/login`, status `302`. Expand it and the **Request** tab shows the whole message:
 
 ```
-Method: POST
-URL: http://target.local/login
-Status: 302
+POST /login HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
 
-Request Body:
 username=testuser&password=testpass
 ```
 
@@ -191,7 +189,7 @@ for i in range(1, 30):
 
 ### Step 3: Review both sources in the Traffic Log
 
-Open the Network Traffic Log. The single `curl` probe and every request the loop issued are all listed, numbered in capture order. Sort out the interesting one by status code or response size, then expand it to read the raw request and response.
+Open the Network Traffic Log. The single `curl` probe and every request the loop issued are all listed, numbered in capture order. The list is not sortable, so scan down the Status column for the row that breaks the pattern — then expand it to read the raw request and response.
 
 ### Step 4: Refine the winning request in the Repeater
 

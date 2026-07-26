@@ -111,14 +111,12 @@ JSON 格式（`application/json`）：
 
 ### 步驟二：Network Traffic Log 分析
 
-在 Network Traffic Log 面板找到 `POST /login` 的請求記錄。展開後可以看到：
+在 Network Traffic Log 面板找到 `POST /login` 那一列——方法為 `POST`、路徑為 `/login`、狀態碼為 `302`。展開後，**Request** 頁籤會顯示完整的訊息：
 
 ```
-Method: POST
-URL: http://target.local/login
-Status: 302
+POST /login HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
 
-Request Body:
 username=testuser&password=testpass
 ```
 
@@ -191,7 +189,7 @@ for i in range(1, 30):
 
 ### 步驟三：在 Traffic Log 一併檢視兩邊的流量
 
-開啟 Network Traffic Log，剛才那一次 `curl` 探測與迴圈送出的每一個請求都會列在其中，並依擷取順序編號。用狀態碼或回應長度找出可疑的那一筆，展開後閱讀原始請求與回應。
+開啟 Network Traffic Log，剛才那一次 `curl` 探測與迴圈送出的每一個請求都會列在其中，並依擷取順序編號。清單不支援排序，請沿著 Status 欄往下掃，找出與其他列不同的那一筆，展開後閱讀原始請求與回應。
 
 ### 步驟四：在 Repeater 微調勝出的那個請求
 

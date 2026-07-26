@@ -8,9 +8,11 @@ Interface regions:
 
 | Region | Description |
 |---|---|
-| Output area | Renders command results and system notices |
+| Output area | Renders command results and system notices, and keeps a scrollback buffer you can scroll up through to revisit earlier output |
 | Input line | Where commands are typed; supports history navigation |
 | Prompt | `hacker@wxlsh:~$ ` signals that the shell is ready; the path segment tracks the current working directory |
+
+Scrollback holds everything printed since the panel opened. `clear` (or `Ctrl + L`) discards it and starts from a blank screen.
 
 On startup the panel prints a short banner:
 
@@ -21,9 +23,15 @@ type 'help' for available commands
 
 ## Command Tiers
 
-wxlsh groups its commands into tiers. Tiers 1–4 are available in every challenge. Tier 5 is a reserved namespace for penetration-testing tools that has not been implemented yet — see [Tier 5](#tier-5-reserved-not-yet-implemented) below.
+wxlsh groups its commands into tiers. Tiers 1–4 are available in every challenge. Tier 5 is a reserved namespace for penetration-testing tools that has not been implemented yet — see the Tier 5 section below.
 
-There is no filesystem layer in the shell. Commands such as `ls`, `cat`, `head`, `tail`, `cp`, `mv`, and `rm` are deliberately absent and report `wxlsh: command not found`.
+There is no filesystem layer in the shell. Commands such as `ls`, `cat`, `head`, `tail`, `cp`, `mv`, and `rm` are deliberately absent. Running one prints the command name back at you along with a pointer to `help`:
+
+```
+hacker@wxlsh:~$ cat /etc/passwd
+wxlsh: command not found: cat
+Type 'help' for available commands.
+```
 
 > **Quoting and flags**: the parser treats a short flag as consuming the token after it, so `-d ZmxhZ3s…` stores the payload as the flag's value and leaves no positional argument behind. Quoted tokens are never treated as flags. Where this matters, the syntax below shows the form that actually works.
 
@@ -307,7 +315,9 @@ wxlsh records every command you run, and the arrow keys let you browse and reuse
 | `↑` (Up) | Surface the previous command from history |
 | `↓` (Down) | Advance to the next command in history (toward newer entries) |
 
-History is persisted to IndexedDB rather than held in memory, so it survives a page reload — the most recent 200 entries are restored when the terminal starts. The store is shared across every challenge on the site rather than kept per challenge, so entries typed in an earlier challenge remain reachable with the arrow keys. Consecutive duplicates are collapsed into one entry.
+History is persisted to IndexedDB rather than held in memory, so it survives a page reload — the most recent 200 entries are restored when the terminal starts. The store is shared across every challenge on the site rather than kept per challenge, so entries typed in an earlier challenge remain reachable with the arrow keys.
+
+Consecutive duplicates are collapsed only on the way into the persistent store. Within the current session the arrow keys and `history` still show every repetition, so a command you ran three times in a row appears three times until you reload.
 
 ## Keyboard Shortcuts
 

@@ -52,3 +52,18 @@
 - [x] 8.8 [P] 修正 README.md 三筆事實偏差:`pnpm wasm:tools` 說明加註它會吞掉安裝失敗、需自行確認;Cloudflare Pages build command 移除非必要的 `cargo install wasm-tools`;frontmatter 範例移除 `layout: challenge` 的 required 註記(validator 必填欄位清單不含它)。驗證:對照 package.json 的 wasm:tools script、challenge validator 的必填欄位清單。
 - [x] 8.9 [P] 修正 zh-TW 用語三處:network.md 的「客戶端錯誤」改為「使用者端錯誤」(repo gate 的 mainland_vocab 規則封鎖「用戶」,故不能回退為「用戶端」);「參數篡改」改為台灣慣用的「參數竄改」;python.md 的「快捷鍵」改為「快速鍵」,與 terminal.md 一致。驗證:三檔 prose gate 0 blocking,且全域 grep 無殘留。
 - [x] 8.10 全面複驗:對本次修改的每一檔重跑 repo prose gate 與 humane-prose-audit,並執行 pnpm docs:build。驗證:prose gate 0 blocking、humane-prose-audit verdict PASS、build exit 0。
+
+## 9. Round 2 audit 修復
+
+背景:round 2 復檢(22 agents / 21 完成 / 0 refuted / 0 inconclusive)回報 6 筆 High blocking 與 15 筆 advisory,逐條實地查證後全部成立,其中兩筆是 round 1 修復自身引入的 regression。i18n 層第三度被 content filter 擋下,該層改由主流程手動執行。
+
+- [x] 9.1 修正 README.md 的 fork:init 指引:實測 `pnpm fork:init` 不帶 flag 會因缺少 `--author` 直接失敗,且 `scripts/fork-init.ts` 只在 `.github/workflows/deploy.yml` 不存在時才寫入該檔——fork 一定已有此檔,故 `SITE_BASE: /wxl-template/` 永遠不會被改寫,照 README 操作會得到全站資產 404。改為列出必要 flag 的完整指令,明確說明 fork:init 不會動 SITE_BASE、需自行編輯 deploy.yml,並說明 `--base` 會把 config.mts 的 env-conditional base 換成硬編碼字面值。驗證:對照 scripts/fork-init.ts 的 DEPLOY_REL 分支與 usage 區塊。
+- [x] 9.2 修正英中兩版 getting started FAQ 的 Pentest Notes 答案:`usePentestNotes.ts` 只對 `pentest-draft-<slug>` 做 getItem 與 removeItem,**從未 setItem**,因此未儲存的草稿並不會被保存。改為說明只有明確儲存的筆記會進 IndexedDB,編輯區內未儲存的內容會在關閉或重新整理後消失。驗證:grep 全 repo 確認無該 key 的 setItem。
+- [x] 9.3 落實 Python Guide page documents Code Editor and Pyodide environment requirement:baseline spec 仍要求文件化「requests stub」並宣稱其經 Service Worker 路由,與已改寫為 micropip 真實套件的 python.md 相矛盾。於 delta spec 新增第三條 MODIFIED requirement,改以實作為準(micropip 安裝的真 requests、經 monkey-patch 的 HTTPAdapter.send 走 dispatch bridge,並明文禁止宣稱走 Service Worker)。驗證:spectra validate 與 analyze 皆無 Critical。
+- [x] 9.4 修正英中兩版 terminal 指南三處:移除指向錯誤錨點的 Tier 5 頁內連結(渲染後的 heading id 含 em dash);`command not found` 的實際輸出補為兩行完整訊息並附範例;連續重複指令的去重說明限縮為「只在寫入持久化儲存時發生,session 內方向鍵與 history 仍會顯示每次重複」。驗證:建置後全站頁內錨點檢查 0 個失效;對照 useWxlsh.ts 的 unknown-command 分支與 historyBuffer 賦值。
+- [x] 9.5 落實 Terminal Guide page documents built-in terminal commands requirement 中的 scrollback 條款:英中兩版於介面說明補上 scrollback 緩衝區的描述與 clear 的關係。驗證:delta spec 該條列舉的 UI 元素逐項在文件中找得到對應段落。
+- [x] 9.6 [P] 修正 README.md 兩處:Cloudflare Pages 的 Note 仍宣稱建置指令會安裝 wasm-tools(task 8.8 已將其移除,兩者互相矛盾),改為說明 wasm-tools 僅供 challenge:verify／keygen 使用;架構圖的 Service Worker 路徑由不存在的 `workers/` 改為實際的 `docs/public/challenge-sw.js`。驗證:與建置指令區塊、repo 實際檔案位置比對。
+- [x] 9.7 [P] 修正英中兩版 getting started 的工具表與 FAQ:Code Editor 的面板標籤實際為 `Code`;Pentest Notes 並非分頁而是導覽列按鈕開啟的 modal;移除不存在的「Pyodide not ready yet」提示,改為描述 Run 按鈕在 runtime 就緒前停用並顯示 Loading…。驗證:對照 ChallengeLayout.vue 的 ALL_TABS 與 CodeEditorPanel.vue 的按鈕狀態。
+- [x] 9.8 [P] 修正 CONTRIBUTE.md 的測試指令:`pnpm test` 是裸 `vitest`,在互動式終端機會停在 watch 模式,改為 `pnpm test --run`。驗證:對照 package.json 的 test script。
+- [x] 9.9 [P] 修正英中兩版 network 指南兩處:End-to-End 範例步驟二仍以四個假欄位呈現展開後的記錄,與同頁稍早的子頁籤描述自相矛盾,改為 Request 頁籤的完整 raw 訊息;組合流程步驟三移除「用狀態碼或回應長度排序」的說法(清單無長度欄也不支援排序)。驗證:對照 NetworkPanel.vue 的表頭與 detail 區塊。
+- [x] 9.10 全面複驗:repo prose gate、humane-prose-audit、pnpm docs:build,外加全站頁內錨點檢查與英中結構配對檢查。驗證:prose gate 0 blocking、verdict PASS、build exit 0、失效錨點 0、四組配對的標題／code fence／表格列數一致。

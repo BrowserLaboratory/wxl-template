@@ -46,12 +46,12 @@ Once you successfully exploit the vulnerability you obtain a flag string (typica
 
 | Tool | Panel label | Primary purpose |
 |---|---|---|
-| Code Editor / Pyodide | Code Editor | Run Python 3 scripts inside the browser, with HTTP request simulation |
+| Code Editor / Pyodide | Code | Run Python 3 scripts inside the browser, with HTTP request simulation |
 | Terminal / wxlsh | Terminal | Invoke built-in command-line utilities, including encoders and `curl`-style commands |
 | Built-in browser | Browser | Browse and interact with the target challenge application |
 | Network Traffic Log | Network | Record and inspect every HTTP request and response in full |
 | HTTP Repeater | Repeater | Modify the method, headers, and parameters of a request and replay it |
-| Pentest Notes | Notes | Freely record the testing process, observations, and exploitation ideas |
+| Pentest Notes | — (nav-bar button, opens a modal) | Freely record the testing process, observations, and exploitation ideas |
 
 ## FAQ
 
@@ -61,7 +61,7 @@ When you open a challenge page for the first time, the platform downloads the Py
 
 **Q: What if a Python script runs but prints nothing?**
 
-Make sure your script calls `print()` to emit output. Pyodide also takes a moment to initialize, so if you run a script immediately after opening the page, you may see a "Pyodide not ready yet" notice — wait a few seconds and try again.
+Make sure your script calls `print()` to emit output. Pyodide also takes a moment to initialize, but you cannot run a script early by accident: until the runtime is ready the Run button is disabled and reads "Loading…". Wait for it to turn into "▶ Run".
 
 **Q: The Network Traffic Log shows no requests — why?**
 
@@ -69,7 +69,7 @@ Every tool panel shares one dispatch layer, so the log captures requests from th
 
 **Q: Do Pentest Notes disappear after closing the page?**
 
-No. Saved notes are stored in the browser's IndexedDB, and an in-progress draft is kept in `localStorage` until you save it. As long as you do not clear your browser data, you will see your previous notes the next time you open the page.
+Only the notes you explicitly save. Saving writes the note to the browser's IndexedDB, and those notes reappear the next time you open the page as long as you do not clear your browser data. Text still sitting in the editor has not been saved anywhere, so closing or reloading the page discards it — save before you navigate away.
 
 **Q: Are third-party packages importable in the Code Editor?**
 

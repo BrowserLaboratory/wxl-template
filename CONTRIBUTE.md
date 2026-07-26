@@ -70,7 +70,7 @@ main ──────────●──────────────
 
    ```bash
    pnpm dev          # Start the dev server
-   pnpm test         # TypeScript / JavaScript unit tests
+   pnpm test --run   # TypeScript / JavaScript unit tests (bare `pnpm test` stays in Vitest watch mode)
    pnpm wasm:test    # Rust unit tests
    ```
 

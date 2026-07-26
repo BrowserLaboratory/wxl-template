@@ -91,7 +91,7 @@ Browser
 ├── VitePress site (Vue 3 + UnoCSS)
 │   ├── Challenge pages (Markdown + YAML frontmatter)
 │   └── IndexedDB (attack-session persistence + tool state)
-├── Service Worker (workers/)
+├── Service Worker (docs/public/challenge-sw.js)
 │   └── Intercepts HTTP requests and routes them to the matching WASM runtime
 └── WASM runtimes
     ├── virtual-fs      Encrypted virtual filesystem (Rust)
@@ -165,7 +165,15 @@ Two settings live in the GitHub UI rather than in this repository:
 1. **Settings → Pages → Source** must be set to **GitHub Actions**.
 2. The **`github-pages` environment** must allow deployments from `v*` tags (in addition to the `main` branch, which authorises `workflow_dispatch` runs). Without that rule, the tag-triggered deploy job is rejected.
 
-After forking, run `pnpm fork:init` to rewrite `SITE_BASE` and the other project-identity values for your own repository name.
+After forking, run `fork:init` with its required flags to rewrite the project identity:
+
+```bash
+pnpm fork:init --author "<Your Name>" --repo <owner>/<repo> --base /<repo>/
+```
+
+It rewrites `package.json`, the GitHub URLs, and the VitePress `base` in `.vitepress/config.mts`. **It does not touch `SITE_BASE`.** The script refuses to overwrite an existing `.github/workflows/deploy.yml` — and a fork always has one — so it prints `left untouched` and moves on, leaving `SITE_BASE: /wxl-template/` in place. Edit that value to `/<repo>/` yourself, or the deployment 404s exactly as described above.
+
+Note also that `--base /<repo>/` replaces the env-conditional `base: process.env.SITE_BASE ?? '/'` with a hard-coded literal, after which `SITE_BASE` no longer influences the build at all. Pass `--base none` to keep the env-conditional form.
 
 ### Deploying to Cloudflare Pages
 
@@ -184,7 +192,7 @@ After forking, run `pnpm fork:init` to rewrite `SITE_BASE` and the other project
 4. Add `NODE_VERSION=24` to the environment variables.
 5. If the site is served from a sub-path, add `SITE_BASE` with that path (leave it unset for a root-domain deployment).
 
-> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` and `wasm-tools` before building.
+> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not needed here; it is only used by `pnpm challenge:verify` and `pnpm challenge:keygen`, neither of which runs during a site build.
 
 ## License
 
