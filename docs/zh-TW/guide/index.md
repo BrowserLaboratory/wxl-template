@@ -6,7 +6,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 主要特色：
 
-- **零後端依賴**：所有挑戰工具（Python 執行環境、終端機、網路流量記錄）皆在瀏覽器內運行
+- **零後端依賴**：所有挑戰工具（Python 執行環境、終端機、網路流量記錄）皆在瀏覽器內執行
 - **隱私保護**：攻擊腳本與測試資料不會離開你的裝置
 - **即開即用**：只需現代瀏覽器，無需安裝任何軟體或設定環境
 
@@ -65,12 +65,12 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 **Q：Network Traffic Log 看不到任何請求？**
 
-Network Traffic Log 只會記錄透過 **Browser 面板**發出的請求。若你在 Code Editor 中使用 `requests` 模組發送的請求，會顯示在 Code Editor 的輸出區塊，而不是 Network 面板。
+所有工具面板共用同一層 dispatch，因此 Browser 面板、Repeater、Terminal 的 `curl` 與 `wget`，以及 Code Editor 的 `requests` 呼叫都會被記錄下來。清單空白通常代表還沒發出任何請求——請先與挑戰互動。
 
 **Q：關閉頁面後，Pentest Notes 的內容會消失嗎？**
 
-不會。Pentest Notes 的內容儲存在瀏覽器的 `localStorage` 中。只要不清除瀏覽器資料，關閉後重新開啟仍可看到先前的筆記。
+不會。已儲存的筆記存放在瀏覽器的 IndexedDB，尚未儲存的草稿則暫存於 `localStorage`。只要不清除瀏覽器資料，關閉後重新開啟仍可看到先前的筆記。
 
 **Q：可以在 Code Editor 中 import 第三方套件嗎？**
 
-目前支援 Pyodide 內建的標準函式庫模組（如 `json`、`re`、`base64`、`hashlib`）以及平台提供的 `requests` stub。不支援 `pip install` 安裝額外套件，也無法 import 未內建的第三方套件。
+可以。除了 Pyodide 內建的標準函式庫模組（如 `json`、`re`、`base64`、`hashlib`）之外，平台會以 micropip 安裝第三方套件——真正的 `requests` 套件就是這樣提供的。題目作者在挑戰的 `packages` frontmatter 欄位宣告需要的額外套件，執行環境啟動時便會安裝。你無法自己在腳本中執行 `pip install`；套件清單由題目決定。

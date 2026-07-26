@@ -65,12 +65,12 @@ Make sure your script calls `print()` to emit output. Pyodide also takes a momen
 
 **Q: The Network Traffic Log shows no requests — why?**
 
-The Network Traffic Log only records requests issued through the **Browser** panel. Requests made from the Code Editor via the `requests` module appear in the Code Editor's output area, not in the Network panel.
+Every tool panel shares one dispatch layer, so the log captures requests from the Browser panel, the Repeater, the Terminal's `curl` and `wget`, and the Code Editor's `requests` calls alike. An empty log usually means no request has been issued yet — interact with the challenge first.
 
 **Q: Do Pentest Notes disappear after closing the page?**
 
-No. Pentest Notes are stored in the browser's `localStorage`. As long as you do not clear your browser data, you will see your previous notes the next time you open the page.
+No. Saved notes are stored in the browser's IndexedDB, and an in-progress draft is kept in `localStorage` until you save it. As long as you do not clear your browser data, you will see your previous notes the next time you open the page.
 
 **Q: Are third-party packages importable in the Code Editor?**
 
-The platform supports the standard library modules bundled with Pyodide (such as `json`, `re`, `base64`, `hashlib`) and the platform-provided `requests` stub. `pip install` is not supported, and third-party packages that are not bundled with Pyodide cannot be imported.
+Yes. Alongside the standard library modules bundled with Pyodide (such as `json`, `re`, `base64`, `hashlib`), the platform installs third-party packages with micropip — that is how the real `requests` library is provided. A challenge author declares any extra packages in the challenge's `packages` frontmatter field, and they are installed when the runtime starts. You cannot run `pip install` from a script yourself; the package set is fixed by the challenge.

@@ -2,23 +2,24 @@
 
 ## Network Traffic Log Panel
 
-The Network Traffic Log panel automatically records every HTTP request issued from the **Browser panel**, along with its matching response. Each entry shows the following fields:
+The Network Traffic Log panel automatically records every HTTP request the challenge issues, along with its matching response. Each entry shows the following fields:
 
 | Field | Description |
 |---|---|
+| # | Sequence number of the entry, in capture order |
 | Method | HTTP request method (GET, POST, PUT, DELETE, etc.) |
-| URL | Full target URL of the request |
+| URL | Request path and query string (the host is omitted to keep entries readable) |
 | Status | HTTP response status code (colour-coded) |
-| Timing | Time elapsed from request dispatch to response receipt (milliseconds) |
+| Time | Time elapsed from request dispatch to response receipt (milliseconds) |
 
-Clicking any entry in the list expands a detail area showing:
+Clicking any entry in the list expands a detail area with two sub-tabs and a **Send to Repeater** button:
 
-- **Request Headers**: the complete request headers
-- **Request Body**: the request body (for POST/PUT requests)
-- **Response Headers**: the complete response headers
-- **Response Body**: the response body content
+- **Request**: the complete request rendered as one raw HTTP message — request line, headers, blank line, body
+- **Response**: the raw response — status line, headers, blank line, body
 
-> **Note**: The Network Traffic Log only records requests issued from the Browser panel. Requests sent via the `requests` module inside the Code Editor do not appear in this panel.
+Because both tabs show whole messages rather than field-by-field breakdowns, you can copy either one straight into the Repeater or into a script.
+
+> **Note**: Every tool panel shares one dispatch layer, so the log captures requests from all of them — the Browser panel, the Repeater, `curl` and `wget` in the Terminal, and the `requests` module inside the Code Editor. The list itself does not label which panel a request came from, so use the sequence number and timing to line entries up with the action that produced them.
 
 ## HTTP Status Codes
 
@@ -47,7 +48,7 @@ The Network Traffic Log integrates tightly with the HTTP Repeater. When you spot
 
 1. In the Network Traffic Log list, click the request entry you want to analyse
 2. After the detail panel expands, click the "**Send to Repeater**" button
-3. Every part of the request (method, URL, headers, body) is automatically populated into the HTTP Repeater panel
+3. The complete request is written into the Repeater's raw request editor as one HTTP message
 4. Switch to the **Repeater** panel to edit and resend it
 
 > **Tip**: Once you find a suspicious request, use Send to Repeater right away. This avoids repeating actions in the Browser panel and cluttering the log with noise.
@@ -56,27 +57,32 @@ The Network Traffic Log integrates tightly with the HTTP Repeater. When you spot
 
 The HTTP Repeater lets you freely edit every part of an HTTP request, resend it, and inspect the response in real time. It is the core tool for testing parameter tampering, header bypasses, and injection vulnerabilities.
 
+Rather than splitting the request across separate fields, the Repeater gives you one **Raw HTTP Request** editing area holding the whole message — request line, headers, blank line, body — the same way Burp Repeater does.
+
 | Component | Description |
 |---|---|
-| Method selector | Dropdown for switching between GET, POST, PUT, DELETE, PATCH, and other HTTP methods |
-| URL editor | Enter or modify the full target URL, including the query string |
-| Headers editor | Edit request headers line by line in `Key: Value` format |
-| Body editor | Edit the request body — supports form and JSON formats |
-| Send button | Dispatch the request with the current settings |
-| Response viewer | Displays the response status code, headers, and body with formatted rendering |
+| Raw HTTP Request area | A single editor holding the complete request text: request line, headers, an empty line, then the body |
+| Send button | Dispatch the request exactly as written |
+| Response pane | Displays the raw response — status line, headers, and body |
+| Saved Snapshots sidebar | Name and store the current request; click a saved entry to restore it, or use the × to delete it |
 
-### Headers Editing Format
+### Raw Request Format
 
-One header per line, formatted as `Header-Name: Value`:
+Write the request the way it goes on the wire: the request line first, then one header per line, then an empty line, then the body.
 
 ```
+POST /login HTTP/1.1
+Host: target.local
 Content-Type: application/json
-Authorization: Bearer eyJhbGci...
 Cookie: session=abc123; admin=false
 X-Forwarded-For: 127.0.0.1
+
+{"username": "admin", "password": "test"}
 ```
 
-### Body Editing Format
+The empty line between headers and body is required — without it the body is parsed as another header.
+
+### Body Formats
 
 Form format (`application/x-www-form-urlencoded`):
 
@@ -122,13 +128,17 @@ Click "Send to Repeater" to forward this request to the Repeater panel.
 
 ### Step 4: Tamper With the Parameters
 
-In the Repeater's Body editor, change the `password` parameter to a SQL Injection payload:
+In the Repeater's raw request editor, change the `password` parameter in the body to a SQL Injection payload:
 
 ```
+POST /login HTTP/1.1
+Host: target.local
+Content-Type: application/x-www-form-urlencoded
+
 username=admin&password=' OR '1'='1' --
 ```
 
-Click "Send" to dispatch the modified request.
+Click "Send" to dispatch the modified request. Save it as a snapshot first if you plan to try several payload variants — restoring a snapshot is faster than retyping the request.
 
 ### Step 5: Inspect the Response and Capture the flag
 
@@ -141,3 +151,50 @@ Welcome, admin! Your flag is: flag{sql_injection_success}
 ```
 
 Copy the flag and submit it on the challenge page to complete the task.
+
+## Combining the Terminal and Code Editor With the Traffic Log
+
+The Browser panel is not the only source the Traffic Log records. Because every panel dispatches through the same layer, you can probe from the Terminal, sweep from the Code Editor, and still review and replay everything from one list.
+
+**Scenario**: an endpoint returns different content for some `id` values, and you want to find which one hides the flag.
+
+### Step 1: Probe once from the Terminal
+
+Confirm the endpoint responds and inspect its headers before writing any script:
+
+```
+hacker@wxlsh:~$ curl -i "http://target.local/api/user?id=1"
+HTTP 200
+content-type: application/json
+
+{
+  "id": 1,
+  "name": "guest",
+  "role": "user"
+}
+```
+
+A JSON response is re-indented before it is printed, so the body you see is pretty-printed rather than the exact bytes on the wire. Open the entry in the Traffic Log when you need the raw form.
+
+### Step 2: Sweep the range from the Code Editor
+
+Switch to the Code Editor and iterate over the parameter with `requests`:
+
+```python
+import requests
+
+for i in range(1, 30):
+    r = requests.get("http://target.local/api/user", params={"id": i})
+    if "admin" in r.text or "flag" in r.text.lower():
+        print(f"[!] id={i}: {r.text[:200]}")
+```
+
+### Step 3: Review both sources in the Traffic Log
+
+Open the Network Traffic Log. The single `curl` probe and every request the loop issued are all listed, numbered in capture order. Sort out the interesting one by status code or response size, then expand it to read the raw request and response.
+
+### Step 4: Refine the winning request in the Repeater
+
+Expand the entry that returned the interesting response and click **Send to Repeater**. The raw request lands in the Repeater's editor, where you can adjust a header or a parameter and resend without rerunning the whole sweep. Save a snapshot before each variation so you can jump back to a known-good request.
+
+This is the loop worth internalising: probe in the Terminal, scale in the Code Editor, review in the Traffic Log, refine in the Repeater.

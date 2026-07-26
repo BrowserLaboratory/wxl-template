@@ -8,8 +8,10 @@ Thanks for your interest in this project! Please read this guide before submitti
 - [Development workflow](#development-workflow)
 - [PR submission workflow](#pr-submission-workflow)
 - [Adding a new challenge](#adding-a-new-challenge)
+- [Challenge Keygen](#challenge-keygen)
 - [Commit conventions](#commit-conventions)
 - [Reporting issues](#reporting-issues)
+- [Maintainer Setup](#maintainer-setup)
 
 ## Branch model
 
@@ -25,7 +27,7 @@ This project uses a simple **`main`-based** branching strategy — there is no l
 ### Branch naming convention
 
 ```
-feat/<short-description>      # e.g. feature/add-php-upload-challenge
+feature/<short-description>   # e.g. feature/add-php-upload-challenge
 bugfix/<short-description>    # e.g. bugfix/fix-flag-verifier-timing
 hotfix/<short-description>    # e.g. hotfix/patch-wasm-memory-leak
 ```
