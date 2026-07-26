@@ -12,7 +12,7 @@ Terminal 面板提供一個在瀏覽器內執行的指令列環境，使用平�
 | 輸入列 | 輸入指令的區域，支援歷史紀錄瀏覽 |
 | 提示字元 | `hacker@wxlsh:~$ ` 表示 shell 就緒，路徑區段會反映目前的工作目錄 |
 
-Scrollback 會保留面板開啟後印出的所有內容。執行 `clear`（或按 `Ctrl + L`）會清掉它，從空白畫面重新開始。
+Scrollback 緩衝區保留最近 1000 行；更早的輸出會隨著新行進來而被丟棄。執行 `clear`（或按 `Ctrl + L`）會清空它，從空白畫面重新開始。
 
 面板啟動時會先印出一段 banner：
 
@@ -56,12 +56,12 @@ Type 'help' for available commands.
 
 | 指令 | 語法 | 常用 flag |
 |---|---|---|
-| `grep` | `grep [options] <pattern> [text]` | `-i` 忽略大小寫、`-v` 反向、`-c` 計數、`-n` 加行號 |
-| `sed` | `sed <expression> [text]` | 例如 `sed "s/old/new/g"` |
-| `awk` | `awk <program> [text]` | 例如 `awk "{print $1}"` |
+| `grep` | `grep [options] <pattern> <text>` | `-i` 忽略大小寫、`-v` 反向、`-c` 計數、`-n` 加行號 |
+| `sed` | `sed <expression> <text>` | 例如 `sed "s/old/new/g"` |
+| `awk` | `awk <program> <text>` | 例如 `awk "{print $1}"` |
 | `sort` | `sort [options] [text]` | `-r` 反序、`-n` 數值排序、`-u` 去重 |
 | `uniq` | `uniq [options] [text]` | `-c` 加上出現次數、`-d` 只印重複行 |
-| `cut` | `cut [options] [text]` | `-d <delim>`、`-f <fields>` |
+| `cut` | `cut [options] <text>` | `-d <delim>`、`-f <fields>` |
 | `tr` | `tr <set1> <set2> [text]` | 逐字元對應，例如 `tr abc ABC`；不支援 `a-z` 這類範圍展開 |
 | `tee` | `tee [text]` | 將輸入原樣傳遞到輸出 |
 | `xargs` | `xargs [text ...]` | 原樣回傳自己的參數，不會執行任何指令 |

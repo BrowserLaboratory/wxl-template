@@ -12,7 +12,7 @@ Interface regions:
 | Input line | Where commands are typed; supports history navigation |
 | Prompt | `hacker@wxlsh:~$ ` signals that the shell is ready; the path segment tracks the current working directory |
 
-Scrollback holds everything printed since the panel opened. `clear` (or `Ctrl + L`) discards it and starts from a blank screen.
+The scrollback buffer holds the last 1000 lines; output older than that is discarded as new lines arrive. `clear` (or `Ctrl + L`) empties it and starts from a blank screen.
 
 On startup the panel prints a short banner:
 
@@ -56,12 +56,12 @@ Type 'help' for available commands.
 
 | Command | Syntax | Common flags |
 |---|---|---|
-| `grep` | `grep [options] <pattern> [text]` | `-i` case-insensitive, `-v` invert, `-c` count, `-n` line numbers |
-| `sed` | `sed <expression> [text]` | e.g. `sed "s/old/new/g"` |
-| `awk` | `awk <program> [text]` | e.g. `awk "{print $1}"` |
+| `grep` | `grep [options] <pattern> <text>` | `-i` case-insensitive, `-v` invert, `-c` count, `-n` line numbers |
+| `sed` | `sed <expression> <text>` | e.g. `sed "s/old/new/g"` |
+| `awk` | `awk <program> <text>` | e.g. `awk "{print $1}"` |
 | `sort` | `sort [options] [text]` | `-r` reverse, `-n` numeric, `-u` unique |
 | `uniq` | `uniq [options] [text]` | `-c` prefix counts, `-d` duplicates only |
-| `cut` | `cut [options] [text]` | `-d <delim>`, `-f <fields>` |
+| `cut` | `cut [options] <text>` | `-d <delim>`, `-f <fields>` |
 | `tr` | `tr <set1> <set2> [text]` | Character-for-character mapping, e.g. `tr abc ABC`; ranges such as `a-z` are not expanded |
 | `tee` | `tee [text]` | Pass input through to output |
 | `xargs` | `xargs [text ...]` | Echoes its arguments back; it does not invoke another command |

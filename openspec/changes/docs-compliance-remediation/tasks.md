@@ -67,3 +67,13 @@
 - [x] 9.8 [P] 修正 CONTRIBUTE.md 的測試指令:`pnpm test` 是裸 `vitest`,在互動式終端機會停在 watch 模式,改為 `pnpm test --run`。驗證:對照 package.json 的 test script。
 - [x] 9.9 [P] 修正英中兩版 network 指南兩處:End-to-End 範例步驟二仍以四個假欄位呈現展開後的記錄,與同頁稍早的子頁籤描述自相矛盾,改為 Request 頁籤的完整 raw 訊息;組合流程步驟三移除「用狀態碼或回應長度排序」的說法(清單無長度欄也不支援排序)。驗證:對照 NetworkPanel.vue 的表頭與 detail 區塊。
 - [x] 9.10 全面複驗:repo prose gate、humane-prose-audit、pnpm docs:build,外加全站頁內錨點檢查與英中結構配對檢查。驗證:prose gate 0 blocking、verdict PASS、build exit 0、失效錨點 0、四組配對的標題／code fence／表格列數一致。
+
+## 10. Round 3 audit 修復
+
+背景:round 3 復檢(16 agents 全數完成、0 錯誤、0 refuted、0 inconclusive)回報 4 筆 blocking 與 11 筆 advisory。最嚴重的一筆(Critical)又是 round 2 修復自身引入的 regression,顯示「修 A 時就地寫下關於 B 的新斷言而未查證 B」是重複發生的失效模式,已於 RCA 追查。
+
+- [x] 10.1 修正 README 的 `--base none` 語意反轉(round 2 引入的 Critical regression):`scripts/fork-init.ts` 的 `--base none` 對映為 `base = null`,`setViteBase` 會把整行 `base:` 從 config.mts **刪除**;真正保留 env-conditional 形式的做法是**完全不帶 `--base`**(`base === undefined` 時直接原樣回傳)。改寫該句並明確警告 `none` 會使 SITE_BASE 失效。驗證:對照 fork-init.ts 的 parseForkInitArgs 與 setViteBase 分支,以及 tests/unit/scripts/fork-init.test.ts 的 `--base none strips an existing base line` 測試。
+- [x] 10.2 修正英中兩版 python 指南的 requests 能力宣稱:被 patch 的 `HTTPAdapter.send` 直接建構 Response,未走 adapter 正常的回應處理路徑,因此 `Set-Cookie` 不會進入 `response.cookies` 或 Session 的 cookie jar;且 `Set-Cookie` 在 Fetch API 屬禁用回應標頭,平台改以 `X-Wxlsh-Set-Cookie` 轉送。自能力清單移除「cookie 處理」,並補上需自行取出與回填的說明。驗證:對照 usePythonRuntime.ts 的 `_patched_send` 與 dispatch bridge 的 setCookies 分支。
+- [x] 10.3 [P] 修正英中兩版 terminal 指南兩處:scrollback 由「保留開啟後所有內容」更正為實際的 1000 行上限;第 2 層語法欄把 `grep`／`sed`／`awk`／`cut` 的 text 由選填 `[text]` 改為必填 `<text>`(省略只會得到 usage)。驗證:對照 WxlshPanel.vue 的 `scrollback: 1000`;以 harness 執行四個指令的無參數形式確認皆回 usage。
+- [x] 10.4 [P] 修正 README 兩處與 CONTRIBUTE 兩處:Cloudflare Note 更正為「`pnpm build` 確實會跑 challenge:keygen,keygen 缺少 wasm-tools 時降級為警告」(round 2 誤寫成兩者都不在 build 流程內);scripts 表的 `fork:init` 說明改為需要 `--author`／`--repo` 且不動 SITE_BASE、`pnpm test` 補註 watch 模式;CONTRIBUTE 的 PR checklist 同步改為 `pnpm test --run`(round 2 只改了開發流程段、checklist 未同步);retype 的 spec.ts 同步說明精確化為改寫 `EXPLOIT_PATH`。驗證:對照 package.json 的 build／test script 與 challenge-retype.ts 的 specPath 分支。
+- [x] 10.5 全面複驗:repo prose gate、pnpm docs:build、全站頁內錨點檢查、英中區塊型別序列比對。驗證:0 blocking、build exit 0、失效錨點 0、四組配對逐塊相同。

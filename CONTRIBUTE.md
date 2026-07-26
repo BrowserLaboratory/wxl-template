@@ -113,7 +113,7 @@ The PR description must contain the following three sections:
 
 Before submitting, confirm:
 
-- [ ] Local tests pass (`pnpm test` & `pnpm wasm:test`).
+- [ ] Local tests pass (`pnpm test --run` & `pnpm wasm:test`).
 - [ ] Commit messages follow the conventions below.
 - [ ] PR target branch is `main`.
 - [ ] PR description contains Summary / Motivation / Test Plan.
@@ -144,7 +144,7 @@ pnpm create:challenge --name sqli-login --title "SQL Injection Login Bypass" \
 
 ### Mutate gate (`pnpm challenge:retype`)
 
-Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, re-runs `pnpm challenge:keygen`, and (when the backend changes) tries to keep `tests/challenges/<slug>.spec.ts` in sync.
+Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, re-runs `pnpm challenge:keygen`, and (when the backend changes) rewrites `EXPLOIT_PATH` in `tests/challenges/<slug>.spec.ts` to match the new backend's entry path. The rest of the spec file is left to you.
 
 ```bash
 # Metadata-only mutations

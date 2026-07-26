@@ -69,12 +69,12 @@ The dev server starts at `http://localhost:5173` by default.
 | `pnpm docs:dev` | Start the VitePress dev server only (skips the WASM build) |
 | `pnpm docs:build` | Build the VitePress static site only |
 | `pnpm docs:preview` | Preview the built static site |
-| `pnpm test` | Run the TypeScript / JavaScript unit tests (Vitest) |
+| `pnpm test` | Run the TypeScript / JavaScript unit tests (Vitest). Bare, it stays in watch mode — use `pnpm test --run` for a single pass |
 | `pnpm test:smoke` | Run the Playwright smoke tests against the built site |
 | `pnpm wasm:build` | Build every Rust WASM module |
 | `pnpm wasm:test` | Run the Rust unit tests (`cargo test`) |
 | `pnpm wasm:tools` | Attempt to install `wasm-tools` into the Rust toolchain; it silences failures and always exits 0, so confirm with `wasm-tools --version` |
-| `pnpm fork:init` | Rewrite the project identity after forking or cloning this template (package name, VitePress base, GitHub URLs) |
+| `pnpm fork:init` | Rewrite the project identity after forking (package name, GitHub URLs, and optionally the VitePress `base`). Requires `--author` and `--repo`; does not touch `SITE_BASE` in `deploy.yml` |
 | `pnpm challenge:keygen` | Generate the encrypted WASM module for every challenge |
 | `pnpm create:challenge` | Interactively scaffold a new challenge |
 | `pnpm challenge:validate` | Validate every challenge's frontmatter and file layout |
@@ -173,7 +173,7 @@ pnpm fork:init --author "<Your Name>" --repo <owner>/<repo> --base /<repo>/
 
 It rewrites `package.json`, the GitHub URLs, and the VitePress `base` in `.vitepress/config.mts`. **It does not touch `SITE_BASE`.** The script refuses to overwrite an existing `.github/workflows/deploy.yml` — and a fork always has one — so it prints `left untouched` and moves on, leaving `SITE_BASE: /wxl-template/` in place. Edit that value to `/<repo>/` yourself, or the deployment 404s exactly as described above.
 
-Note also that `--base /<repo>/` replaces the env-conditional `base: process.env.SITE_BASE ?? '/'` with a hard-coded literal, after which `SITE_BASE` no longer influences the build at all. Pass `--base none` to keep the env-conditional form.
+Mind what `--base` does to `.vitepress/config.mts`. Passing `--base /<repo>/` replaces the env-conditional `base: process.env.SITE_BASE ?? '/'` with a hard-coded literal, after which `SITE_BASE` no longer influences the build. **Omit `--base` entirely** to leave that line untouched. Do not reach for `--base none` expecting the env-conditional form — `none` deletes the `base` declaration outright, so VitePress falls back to `/` and `SITE_BASE` becomes a no-op, which is the 404 case described above.
 
 ### Deploying to Cloudflare Pages
 
@@ -192,7 +192,7 @@ Note also that `--base /<repo>/` replaces the env-conditional `base: process.env
 4. Add `NODE_VERSION=24` to the environment variables.
 5. If the site is served from a sub-path, add `SITE_BASE` with that path (leave it unset for a root-domain deployment).
 
-> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not needed here; it is only used by `pnpm challenge:verify` and `pnpm challenge:keygen`, neither of which runs during a site build.
+> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not installed here. `pnpm build` does run `pnpm challenge:keygen`, which uses `wasm-tools` to strip the WASM binary, but keygen degrades to a warning when the tool is absent — so the build still succeeds, just without that strip step. Add `wasm-tools` to the install line if you want stripped payloads in production builds.
 
 ## License
 

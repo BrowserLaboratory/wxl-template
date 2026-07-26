@@ -33,7 +33,9 @@ The following modules can be `import`ed directly with no installation required:
 
 ### requests (installed via micropip)
 
-The platform installs the real `requests` library with micropip, then monkey-patches its transport layer (`HTTPAdapter.send`) so requests are routed to the challenge backend through the platform's dispatch bridge instead of the network. Because the library itself is genuine, the full API is available — `get`, `post`, `put`, `delete`, `Session`, cookie handling, auth helpers, and so on — and the requests it sends are recorded in the Network Traffic Log alongside traffic from the other panels.
+The platform installs the real `requests` library with micropip, then monkey-patches its transport layer (`HTTPAdapter.send`) so requests are routed to the challenge backend through the platform's dispatch bridge instead of the network. Because the library itself is genuine, its request-building API is available as usual — `get`, `post`, `put`, `delete`, `Session`, auth helpers, and so on — and the requests it sends are recorded in the Network Traffic Log alongside traffic from the other panels.
+
+> **Cookies are not automatic.** The patched transport builds the response object directly rather than going through the adapter's normal response path, so `Set-Cookie` is never parsed into `response.cookies` or into a `Session`'s cookie jar. A session will not carry a login cookie forward on its own. On top of that, `Set-Cookie` is a forbidden response header in the Fetch API, so the platform relays it under the name `X-Wxlsh-Set-Cookie` — read it from `response.headers` and set the `Cookie` header yourself on subsequent requests.
 
 The two calls you will reach for most often:
 
