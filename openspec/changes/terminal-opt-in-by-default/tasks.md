@@ -95,3 +95,11 @@
 - [x] 11.7 補上 `tools: []` 的 analyze 測試——那是本次變更下輸出改變最明顯的輸入(原本空字串,現為 browser),卻無測試覆蓋。完成判準:該案例有具名測試。驗證:執行該檔。
 - [x] 11.8 更新 proposal 的 Impact 與 design 的範圍邊界:rounds 1、2 擴大了改動面(第四份 delta spec、NetworkPanel 的新 prop、validate 的輸出、首頁 i18n),兩份 artifact 的列舉卻停留在初版。以 `git diff main...HEAD --name-only` 為真實來源重寫。完成判準:列舉與實際 diff 一致。驗證:逐檔核對。
 - [x] 11.9 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。
+
+## 12. RCA 與機械閘門實跑
+
+背景:三輪稽核用盡未 clean,依協定啟動多 Opus clean-context RCA(4 lens + 綜合,0 錯誤)。報告推翻了我的自我診斷:rounds 2–3 的 blocking **文字沒有一筆是上一輪修復寫的**(3 筆早於本 change,1 筆由實作 commit 寫下且當時為真),但 4/4 都是被上一輪修復**弄假**的。我的因果判斷正確、作者歸屬判斷全錯,而錯的那半正是導致我從上一個 change 移植錯誤補救措施的原因。
+
+- [x] 12.1 複驗 RCA 的三項關鍵實證主張。完成判準:三項皆可獨立重現。驗證:(a) `git grep -n -i "send to repeater" 98751c6 -- ':!openspec/changes/archive'` 同時命中 `docs/guide/network.md:15`、其 zh-TW 鏡像與 `openspec/specs/network-traffic-panel/spec.md:74`——即 rounds 2 與 3 的全部 blocking 在 round 1 修復當下就已同時在清單上;(b) `git show b6b7d8f -- scripts/challenge-analyze.ts` 只動 `undefined` 分支,故 design.md 的「`tools` 存在時輸出不變」寫下時為真;(c) `git blame -L 15,15 263d310 -- docs/guide/network.md` 指向 merge base `000094c8`。
+- [x] 12.2 修正 RCA 以 G2 閘門找到、三輪稽核皆未報的殘留:`design.md:69` 仍以全稱句宣稱「未出現在分頁列的面板…其惰性初始化不會觸發」,但 98751c6 早已把 delta spec 的孿生句收窄為條件式。該全稱句確實為假——`RepeatPanel.vue:120` 的 `onMounted` 無條件讀取 localStorage 快照,與容器尺寸無關。改為只陳述有尺寸守衛的兩個面板並點名反例。驗證:讀 `RepeatPanel.vue:120`、`CodeEditorPanel.vue:48-49`、`WxlshPanel.vue:174-175` 三處。
+- [x] 12.3 手動實跑 RCA 提出的 G1–G5 閘門於本 change。完成判準:每道閘門給出可判定的結果,誤報須指出原因。驗證:G1(Send to Repeater 與 Terminal 的全部命中皆帶條件或落在已聲明前提段落)PASS;G2 命中兩筆但皆為**限定式**宣稱(「不改 validate 的合法性驗證規則」「不改 index.md 關於執行位置的敘述」),非裸宣稱——顯示該閘門需要限定式處理;G3(已刪除字面值)命中三筆全在 tasks.md 作為歷史引用,非現行宣稱,PASS;G4(範圍列舉 vs 實際 diff)PASS;G5 命中 `challenge-tools-control` 缺 baseline scenario `Default all tabs enabled`——**誤報**,該 scenario 是本次刻意移除並由 `Terminal excluded by default` 取代,顯示 G5 需要「刻意移除且記錄」的例外。
