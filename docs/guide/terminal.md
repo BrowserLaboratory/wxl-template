@@ -62,7 +62,7 @@ Type 'help' for available commands.
 | `sort` | `sort [options] [text]` | `-r` reverse, `-n` numeric, `-u` unique |
 | `uniq` | `uniq [options] [text]` | `-c` prefix counts, `-d` duplicates only |
 | `cut` | `cut [options] <text>` | `-d <delim>`, `-f <fields>` |
-| `tr` | `tr <set1> <set2> [text]` | Character-for-character mapping, e.g. `tr abc ABC`; ranges such as `a-z` are not expanded |
+| `tr` | `tr <set1> <set2> <text>` | Character-for-character mapping, e.g. `tr abc ABC`; ranges such as `a-z` are not expanded |
 | `tee` | `tee [text]` | Pass input through to output |
 | `xargs` | `xargs [text ...]` | Echoes its arguments back; it does not invoke another command |
 | `diff` | `diff <text1> <text2>` | Compare two inputs line by line |
@@ -251,6 +251,8 @@ curl -i <url>
 ```
 
 Supported flags are `-X`, `-d`, `-H`, `-i` (include response headers), `-s` (silent), `-L` (follow redirects), `-v` (verbose), and `-o <file>`. There is no `-I`; use `-i` to see the response headers.
+
+Since the shell has no filesystem, `-o` (and `wget`'s `-O`) print a `saved to <file>` line and discard the response body — they suppress output rather than write anything you can read back.
 
 **Example**
 

@@ -62,7 +62,7 @@ Type 'help' for available commands.
 | `sort` | `sort [options] [text]` | `-r` 反序、`-n` 數值排序、`-u` 去重 |
 | `uniq` | `uniq [options] [text]` | `-c` 加上出現次數、`-d` 只印重複行 |
 | `cut` | `cut [options] <text>` | `-d <delim>`、`-f <fields>` |
-| `tr` | `tr <set1> <set2> [text]` | 逐字元對應，例如 `tr abc ABC`；不支援 `a-z` 這類範圍展開 |
+| `tr` | `tr <set1> <set2> <text>` | 逐字元對應，例如 `tr abc ABC`；不支援 `a-z` 這類範圍展開 |
 | `tee` | `tee [text]` | 將輸入原樣傳遞到輸出 |
 | `xargs` | `xargs [text ...]` | 原樣回傳自己的參數，不會執行任何指令 |
 | `diff` | `diff <text1> <text2>` | 逐行比對兩段輸入的差異 |
@@ -251,6 +251,8 @@ curl -i <url>
 ```
 
 支援的 flag 為 `-X`、`-d`、`-H`、`-i`（一併輸出回應標頭）、`-s`（安靜模式）、`-L`（跟隨轉向）、`-v`（verbose）與 `-o <file>`。並沒有 `-I`；要看回應標頭請用 `-i`。
+
+由於這個 shell 沒有檔案系統，`-o`（以及 `wget` 的 `-O`）只會印出一行 `saved to <file>` 並把回應本體丟棄——它的作用是抑制輸出，而不是真的寫出你之後讀得回來的檔案。
 
 **範例**
 

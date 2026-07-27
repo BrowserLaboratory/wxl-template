@@ -144,7 +144,7 @@ pnpm create:challenge --name sqli-login --title "SQL Injection Login Bypass" \
 
 ### Mutate gate (`pnpm challenge:retype`)
 
-Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, re-runs `pnpm challenge:keygen`, and (when the backend changes) rewrites `EXPLOIT_PATH` in `tests/challenges/<slug>.spec.ts` to match the new backend's entry path. The rest of the spec file is left to you.
+Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, and re-runs `pnpm challenge:keygen` when the backend changes. It never writes to `tests/challenges/<slug>.spec.ts`: a flask ↔ fastapi swap leaves `EXPLOIT_PATH` alone because the routes are unchanged, and a cross-language swap exits with code 2 before anything is modified. Check the spec file yourself after a retype.
 
 ```bash
 # Metadata-only mutations

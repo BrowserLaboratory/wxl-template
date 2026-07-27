@@ -88,3 +88,14 @@
 - [x] 11.2 以 harness 對英中兩版 terminal 指南做全自動範例比對:抽出每個 `hacker@wxlsh:~$` 範例與其宣稱輸出,實跑後逐字比對。完成判準:除 Tier 1 未建模與 curl stub 外全數相符。驗證:兩版各 13/13 相符。
 - [x] 11.3 逐條查證 rounds 1–2 在 README／CONTRIBUTE／network／python／index 留下的散文斷言。完成判準:每一句機制性斷言都能指到原始碼出處。驗證:deploy.yml 四項(v* tag + workflow_dispatch、Actions 部署法、Node 24 與 pinned wasm-pack 0.14.0、SITE_BASE)、challenge-verify.ts 的 wasm-tools validate、chall-wasm 三個 crate、keygen 產出的 runtime.wasm 與 wasmModule 欄位、usePythonRuntime 對 packages 的 native/micropip 分流、RepeatPanel 的 crlf 空行切分與 Host→URL 組裝、CodeEditorPanel 的 keymap 與 window.prompt 存檔流程。
 - [x] 11.4 修正 11.3 唯一查出的偏差:README 的 Node 版本理由原本寫成「the challenge scripts run through --experimental-strip-types」,實際上只有 keygen／create:challenge／validate／analyze 四個走該旗標,其餘五個走 devDependency 的 tsx、無版本下限。改為分別列出。驗證:對照 package.json 的 scripts 區塊逐項核對。
+
+## 12. Round 4 audit 修復(修正協定下的確認輪)
+
+背景:round 4(14 agents 全數完成、0 錯誤、0 dead layer)回報 2 筆 blocking(同一問題由兩個稽核層各自發現)與 9 筆 advisory。blocking 那筆是 round 3 的「精確化」修改本身寫錯——這是同一失效模式連續第五次,且發生在我宣稱已查證過該檔的情況下。本群組改採「刪除與保守措辭優先、不自願補寫機制說明」的原則。
+
+- [x] 12.1 修正 CONTRIBUTE.md 的 `challenge:retype` 描述:`syncSpecExploitPath()` 的回傳型別雖宣告了 `updated` 變體,函式本體從未建構它;全檔 `writeFileSync` 只寫 app 檔與 index.md,`tests/challenges/<slug>.spec.ts` 一次都沒被寫入;跨語言互換在抵達該函式前就以 exit code 2 中止。改為據實描述並要求使用者自行檢查 spec 檔,同時把 keygen 重跑改為「僅在 backend 變更時」。驗證:對照 challenge-retype.ts:255-274 的函式本體、349／382 兩處 writeFileSync、305-317 的 fail-fast,以及 challenge-retype-spec-sync.test.ts 的 preserves EXPLOIT_PATH 測試。
+- [x] 12.2 [P] 修正英中兩版 terminal 指南兩處:`tr` 的 text 參數由選填改為必填(harness 實測 `tr abc ABC` 回 usage);補上 `curl -o` 與 `wget -O` 的說明——shell 無檔案系統,兩者只印出 saved to 一行並丟棄回應本體。驗證:harness 實跑兩者。
+- [x] 12.3 [P] 修正 README 三處:fork:init 表格列移除「package name」宣稱(僅在帶 `--name` 或 `--rebrand` 時才改);wasm-tools 的兩處說明補上 keygen 也用它做 mutate,不只 strip;scripts 表補上遺漏的 `prepare`(oss-readme spec 要求列出全部 package.json scripts)。驗證:對照 fork-init.ts:285-286、challenge-keygen.ts:379 與 402、package.json 的 scripts 區塊。
+- [x] 12.4 [P] 修正 proposal.md 的 F2 描述:spec delta 已由兩條 MODIFIED requirement 增為三條(task 9.3 補上 Python Guide),Why 與 Impact 兩處同步更新。驗證:與 specs/platform-documentation/spec.md 的 `### Requirement:` 數量核對。
+- [x] 12.5 全面複驗:repo prose gate、pnpm docs:build、英中區塊型別序列比對、spectra validate 與 analyze。驗證:0 blocking、build exit 0、四組配對逐塊相同、valid 且無 Critical/Warning。
+
