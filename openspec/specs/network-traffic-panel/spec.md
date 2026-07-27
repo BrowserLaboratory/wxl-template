@@ -71,7 +71,9 @@ The panel SHALL include a Clear button that removes all recorded traffic entries
 ---
 ### Requirement: NetworkPanel provides Send to Repeater action for each traffic entry
 
-Each expanded traffic entry SHALL include a "Send to Repeater" button. When clicked, the button SHALL emit an event containing the selected entry's request data formatted as a raw HTTP request string (method, path, headers, and body in CRLF-delimited format). The parent layout SHALL receive this event, inject the raw request into RepeatPanel, and switch to the Repeater tab.
+Each expanded traffic entry SHALL include a "Send to Repeater" button whenever the challenge grants the Repeater tab. When clicked, the button SHALL emit an event containing the selected entry's request data formatted as a raw HTTP request string (method, path, headers, and body in CRLF-delimited format). The parent layout SHALL receive this event, inject the raw request into RepeatPanel, and switch to the Repeater tab.
+
+When the challenge withholds the Repeater tab, the button SHALL NOT be rendered, and the parent layout SHALL ignore the event if it arrives by any other route. A rendered button that silently does nothing is not an acceptable substitute: the reader SHALL NOT be offered an action the challenge has disabled.
 
 #### Scenario: User sends a traffic entry to Repeater
 
@@ -83,6 +85,11 @@ Each expanded traffic entry SHALL include a "Send to Repeater" button. When clic
 
 - **WHEN** a user sends a traffic entry with custom headers and a JSON body to Repeater
 - **THEN** the RepeatPanel request editor SHALL contain all original request headers and the exact JSON body from the traffic entry
+
+#### Scenario: Send to Repeater is absent when the challenge withholds the Repeater
+
+- **WHEN** a challenge declares `tools: [browser, network]` and a user expands a traffic entry
+- **THEN** the entry's action row SHALL NOT contain a "Send to Repeater" button
 
 ---
 ### Requirement: Traffic recording intercepts all requests via dispatch wrapper
