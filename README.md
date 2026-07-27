@@ -33,11 +33,12 @@
 
 ## Prerequisites
 
-- **Node.js** >= 18
+- **Node.js** >= 22.6 — `challenge:keygen`, `create:challenge`, `challenge:validate`, and `challenge:analyze` run through `node --experimental-strip-types`, which is unavailable on earlier releases. The remaining TypeScript scripts go through the bundled `tsx` and have no such floor. CI builds on Node 24.
 - **pnpm** >= 10 (`npm install -g pnpm`)
 - **Rust** toolchain (install via [rustup](https://rustup.rs/))
-- **wasm-pack** (`cargo install wasm-pack`)
-- **Chromium for Playwright** — required only before the first `pnpm challenge:verify` run. After `pnpm install`, install the browser binary once with:
+- **wasm-pack** (`cargo install wasm-pack`) — not a package dependency; install it into your Rust toolchain
+- **wasm-tools** (`cargo install wasm-tools`, or `pnpm wasm:tools`) — required by the L2 stage of `pnpm challenge:verify`, which runs `wasm-tools validate` on the generated payload. `pnpm challenge:keygen` also uses it for its strip and mutate passes, but degrades to a warning for each when it is absent.
+- **Chromium for Playwright** — required before the first `pnpm challenge:verify` or `pnpm test:smoke` run. After `pnpm install`, install the browser binary once with:
 
   ```bash
   pnpm exec playwright install chromium
@@ -68,15 +69,21 @@ The dev server starts at `http://localhost:5173` by default.
 | `pnpm docs:dev` | Start the VitePress dev server only (skips the WASM build) |
 | `pnpm docs:build` | Build the VitePress static site only |
 | `pnpm docs:preview` | Preview the built static site |
-| `pnpm test` | Run the TypeScript / JavaScript unit tests (Vitest) |
+| `pnpm test` | Run the TypeScript / JavaScript unit tests (Vitest). Bare, it stays in watch mode — use `pnpm test --run` for a single pass |
+| `pnpm test:smoke` | Run the Playwright smoke tests against the built site |
 | `pnpm wasm:build` | Build every Rust WASM module |
 | `pnpm wasm:test` | Run the Rust unit tests (`cargo test`) |
+| `pnpm wasm:tools` | Attempt to install `wasm-tools` into the Rust toolchain; it silences failures and always exits 0, so confirm with `wasm-tools --version` |
+| `pnpm fork:init` | Rewrite the project identity after forking (author, GitHub URLs, and optionally the VitePress `base`). Requires `--author` and `--repo`; the package name changes only with `--name` or `--rebrand`, and `SITE_BASE` in `deploy.yml` is never touched |
 | `pnpm challenge:keygen` | Generate the encrypted WASM module for every challenge |
-| `pnpm create:challenge` | Interactively scaffold a new challenge |
+| `pnpm create:challenge` | Scaffold a new challenge from flags; `--name <slug>` is required and a bare run exits 1 with its usage line |
+| `pnpm challenge:validate` | Validate every challenge's frontmatter and file layout |
+| `pnpm challenge:analyze` | Report the content and configuration of a challenge |
 | `pnpm challenge:retype` | Mutate an existing challenge's backend / difficulty / tags / category |
 | `pnpm challenge:verify` | Run the layered verify gate (L1 lint, L2 build, L3 Playwright e2e) on a challenge |
 | `pnpm challenge:verify:blind` | Run the L4 blind-solve sub-routine standalone (also reached via `pnpm challenge:verify <slug> --blind`) |
 | `pnpm challenge:verify:cross` | Maintainer-only L4 multi-agent cross-check — runs the blind gate against `claude,codex,gemini` and aggregates verdicts |
+| `pnpm prepare` | Install the git hooks (`simple-git-hooks`); runs automatically after `pnpm install` |
 
 ## Architecture
 
@@ -85,14 +92,17 @@ Browser
 ├── VitePress site (Vue 3 + UnoCSS)
 │   ├── Challenge pages (Markdown + YAML frontmatter)
 │   └── IndexedDB (attack-session persistence + tool state)
-├── Service Worker (workers/)
+├── Service Worker (docs/public/challenge-sw.js)
 │   └── Intercepts HTTP requests and routes them to the matching WASM runtime
 └── WASM runtimes
     ├── virtual-fs      Encrypted virtual filesystem (Rust)
     ├── asgi-bridge     Python ASGI/WSGI bridge layer (Rust)
+    ├── wxlsh-parser    wxlsh terminal command parser and native commands (Rust)
     ├── python-bridge   Pyodide integration (TypeScript)
     └── php-bridge      php-wasm integration (TypeScript)
 ```
+
+The three Rust crates live under `chall-wasm/` and are built by `pnpm wasm:build`.
 
 ### Request flow
 
@@ -107,16 +117,20 @@ Every challenge is a Markdown file with a YAML frontmatter block declaring its c
 
 ```yaml
 ---
-title: Door Is Open
-backend: fastapi         # flask | fastapi | php
-app: ./app.py
-wasmModule: /challenge/door-is-open/runtime.wasm  # produced by keygen
-fs:
-  /flag.txt: ./flag.txt
+title: Door Is Open      # required
+layout: challenge        # selects the challenge UI; without it the page renders as a plain docs page
+backend: fastapi         # required — flask | fastapi | php
+app: app.py              # required — path relative to the challenge's src/ root
 difficulty: easy
+category: web
+packages: []             # extra Python packages to install via micropip
+tools: [ browser, network, repeater, code ]
 source_visible: false    # true = white-box, false = black-box (default)
+wasmModule: /challenge/door-is-open/runtime.wasm  # produced by keygen
 ---
 ```
+
+Challenge source files are picked up by scanning the challenge's `src/` directory. The legacy `fs:` mapping is still accepted for compatibility, but the validator emits a deprecation warning — new challenges SHALL rely on the `src/` scan instead.
 
 ## Contributing
 
@@ -138,32 +152,29 @@ pnpm build
 
 ### Deploying to GitHub Pages
 
-```yaml
-# Example: .github/workflows/deploy.yml
-name: Deploy
-on:
-  push:
-    branches: [main]
+This repository ships a working deployment workflow at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — use it as-is rather than writing your own. Its shape:
 
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - uses: dtolnay/rust-toolchain@stable
-      - run: cargo install wasm-pack
-      - run: pnpm install
-      - run: pnpm build
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .vitepress/dist
+- **Trigger**: a `v*` release tag push, plus manual `workflow_dispatch`. Pushing to `main` does not deploy.
+- **Pages source**: the GitHub Actions deployment method (`actions/upload-pages-artifact` + `actions/deploy-pages`). There is no `gh-pages` branch.
+- **Toolchain**: Node 24 and a SHA-pinned `wasm-pack` 0.14.0, matching `release.yml`.
+- **Base path**: the build step sets `SITE_BASE: /wxl-template/`.
+
+`SITE_BASE` is what makes a project site work. VitePress bakes it into every asset URL, so a site served from `https://<user>.github.io/<repo>/` needs `SITE_BASE: /<repo>/` — without it, the deployed page requests its assets from the domain root and every one of them 404s. Set it only in the deploy workflow; leaving it unset keeps local and CI builds rooted at `/`.
+
+Two settings live in the GitHub UI rather than in this repository:
+
+1. **Settings → Pages → Source** must be set to **GitHub Actions**.
+2. The **`github-pages` environment** must allow deployments from `v*` tags (in addition to the `main` branch, which authorises `workflow_dispatch` runs). Without that rule, the tag-triggered deploy job is rejected.
+
+After forking, run `fork:init` with its required flags to rewrite the project identity:
+
+```bash
+pnpm fork:init --author "<Your Name>" --repo <owner>/<repo>
 ```
+
+It rewrites `package.json` and the GitHub URLs. **It does not touch `SITE_BASE`.** The script refuses to overwrite an existing `.github/workflows/deploy.yml` — and a fork always has one — so it prints `left untouched` and moves on, leaving `SITE_BASE: /wxl-template/` in place. Edit that value to `/<repo>/` yourself, or the deployment 404s exactly as described above.
+
+The example omits `--base` deliberately: with the flag absent the script leaves `.vitepress/config.mts` alone, so the env-conditional `base: process.env.SITE_BASE ?? '/'` survives and `SITE_BASE` stays in control. Passing `--base /<repo>/` instead replaces that line with a hard-coded literal, after which `SITE_BASE` no longer influences the build. Do not reach for `--base none` expecting the env-conditional form — `none` deletes the `base` declaration outright, so VitePress falls back to `/` and `SITE_BASE` becomes a no-op, which is the 404 case described above.
 
 ### Deploying to Cloudflare Pages
 
@@ -173,15 +184,16 @@ jobs:
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
      && . "$HOME/.cargo/env" \
-     && cargo install wasm-tools \
+     && cargo install wasm-pack \
      && pnpm install \
      && pnpm build
    ```
 
 3. Set the output directory to `.vitepress/dist`.
-4. Add `NODE_VERSION=22` to the environment variables.
+4. Add `NODE_VERSION=24` to the environment variables.
+5. If the site is served from a sub-path, add `SITE_BASE` with that path (leave it unset for a root-domain deployment).
 
-> **Note**: Cloudflare Pages does not ship a Rust toolchain by default; the build command above installs a minimal Rust toolchain and `wasm-tools` automatically. `wasm-pack` is declared as a devDependency, so `pnpm install` picks it up.
+> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not installed here. `pnpm build` does run `pnpm challenge:keygen`, which uses `wasm-tools` for its strip and mutate passes, but keygen degrades to a warning for each when the tool is absent — so the build still succeeds, just without those passes. Add `wasm-tools` to the install line if you want stripped and mutated payloads in production builds.
 
 ## License
 

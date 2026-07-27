@@ -8,8 +8,10 @@ Thanks for your interest in this project! Please read this guide before submitti
 - [Development workflow](#development-workflow)
 - [PR submission workflow](#pr-submission-workflow)
 - [Adding a new challenge](#adding-a-new-challenge)
+- [Challenge Keygen](#challenge-keygen)
 - [Commit conventions](#commit-conventions)
 - [Reporting issues](#reporting-issues)
+- [Maintainer Setup](#maintainer-setup)
 
 ## Branch model
 
@@ -25,7 +27,7 @@ This project uses a simple **`main`-based** branching strategy — there is no l
 ### Branch naming convention
 
 ```
-feat/<short-description>      # e.g. feature/add-php-upload-challenge
+feature/<short-description>   # e.g. feature/add-php-upload-challenge
 bugfix/<short-description>    # e.g. bugfix/fix-flag-verifier-timing
 hotfix/<short-description>    # e.g. hotfix/patch-wasm-memory-leak
 ```
@@ -68,7 +70,7 @@ main ──────────●──────────────
 
    ```bash
    pnpm dev          # Start the dev server
-   pnpm test         # TypeScript / JavaScript unit tests
+   pnpm test --run   # TypeScript / JavaScript unit tests (bare `pnpm test` stays in Vitest watch mode)
    pnpm wasm:test    # Rust unit tests
    ```
 
@@ -111,7 +113,7 @@ The PR description must contain the following three sections:
 
 Before submitting, confirm:
 
-- [ ] Local tests pass (`pnpm test` & `pnpm wasm:test`).
+- [ ] Local tests pass (`pnpm test --run` & `pnpm wasm:test`).
 - [ ] Commit messages follow the conventions below.
 - [ ] PR target branch is `main`.
 - [ ] PR description contains Summary / Motivation / Test Plan.
@@ -142,7 +144,7 @@ pnpm create:challenge --name sqli-login --title "SQL Injection Login Bypass" \
 
 ### Mutate gate (`pnpm challenge:retype`)
 
-Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, re-runs `pnpm challenge:keygen`, and (when the backend changes) tries to keep `tests/challenges/<slug>.spec.ts` in sync.
+Once a challenge exists, change its backend / difficulty / tags / category with `challenge:retype` — do **not** edit `index.md` frontmatter or rename `src/app.py` / `src/index.php` by hand. The script keeps the vulnerability body intact, and re-runs `pnpm challenge:keygen` when the backend changes. It never writes to `tests/challenges/<slug>.spec.ts`: a flask ↔ fastapi swap leaves `EXPLOIT_PATH` alone because the routes are unchanged, and a cross-language swap exits with code 2 before anything is modified. Check the spec file yourself after a retype.
 
 ```bash
 # Metadata-only mutations

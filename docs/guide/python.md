@@ -10,10 +10,9 @@ Interface regions:
 |---|---|
 | Code editing area | Main area for typing Python scripts, with syntax highlighting and auto-indent |
 | Execution output area | Shows `print()` output, error messages, and execution status |
-| Toolbar | Contains buttons for run, save, load, and clear output |
-| Status bar | Shows the Pyodide initialization state (loading / ready) |
+| Toolbar | Holds the Run button, a Save button, and a "Load script…" dropdown listing your saved scripts |
 
-> **Note**: The Run button is disabled until Pyodide finishes initializing. Scripts can only be executed once the status bar shows "ready".
+> **Note**: The Run button doubles as the runtime status indicator. It reads "Loading…" and stays disabled until Pyodide finishes initializing, then becomes "▶ Run"; while a script is executing it reads "Running…".
 
 ## Available Modules
 
@@ -32,9 +31,13 @@ The following modules can be `import`ed directly with no installation required:
 | `itertools` | Iteration utilities | Brute-force combination enumeration |
 | `string` | String constants | Obtain alphabet and digit character sets |
 
-### requests stub (platform-specific module)
+### requests (installed via micropip)
 
-The platform provides a `requests`-compatible layer so you can use familiar syntax to send HTTP requests to challenge targets:
+The platform installs the real `requests` library with micropip, then monkey-patches its transport layer (`HTTPAdapter.send`) so requests are routed to the challenge backend through the platform's dispatch bridge instead of the network. Because the library itself is genuine, its request-building API is available as usual — `get`, `post`, `put`, `delete`, `Session`, auth helpers, and so on — and the requests it sends are recorded in the Network Traffic Log alongside traffic from the other panels.
+
+> **Cookies are not automatic.** The patched transport builds the response object directly rather than going through the adapter's normal response path, so `Set-Cookie` is never parsed into `response.cookies` or into a `Session`'s cookie jar — a session will not carry a login cookie forward on its own. The header itself does reach you: read `response.headers['Set-Cookie']` and set the `Cookie` header yourself on subsequent requests. When a response carries several `Set-Cookie` headers they arrive joined into that single value, separated by `, `.
+
+The two calls you will reach for most often:
 
 | Function | Description |
 |---|---|
@@ -179,8 +182,8 @@ print(response.text)
 | Shortcut | Action |
 |---|---|
 | `Cmd + Enter` (macOS) / `Ctrl + Enter` (Windows/Linux) | Run the current script |
-| `Cmd + S` / `Ctrl + S` | Save the script to IndexedDB |
-| `Tab` | Insert indentation (4 spaces) |
+
+Standard CodeMirror editing and undo/redo bindings are also active. Saving is done from the toolbar rather than a shortcut.
 
 ## Saving and Loading Scripts
 
@@ -188,10 +191,10 @@ The Code Editor can save scripts to the browser's **IndexedDB**, which makes it 
 
 ### Saving a Script
 
-Click the "Save" button on the toolbar, or press `Cmd/Ctrl + S`, then enter a script name and confirm to store it.
+Click the "Save" button on the toolbar, then enter a script name and confirm to store it.
 
 ### Loading a Script
 
-Click the "Load" button on the toolbar, choose a script from the saved list, and the editor contents will be replaced with the selected script.
+Open the "Load script…" dropdown on the toolbar and pick a script from the saved list; the editor contents are replaced with the selected script. The dropdown is disabled while no scripts are saved.
 
 > **Note**: Script data is stored locally in the browser's IndexedDB and will be removed when site data is cleared. Back up important scripts to a local text editor.
