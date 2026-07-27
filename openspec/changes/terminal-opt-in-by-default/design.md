@@ -22,7 +22,7 @@
 - 不觸碰 `commands` 欄位與 Tier 5 指令管線。
 - 不改變面板的掛載方式,不改 `create-challenge.ts` 的樣板,不新增 Playwright 測試。
 - 不修改任何挑戰的 frontmatter。
-- 不改 `challenge-validate.ts`。
+- 不改 `challenge-validate.ts` 對 `tools` 值的**驗證邏輯**;但其 `else` 分支印出的預設說明字串會隨本次變更失真,屬必修範圍。
 
 ## Decisions
 
@@ -78,7 +78,7 @@ frontmatter 的 `tools` 欄位型別不變:選填的合法 tab ID 陣列。合�
 
 **驗收條件**
 
-- `tests/unit/layouts/ChallengeLayout.test.ts` 涵蓋上表三種情境,外加「清單未列 browser 仍注入」與「清單明確列出 terminal 則 Terminal 分頁出現」兩則。全部測試在實作前撰寫並先行失敗。
+- `tests/unit/layouts/ChallengeLayout.test.ts` 涵蓋上表三種情境,外加「清單未列 browser 仍注入」與「清單明確列出 terminal 則 Terminal 分頁出現」兩則。凡實作變更了行為的案例,測試皆在實作前撰寫並先行失敗;另有數則是刻意的迴歸護欄,實作前後皆須通過,不得因此被視為未走 TDD。
 - `tests/challenge-analyze.test.ts` 對缺席情境的斷言更新為新輸出。
 - `pnpm test --run` 全數通過。
 - `pnpm docs:build` 成功。
@@ -88,7 +88,7 @@ frontmatter 的 `tools` 欄位型別不變:選填的合法 tab ID 陣列。合�
 
 *In scope*:layout 的分頁計算、analyze 的摘要字串、三份 spec 的對應 requirement、README 的 frontmatter 註解、解題者指南中因本變更而失真的敘述。
 
-*Out of scope*:任何挑戰的 frontmatter、`create-challenge.ts`、`challenge-validate.ts`、`commands` 欄位、面板掛載方式、Playwright、首頁內容與 `homepage-content` spec。
+*Out of scope*:任何挑戰的 frontmatter、`create-challenge.ts`、`challenge-validate.ts` 的驗證邏輯、`commands` 欄位、面板掛載方式、Playwright、首頁內容與 `homepage-content` spec。
 
 ## Risks / Trade-offs
 

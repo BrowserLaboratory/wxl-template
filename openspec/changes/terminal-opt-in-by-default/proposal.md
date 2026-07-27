@@ -30,7 +30,7 @@
 - 不改 `scripts/create-challenge.ts` 的 frontmatter 樣板。新挑戰將沿用新預設,`tools` 欄位的說明改寫在 README 的 frontmatter 範例旁。
 - 不改面板的掛載方式(維持 `v-show`),不新增 Playwright 測試。
 - 不改 `docs/guide/index.md` 關於工具「在瀏覽器內執行」的敘述,以及首頁的 Terminal 功能卡——兩者描述的是平台能力與執行位置,不因本次變更而失真。
-- 不改 `scripts/challenge-validate.ts`:其 tools 檢查僅在欄位存在時執行,不受預設值變更影響。
+- 不改 `scripts/challenge-validate.ts` 對 `tools` 值的驗證邏輯。其 `else` 分支印出的預設說明字串則必須同步——該字串描述的正是本次變更改掉的預設。
 
 ## Alternatives Considered
 

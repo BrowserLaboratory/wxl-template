@@ -288,7 +288,9 @@ export function analyzeChallenge(challenge: ChallengeFile): AnalysisResult {
   } else if (Array.isArray(fm.tools) && fm.tools.length === VALID_TOOLS.length) {
     toolsSummary = 'all enabled'
   } else if (Array.isArray(fm.tools)) {
-    toolsSummary = (fm.tools as string[]).join(', ')
+    // Report the tabs that actually render, so the injected browser shows up.
+    const rendered = VALID_TOOLS.filter(t => t === 'browser' || (fm.tools as string[]).includes(t))
+    toolsSummary = rendered.join(', ')
   } else {
     toolsSummary = 'unknown'
   }

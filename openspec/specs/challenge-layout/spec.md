@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines the custom VitePress layout for challenge pages, rendering a two-column split view with a collapsible description panel and flag submit form on the left, and tabbed interaction panels (Browser, Network, Repeater, Terminal, Code Editor) on the right, gated on runtime and Service Worker readiness.
+Defines the custom VitePress layout for challenge pages, rendering a two-column split view with a collapsible description panel and flag submit form on the left, and interaction panels (Browser, Network, Repeater, Terminal, Code Editor) on the right behind a tab bar whose entries the challenge selects, gated on runtime and Service Worker readiness.
 
 ## Requirements
 

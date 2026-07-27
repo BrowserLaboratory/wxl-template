@@ -47,7 +47,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 | 工具名稱 | 面板標籤 | 主要用途 |
 |---|---|---|
 | Code Editor / Pyodide | Code | 在瀏覽器內執行 Python 3 腳本，支援 HTTP 請求模擬 |
-| Terminal / wxlsh | Terminal | 執行內建指令列工具，包含編碼轉換與 curl 等指令。僅在挑戰主動提供時出現，因此多數頁面看不到這個分頁 |
+| Terminal / wxlsh | Terminal | 執行內建指令列工具，包含編碼轉換與 curl 等指令。僅在挑戰主動提供時出現，未授予的挑戰就看不到這個分頁 |
 | 內建瀏覽器 | Browser | 直接瀏覽並互動目標挑戰網站 |
 | Network Traffic Log | Network | 記錄並檢視所有 HTTP 請求與回應的完整內容 |
 | HTTP Repeater | Repeater | 修改 HTTP 請求的方法、標頭、參數後重新送出 |

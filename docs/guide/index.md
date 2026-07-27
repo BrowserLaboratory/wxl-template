@@ -47,7 +47,7 @@ Once you successfully exploit the vulnerability you obtain a flag string (typica
 | Tool | Panel label | Primary purpose |
 |---|---|---|
 | Code Editor / Pyodide | Code | Run Python 3 scripts inside the browser, with HTTP request simulation |
-| Terminal / wxlsh | Terminal | Invoke built-in command-line utilities, including encoders and `curl`-style commands. Offered only by challenges that ask for it, so the tab is absent on many pages |
+| Terminal / wxlsh | Terminal | Invoke built-in command-line utilities, including encoders and `curl`-style commands. Offered only by challenges that ask for it, so the tab is absent unless the challenge grants it |
 | Built-in browser | Browser | Browse and interact with the target challenge application |
 | Network Traffic Log | Network | Record and inspect every HTTP request and response in full |
 | HTTP Repeater | Repeater | Modify the method, headers, and parameters of a request and replay it |

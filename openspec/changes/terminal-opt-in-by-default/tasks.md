@@ -54,3 +54,17 @@
 - [x] 8.2 驗收 `challenge-tools-control` 的 requirement「Tier 5 command allowlist via commands field」:確認本次變更未動 `commands` 管線,且新增的那句「Terminal 未授予時 commands 無可觀察效果」與實作一致。完成判準:確認 `commands` 相關程式碼零改動,且該句可由 layout 的分頁規則推導。驗證:`git diff` 搜尋 commands 應無命中。
 - [x] 8.3 驗收 `challenge-layout` 的 requirement「Challenge layout renders a left-right split view」:確認分頁數量不再固定為五、面板仍以 `v-show` 掛載、未授予的面板因容器尺寸為 0 而不初始化。完成判準:三項各指出實作依據。驗證:對照 `ChallengeLayout.vue` 的面板區塊與 `WxlshPanel.vue` 的尺寸守衛。
 - [x] 8.4 驗收 `challenge-framework` 的 requirement「Frontmatter schema defines challenge metadata」:確認 `tools` 的預設值敘述與實作一致,且驗證器仍將缺席的 `tools` 保持為 `undefined` 而非注入預設。完成判準:指出 `config.ts` 中原樣傳遞的那一行,並確認 layout 才是套用預設之處。驗證:對照 `.vitepress/challenge/config.ts` 與 `ChallengeLayout.vue`。
+
+## 9. Round 1 audit 修復
+
+背景:round 1(22 agents 全數完成、0 錯誤、0 dead layer)回報 5 筆 blocking(去重後三個相異缺陷)與 15 筆 advisory。另有一筆被對抗式複審評為 Medium 的項目,經我自行複驗判定為當機迴歸並升級處理。
+
+- [x] 9.1 修正 `onSendToRepeater` 繞過允許清單的漏洞:該函式無條件設定 `activeTab.value = 'repeater'`,使 Repeater 面板在未被授予時仍可經 Traffic Log 的送出按鈕開啟,且開啟後沒有分頁按鈕可離開。這使 delta spec 新寫的全稱句「A panel whose tab is absent SHALL be unreachable」為假。修法:新增 `hasTab()` 並在該函式開頭擋下。完成判準:全檔僅存的兩個 `activeTab` 寫入點皆受 `tabs` 約束。驗證:新增測試以 `tools: ['browser','network']` 掛載、觸發 sendToRepeater,斷言 active tab 仍為 network 且 repeater 面板維持 `display: none`。
+- [x] 9.2 修正我引入的當機迴歸:`tools` 寫成裸 `tools:`(YAML 解析為 `null`)時,新的 `tabs` computed 會對 `null` 呼叫 `.includes` 而擲 TypeError,使挑戰頁渲染失敗;舊碼的 `!allowedTools` 判斷則會回傳全部分頁。layout 讀的是原始 frontmatter,`config.ts` 的陣列檢查攔不到。修法:改以 `Array.isArray()` 判斷,非陣列一律回退至預設集合。完成判準:`null`、字串、數字三種輸入皆回傳預設四項且不擲錯。驗證:以 `it.each` 三案例先紅後綠。
+- [x] 9.3 修正 `scripts/challenge-validate.ts` 的 `else` 分支字串 `'not specified (default all)'`——它描述的正是本次變更改掉的預設。我原先把該檔列為 Non-Goal,理由是「其 tools 檢查僅在欄位存在時執行」,那是只讀了 `if` 分支的誤判。同步修正 proposal 與 design 中的該項 Non-Goal 措辭。完成判準:字串與 `challenge-analyze.ts` 一致。驗證:新增測試釘住該字串,防止兩者再度漂移。
+- [x] 9.4 修正 baseline spec 的 Purpose:`challenge-tools-control/spec.md` 仍寫「defaulting to all five tabs」,`challenge-layout/spec.md` 仍把五個面板描述為固定分頁。delta 只能攜帶 requirement 層級區塊(歷史上僅見 ADDED/MODIFIED/REMOVED/NEW Requirements),Purpose 會原封不動存活過 archive,故直接修改 baseline 檔。完成判準:兩份 Purpose 與新行為一致。驗證:archive 後複查兩行仍為修正後版本。
+- [x] 9.5 修正 `challenge-analyze.ts` 對非空陣列的輸出:原本原樣印出作者清單,未反映被注入的 browser,`tools: []` 更會印出空字串而與實際渲染的 browser 矛盾。改為輸出實際生效的分頁。完成判準:`tools: []` 與未列 browser 的清單皆顯示 browser。驗證:執行該檔測試。
+- [x] 9.6 修正我自己 artifact 中的不實敘述:design.md 的驗收條件寫「全部測試在實作前撰寫並先行失敗」,但其中兩則是刻意的迴歸護欄,實作前即通過。改為區分「行為變更的測試先紅」與「護欄測試前後皆綠」。完成判準:敘述與 tasks.md 群組 1 的記載一致。驗證:對照 1.4 的完成判準。
+- [x] 9.7 修正剩餘文件不一致:英中版對 Terminal 缺席頻率的量詞不同(many pages / 多數頁面),兩者皆無從查證,改為不帶量詞的條件敘述;`network.md` 的 Traffic Log 提示仍無條件把 Terminal 列為記錄來源,與同一次變更在 index.md 的處理不一致。完成判準:英中做出相同宣稱且皆為條件語氣。驗證:兩版並排比對。
+- [x] 9.8 補上 delta spec 未被測試釘住的兩條規則:重複 id 不產生重複分頁、驗證器保留缺席的 `tools` 為 `undefined`。同時放寬 delta 中那句因果子句的推廣範圍——原句把 `WxlshPanel` 的尺寸守衛推廣為所有面板的性質,改為只陳述可驗證的部分。完成判準:兩條規則各有具名測試。驗證:執行對應測試檔。
+- [x] 9.9 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。

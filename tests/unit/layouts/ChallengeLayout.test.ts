@@ -274,6 +274,57 @@ describe('ChallengeLayout (VitePress layout)', () => {
       .toEqual(['browser', 'network', 'repeater', 'code'])
   })
 
+  it('does not duplicate a tab id repeated in the allowlist', async () => {
+    expect(await tabIdsFor(['code', 'code', 'browser'])).toEqual(['browser', 'code'])
+  })
+
+  it('ignores an allowlist entry that is not a known tab', async () => {
+    expect(await tabIdsFor(['code', 'sqlmap'])).toEqual(['browser', 'code'])
+  })
+
+  it.each([
+    ['null (a bare `tools:` line in YAML)', null],
+    ['a string', 'browser'],
+    ['a number', 7],
+  ])('falls back to the default tab set when tools is %s', async (_label, value) => {
+    // The layout reads raw frontmatter, so config.ts's array check never runs here.
+    // A malformed value must not take the page down with it.
+    expect(await tabIdsFor(value as unknown as string[]))
+      .toEqual(['browser', 'network', 'repeater', 'code'])
+  })
+
+  it('refuses to open the Repeater from the Traffic Log when the challenge did not grant it', async () => {
+    const { useData } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo',
+          difficulty: 'easy',
+          category: 'web',
+          backend: 'flask',
+          slug: 'sqli-demo',
+          description: 'x',
+          markdownBody: '# x',
+          tools: ['browser', 'network'],
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const wrapper = mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+
+    await wrapper.find('[data-tab="network"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const { default: NetworkPanelComponent } = await import('../../../.vitepress/theme/components/NetworkPanel.vue')
+    await wrapper.findComponent(NetworkPanelComponent).vm.$emit('sendToRepeater', 'GET / HTTP/1.1\r\n\r\n')
+    await wrapper.vm.$nextTick()
+
+    // The Repeater has no tab here, so it must stay closed rather than becoming
+    // an active panel with no tab button to leave it by.
+    expect(wrapper.find('[data-tab].ch-tab-btn-active').attributes('data-tab')).toBe('network')
+    expect(wrapper.find('[data-panel="repeater"]').attributes('style')).toContain('display: none')
+  })
+
   it('shows NetworkPanel when network tab is active', async () => {
     const wrapper = mount(ChallengeLayout, {
       global: { stubs: { Content: true } },

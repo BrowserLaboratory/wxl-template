@@ -19,7 +19,7 @@ Clicking any entry in the list expands a detail area with two sub-tabs and a **S
 
 Because both tabs show whole messages rather than field-by-field breakdowns, you can copy either one straight into the Repeater or into a script.
 
-> **Note**: Every tool panel shares one dispatch layer, so the log captures requests from all of them — the Browser panel, the Repeater, `curl` and `wget` in the Terminal, and the `requests` module inside the Code Editor. The list itself does not label which panel a request came from, so use the sequence number and timing to line entries up with the action that produced them.
+> **Note**: Every tool panel shares one dispatch layer, so the log captures requests from all of them — the Browser panel, the Repeater, the `requests` module inside the Code Editor, and, where the challenge grants a Terminal, `curl` and `wget` there too. The list itself does not label which panel a request came from, so use the sequence number and timing to line entries up with the action that produced them.
 
 ## HTTP Status Codes
 

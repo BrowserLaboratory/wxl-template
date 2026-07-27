@@ -184,7 +184,11 @@ export function validateChallenge(mdPath: string): ValidationResult {
       })
     }
   } else {
-    checks.push({ label: 'tools', passed: true, message: 'not specified (default all)' })
+    checks.push({
+      label: 'tools',
+      passed: true,
+      message: 'not specified (default: browser, network, repeater, code — terminal excluded)',
+    })
   }
 
   // ── Check 7: commands values valid ──────────────────────────────────────

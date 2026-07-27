@@ -19,7 +19,7 @@ Network Traffic Log 面板會自動記錄挑戰發出的每一個 HTTP 請求與
 
 兩個頁籤顯示的都是完整訊息而非逐欄拆解，因此可以直接整段複製到 Repeater 或腳本裡。
 
-> **注意**：所有工具面板共用同一層 dispatch，因此記錄涵蓋全部來源——Browser 面板、Repeater、Terminal 的 `curl` 與 `wget`，以及 Code Editor 中 `requests` 模組發出的請求。清單本身不會標示某筆請求來自哪個面板，請改用序號與時間把記錄對應回產生它的操作。
+> **注意**：所有工具面板共用同一層 dispatch，因此記錄涵蓋全部來源——Browser 面板、Repeater、Code Editor 中 `requests` 模組發出的請求，以及挑戰有授予 Terminal 時該處 `curl` 與 `wget` 發出的請求。清單本身不會標示某筆請求來自哪個面板，請改用序號與時間把記錄對應回產生它的操作。
 
 ## HTTP 狀態碼說明
 
