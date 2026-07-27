@@ -79,3 +79,12 @@
 - [x] 10.5 全面複驗:repo prose gate、pnpm docs:build、全站頁內錨點檢查、英中區塊型別序列比對。驗證:0 blocking、build exit 0、失效錨點 0、四組配對逐塊相同。
 - [x] 10.6 修正 round 3 修復自身引入的 `X-Wxlsh-Set-Cookie` 錯誤斷言(由 RCA 的 self-inflicted lens 指出、經查證屬實):改名只發生在 `PythonRuntime.handleRequest()`(Browser 面板走的 Fetch Response 路徑);Code Editor 的 `requests` 走 `ChallengeLayout` 的 `dispatchBridge`,其中 `restoreSetCookie()` 會把 `x-wxlsh-set-cookie` 還原回 `set-cookie` 才交給 Python。英中兩版改為「`response.headers['Set-Cookie']` 讀得到,多個值以 `, ` 合併」,並保留 `response.cookies` 與 Session jar 仍為空的正確部分。驗證:對照 ChallengeLayout.vue:115-125 的 restoreSetCookie 與 128-140 的 dispatchBridge。
 - [x] 10.7 套用 RCA 建議的缺漏閘門,對 round 3 commit 的每一行新增文字重新逐條查證(`git diff -U0` 取 added lines,逐句回推原始碼或以 harness 執行)。完成判準:除 10.6 外,其餘新增斷言皆有出處。驗證:keygen 的 wasm-tools strip 與 warn 降級分支、fork-init 的 --author/--repo 必填檢查、package.json 的 test 與 wasm:test、setViteBase 的三個分支、WxlshPanel 的 scrollback 上限、harness 執行 grep/sed/awk/cut 無參數形式。
+
+## 11. Rounds 1–2 新增行補做 diff 自檢
+
+背景:RCA 的 self-inflicted lens 證實 rounds 2–3 的 10 筆 Critical/High 全部由本次 change 自己的修復 commit 寫出,而 rounds 1–2 的新增行從未經過「只讀新增行、逐句回推出處」這道閘門。本群組補做該檢查,涵蓋 be29fe4..a43d264 之間、且仍存活於 HEAD 的 486 行新增文字。
+
+- [x] 11.1 修正 harness 本身的兩個建模缺口,使其可作為可信量測儀器:補上 unknown-command 的實際兩行輸出、並讓未建模的 Tier 1 指令回傳顯式標記而非靜默落到下層(先前 `help` 會誤落到 Rust native 層而回報錯誤結果)。完成判準:`hex`(純 native)、`cat`(unknown)、`echo`(Tier 1)三種路徑皆回傳與實作一致的結果。驗證:三者實跑比對。
+- [x] 11.2 以 harness 對英中兩版 terminal 指南做全自動範例比對:抽出每個 `hacker@wxlsh:~$` 範例與其宣稱輸出,實跑後逐字比對。完成判準:除 Tier 1 未建模與 curl stub 外全數相符。驗證:兩版各 13/13 相符。
+- [x] 11.3 逐條查證 rounds 1–2 在 README／CONTRIBUTE／network／python／index 留下的散文斷言。完成判準:每一句機制性斷言都能指到原始碼出處。驗證:deploy.yml 四項(v* tag + workflow_dispatch、Actions 部署法、Node 24 與 pinned wasm-pack 0.14.0、SITE_BASE)、challenge-verify.ts 的 wasm-tools validate、chall-wasm 三個 crate、keygen 產出的 runtime.wasm 與 wasmModule 欄位、usePythonRuntime 對 packages 的 native/micropip 分流、RepeatPanel 的 crlf 空行切分與 Host→URL 組裝、CodeEditorPanel 的 keymap 與 window.prompt 存檔流程。
+- [x] 11.4 修正 11.3 唯一查出的偏差:README 的 Node 版本理由原本寫成「the challenge scripts run through --experimental-strip-types」,實際上只有 keygen／create:challenge／validate／analyze 四個走該旗標,其餘五個走 devDependency 的 tsx、無版本下限。改為分別列出。驗證:對照 package.json 的 scripts 區塊逐項核對。

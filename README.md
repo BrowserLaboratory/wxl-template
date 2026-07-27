@@ -33,7 +33,7 @@
 
 ## Prerequisites
 
-- **Node.js** >= 22.6 — the challenge scripts run through `node --experimental-strip-types`, which is unavailable on earlier releases. CI builds on Node 24.
+- **Node.js** >= 22.6 — `challenge:keygen`, `create:challenge`, `challenge:validate`, and `challenge:analyze` run through `node --experimental-strip-types`, which is unavailable on earlier releases. The remaining TypeScript scripts go through the bundled `tsx` and have no such floor. CI builds on Node 24.
 - **pnpm** >= 10 (`npm install -g pnpm`)
 - **Rust** toolchain (install via [rustup](https://rustup.rs/))
 - **wasm-pack** (`cargo install wasm-pack`) — not a package dependency; install it into your Rust toolchain
