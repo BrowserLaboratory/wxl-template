@@ -352,6 +352,40 @@ describe('analyzeChallenge', () => {
     expect(result.warnings.some((w) => w.includes('Hardcoded localhost'))).toBe(true)
   })
 
+  it('reports the injected browser for a list that omits it', () => {
+    createPerFolderChallenge(tmpDir, 'code-only-tools', {
+      frontmatter: [
+        'title: "Code Only"',
+        'backend: flask',
+        'app: app.py',
+        'tools: [code]',
+      ].join('\n'),
+    })
+
+    expect(analyzeChallenge({
+      slug: 'code-only-tools',
+      mdPath: join(tmpDir, 'code-only-tools', 'index.md'),
+      isPerFolder: true,
+    }).toolsSummary).toBe('browser, code')
+  })
+
+  it('does not call a duplicate-padded list "all enabled"', () => {
+    createPerFolderChallenge(tmpDir, 'dup-tools', {
+      frontmatter: [
+        'title: "Dup Tools"',
+        'backend: flask',
+        'app: app.py',
+        'tools: [code, code, code, code, code]',
+      ].join('\n'),
+    })
+
+    expect(analyzeChallenge({
+      slug: 'dup-tools',
+      mdPath: join(tmpDir, 'dup-tools', 'index.md'),
+      isPerFolder: true,
+    }).toolsSummary).toBe('browser, code')
+  })
+
   it('names the tabs the default actually yields when tools is not set', () => {
     createPerFolderChallenge(tmpDir, 'default-tools')
 
@@ -446,7 +480,7 @@ describe('formatAnalysis', () => {
       totalFiles: 2,
       totalSizeBytes: 1230,
       estimatedWasmBytes: 4920,
-      toolsSummary: 'all enabled (default)',
+      toolsSummary: 'browser, network, repeater, code (default — terminal excluded)',
       commandsSummary: 'none (Tier 5 disabled)',
       warnings: [],
     }
@@ -462,7 +496,7 @@ describe('formatAnalysis', () => {
     expect(output).toContain('flag.txt')
     expect(output).toContain('Total:  2 files')
     expect(output).toContain('Est. WASM payload:')
-    expect(output).toContain('Tools:    all enabled (default)')
+    expect(output).toContain('Tools:    browser, network, repeater, code (default — terminal excluded)')
     expect(output).toContain('Commands: none (Tier 5 disabled)')
     expect(output).toContain('(none)')
   })
@@ -479,7 +513,7 @@ describe('formatAnalysis', () => {
       totalFiles: 0,
       totalSizeBytes: 0,
       estimatedWasmBytes: 0,
-      toolsSummary: 'all enabled (default)',
+      toolsSummary: 'browser, network, repeater, code (default — terminal excluded)',
       commandsSummary: 'none (Tier 5 disabled)',
       warnings: ['Flag does not match pattern', 'Hardcoded localhost in app.py'],
     }
@@ -508,7 +542,7 @@ describe('formatSummaryTable', () => {
         totalFiles: 2,
         totalSizeBytes: 1024,
         estimatedWasmBytes: 4096,
-        toolsSummary: 'all enabled (default)',
+        toolsSummary: 'browser, network, repeater, code (default — terminal excluded)',
         commandsSummary: 'none (Tier 5 disabled)',
         warnings: [],
       },

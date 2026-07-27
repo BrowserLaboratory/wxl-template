@@ -544,7 +544,7 @@ onUnmounted(() => {
           <CodeEditorPanel :slug="slug" :dispatch="codeDispatch" :disabled="toolsDisabled" :pyodide="pyodideInstance" :onCodeExecuted="onCodeExecuted" />
         </div>
         <div v-show="activeTab === 'network'" data-panel="network" class="flex-1 overflow-hidden">
-          <NetworkPanel :trafficLog="trafficLog" @clear="clearTrafficLog" @sendToRepeater="onSendToRepeater" />
+          <NetworkPanel :trafficLog="trafficLog" :canSendToRepeater="hasTab('repeater')" @clear="clearTrafficLog" @sendToRepeater="onSendToRepeater" />
         </div>
       </main>
     </div>

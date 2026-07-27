@@ -177,10 +177,12 @@ export function validateChallenge(mdPath: string): ValidationResult {
         message: `invalid tool(s): ${invalid.join(', ')}`,
       })
     } else {
+      // Show the tabs that actually render, so the injected browser is visible.
+      const rendered = VALID_TOOLS.filter((t) => t === 'browser' || tools.includes(t))
       checks.push({
         label: 'tools',
         passed: true,
-        message: `[${tools.join(', ')}]`,
+        message: `[${rendered.join(', ')}]`,
       })
     }
   } else {

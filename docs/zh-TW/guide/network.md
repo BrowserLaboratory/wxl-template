@@ -47,7 +47,7 @@ Network Traffic Log 面板會自動記錄挑戰發出的每一個 HTTP 請求與
 Network Traffic Log 與 HTTP Repeater 緊密整合。若你發現某筆請求值得進一步分析或修改，可透過以下步驟將其送至 Repeater：
 
 1. 在 Network Traffic Log 清單中，點擊要分析的請求條目
-2. 展開詳細資訊後，點擊「**Send to Repeater**」按鈕
+2. 展開詳細資訊後，點擊「**Send to Repeater**」按鈕。此按鈕僅出現在有授予 Repeater 分頁的挑戰；未授予時按鈕不會出現，而不是點了沒反應
 3. 完整的請求會以單一 HTTP 訊息的形式寫入 Repeater 的 raw request 編輯區
 4. 切換至 **Repeater** 面板進行編輯與重送
 
@@ -154,7 +154,7 @@ Welcome, admin! Your flag is: flag{sql_injection_success}
 
 Browser 面板並不是 Traffic Log 唯一的來源。由於所有面板都經同一層 dispatch 送出請求，你可以在 Terminal 探測、在 Code Editor 大量掃描，最後仍在同一份清單裡檢視並重送。
 
-本段流程以有提供 Terminal 分頁的挑戰為例。若該挑戰沒有 Terminal，直接從步驟二開始、改用 Code Editor 探測即可——Traffic Log 的行為完全相同。
+本段流程假設挑戰同時授予 Terminal 與 Repeater。若沒有 Terminal，略過步驟一、改在 Code Editor 發出同樣的探測即可——Traffic Log 記錄的結果完全相同，後續步驟的讀法也一樣。若沒有 Repeater，步驟四則不適用。
 
 **場景**：某個 endpoint 會依 `id` 值回傳不同內容，你想找出藏著 flag 的那一個。
 

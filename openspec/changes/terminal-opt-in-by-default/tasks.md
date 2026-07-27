@@ -68,3 +68,16 @@
 - [x] 9.7 修正剩餘文件不一致:英中版對 Terminal 缺席頻率的量詞不同(many pages / 多數頁面),兩者皆無從查證,改為不帶量詞的條件敘述;`network.md` 的 Traffic Log 提示仍無條件把 Terminal 列為記錄來源,與同一次變更在 index.md 的處理不一致。完成判準:英中做出相同宣稱且皆為條件語氣。驗證:兩版並排比對。
 - [x] 9.8 補上 delta spec 未被測試釘住的兩條規則:重複 id 不產生重複分頁、驗證器保留缺席的 `tools` 為 `undefined`。同時放寬 delta 中那句因果子句的推廣範圍——原句把 `WxlshPanel` 的尺寸守衛推廣為所有面板的性質,改為只陳述可驗證的部分。完成判準:兩條規則各有具名測試。驗證:執行對應測試檔。
 - [x] 9.9 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。
+
+## 10. Round 2 audit 修復
+
+背景:round 2(10 agents 全數完成、0 錯誤、0 dead layer)回報 2 筆 blocking 與 10 筆 advisory。兩筆 blocking 均由 round 1 的修復造成,且 advisory 有一整叢源自同一根因——守衛讓 Send to Repeater 按鈕變成沉默的無效點擊。本輪改為從根因修起:按鈕在未授予 Repeater 時不渲染。
+
+- [x] 10.1 驗收並更新 `network-traffic-panel` 的 requirement「NetworkPanel provides Send to Repeater action for each traffic entry」:baseline 無條件宣稱「The parent layout SHALL ... switch to the Repeater tab」,round 1 的守衛使其在未授予 Repeater 時為假,而本次 change 原本沒有涵蓋該 capability 的 delta,archive 後規範庫會留下兩句互相衝突的 SHALL。新增 delta,並明訂按鈕在未授予時不得渲染。完成判準:delta 的兩個 Scenario 各有具名測試。驗證:`tests/unit/components/NetworkPanel.test.ts` 的隱藏按鈕測試與既有的送出測試。
+- [x] 10.2 為 `NetworkPanel` 新增 `canSendToRepeater` prop(預設 true)並於 false 時不渲染按鈕,由 layout 以 `hasTab('repeater')` 傳入。保留 layout 端的守衛作為縱深防禦。完成判準:未授予 Repeater 時按鈕不存在,而非存在但點擊無效。驗證:先寫失敗測試再實作。
+- [x] 10.3 修正 design.md 的 Implementation Contract:「`tools` 存在時的輸出行為不變」為假——round 1 修改的正是該路徑。同時修正「`challenge:validate` 對 `tools` 的既有檢查行為不變」與 Goals 中只涵蓋缺席情境的措辭。完成判準:契約敘述與兩支腳本的實際輸出一致。驗證:對照 `challenge-analyze.ts` 與 `challenge-validate.ts` 的分支。
+- [x] 10.4 讓 `challenge-validate.ts` 的清單輸出與 `challenge-analyze.ts` 一致(顯示實際生效的分頁而非原樣回印作者清單),使 10.3 修正後的契約成立。完成判準:兩支腳本對同一份 frontmatter 給出一致的分頁描述。驗證:執行兩支腳本的測試。
+- [x] 10.5 修正 `challenge-analyze.ts` 以長度判斷 all enabled 的缺陷:`tools` 為五個重複元素時會被誤報為全部啟用。改為以實際生效的分頁集合判斷。完成判準:五個重複 `code` 的清單輸出為 `browser, code`。驗證:先寫失敗測試再實作。
+- [x] 10.6 修正 `network.md` 英中兩版的兩處:Send to Repeater 流程未說明按鈕的條件性;round 1 加入的「沒有 Terminal 就從步驟二開始」與後續步驟自相矛盾(步驟三仍引用步驟一的 curl 記錄)。改為「略過步驟一、改在 Code Editor 發出同樣的探測」,並補上沒有 Repeater 時步驟四不適用。完成判準:走查全段無自相矛盾。驗證:兩版逐步比對。
+- [x] 10.7 修正 `tests/challenge-analyze.test.ts` 中仍以 `'all enabled (default)'` 作為種子與斷言的三處——`analyzeChallenge` 已不可能產生該字串。完成判準:全檔搜尋該字串零命中。驗證:執行該檔測試。
+- [x] 10.8 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。

@@ -15,7 +15,7 @@
 - 讓 Terminal 成為出題者主動授予的工具,而非預設附贈。
 - 保證任何有宣告 `tools` 的挑戰都保有 Browser 分頁。
 - 修正 `tools: []` 回傳全部分頁的反直覺行為。
-- 讓 `challenge:analyze` 對 `tools` 缺席時的輸出如實反映實際生效的分頁。
+- 讓 `challenge:analyze` 與 `challenge:validate` 的輸出如實反映實際生效的分頁,不論 `tools` 是否存在。
 
 **Non-Goals**
 
@@ -70,11 +70,11 @@ frontmatter 的 `tools` 欄位型別不變:選填的合法 tab ID 陣列。合�
 
 **命令列輸出**
 
-`challenge:analyze` 在 `tools` 缺席時,輸出實際生效的分頁清單並標示其為預設值,而非宣稱全部啟用。`tools` 存在時的輸出行為不變。
+`challenge:analyze` 與 `challenge:validate` 一律描述實際生效的分頁,而非原樣回印作者寫下的清單。`tools` 缺席時額外標示其為預設值;`tools` 存在時輸出 browser 與清單元素的聯集,依既有分頁順序排列,且僅在該聯集涵蓋全部五項時才稱為 all enabled。
 
 **失效模式**
 
-作者宣告的清單若不含 `browser`,不視為錯誤,不發出警告——Browser 靜默注入。`challenge:validate` 對 `tools` 的既有檢查行為不變。
+作者宣告的清單若不含 `browser`,不視為錯誤,不發出警告——Browser 靜默注入。`challenge:validate` 對 `tools` 值的**合法性驗證規則**不變;其描述預設值與生效分頁的輸出字串則隨本變更同步。
 
 **驗收條件**
 

@@ -47,7 +47,7 @@ What common status codes mean during a penetration test:
 The Network Traffic Log integrates tightly with the HTTP Repeater. When you spot a request worth analysing or tampering with further, send it to the Repeater with these steps:
 
 1. In the Network Traffic Log list, click the request entry you want to analyse
-2. After the detail panel expands, click the "**Send to Repeater**" button
+2. After the detail panel expands, click the "**Send to Repeater**" button. It appears only on challenges that grant the Repeater tab — where the tab is withheld, the button is absent rather than inert
 3. The complete request is written into the Repeater's raw request editor as one HTTP message
 4. Switch to the **Repeater** panel to edit and resend it
 
@@ -154,7 +154,7 @@ Copy the flag and submit it on the challenge page to complete the task.
 
 The Browser panel is not the only source the Traffic Log records. Because every panel dispatches through the same layer, you can probe from the Terminal, sweep from the Code Editor, and still review and replay everything from one list.
 
-This walkthrough uses a challenge that offers a Terminal tab. On a challenge without one, start at Step 2 and probe from the Code Editor instead — the Traffic Log behaves the same either way.
+This walkthrough assumes a challenge that grants both the Terminal and the Repeater. Without a Terminal, skip Step 1 and issue the same probe from the Code Editor — the Traffic Log records it identically, and the later steps read the same. Without a Repeater, Step 4 does not apply.
 
 **Scenario**: an endpoint returns different content for some `id` values, and you want to find which one hides the flag.
 
