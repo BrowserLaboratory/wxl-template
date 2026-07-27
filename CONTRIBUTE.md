@@ -7,6 +7,7 @@ Thanks for your interest in this project! Please read this guide before submitti
 - [Branch model](#branch-model)
 - [Development workflow](#development-workflow)
 - [PR submission workflow](#pr-submission-workflow)
+- [Spec-drift gates](#spec-drift-gates)
 - [Adding a new challenge](#adding-a-new-challenge)
 - [Challenge Keygen](#challenge-keygen)
 - [Commit conventions](#commit-conventions)
@@ -117,6 +118,63 @@ Before submitting, confirm:
 - [ ] Commit messages follow the conventions below.
 - [ ] PR target branch is `main`.
 - [ ] PR description contains Summary / Motivation / Test Plan.
+
+## Spec-drift gates
+
+Every other check in `quality-gates.yml` looks at what a change *edited*. `scripts/spec-gates/run.py` looks at the opposite: sentences elsewhere in the repository that were true, were not edited, and became false because the code they describe changed. That is the defect class that has survived multi-round review here more than once.
+
+Run it locally before pushing:
+
+```bash
+python scripts/spec-gates/run.py <change-id>          # human-readable
+python scripts/spec-gates/run.py <change-id> --json   # machine-readable
+```
+
+Each gate reports `PASS`, `REVIEW`, or `FAIL`. **Only `FAIL` blocks CI.** `REVIEW` means the gate found something a person has to judge — a section heading, a code identifier, a deliberate removal — and listing those is the point, not blocking on them.
+
+| Gate | What it checks | Blocks |
+|---|---|---|
+| G1 claim-parity | Every occurrence of a phrase whose truth conditions you changed is hedged, sits under a stated premise, or is recorded as unaffected | no |
+| G2 invariance | A claim that a file is unchanged, where the diff touched it | yes, when the claim is unqualified |
+| G3 deleted-literal | A user-facing string the diff deleted still occurs somewhere | yes |
+| G4 scope parity | The proposal's Impact list matches the actual diff and the delta specs on disk | yes |
+| G5 delta scenario parity | A delta drops a baseline scenario, silently deleting it from the corpus | yes, unless the tasks file names the scenario |
+| G6 added-lines trace | Mechanism assertions in added prose, for you to trace to source | no |
+| G7 archive trace-parity | `@trace` metadata lost while archiving | yes |
+
+### Writing a qualified unchanged-claim (G2)
+
+G2 blocks on `X is unchanged` when the diff touched `X`. Often the claim is true because only one aspect of the file is unchanged — say the validation rules but not the output strings. Mark that aspect in bold so the gate can tell a scoped claim from a blanket one:
+
+```markdown
+- 不改 `scripts/challenge-validate.ts` 對 tools 值的**合法性驗證規則**。
+```
+
+Without the marker the gate reads it as a claim about the whole file and fails. It keys on the explicit marker rather than trying to infer scope, so that a genuinely blanket claim cannot slip through by being phrased loosely.
+
+### Declaring claim phrases for G1
+
+G1 cannot guess which wording your change made conditional, so declare it. Create `openspec/changes/<change-id>/gates.yaml`:
+
+```yaml
+claim_phrases:
+  - Send to Repeater
+  - Terminal tab
+```
+
+The gate then enumerates every occurrence of each phrase and reports the ones that read as unconditional. Record your adjudication of each hit in the tasks file. Leaving `claim_phrases` empty is allowed — G1 passes and says so in its output, rather than passing silently.
+
+### Archive check (G7)
+
+`spectra archive` replaces each MODIFIED requirement block wholesale. When the delta does not carry the `@trace` metadata that was attached to that requirement, archiving discards it. This has happened twice in this repository, three blocks each time. CI cannot catch it because archiving runs on your machine, so take a snapshot first:
+
+```bash
+python scripts/spec-gates/run.py --snapshot <change-id>
+spectra archive <change-id>
+python scripts/spec-gates/run.py --verify-archive <change-id>
+```
+
+The verify step exits non-zero if any capability lost a requirement or a `@trace` block. Restore what was dropped from git before committing the archive.
 
 ## Adding a new challenge
 

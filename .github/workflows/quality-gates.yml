@@ -210,3 +210,59 @@ jobs:
 
       - name: Run site-smoke tests
         run: pnpm test:smoke
+
+  spec-gates:
+    # PR-time spec-drift gates: statements this change falsified without editing.
+    # Guarded to pull_request for the same reason as prose-audit — the gates diff
+    # base against head, and github.base_ref is empty on push events.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/spec-gates/requirements.txt
+
+      - name: Install spec-gates dependencies
+        run: pip install -r scripts/spec-gates/requirements.txt
+
+      - name: Run the gate script's own tests
+        run: python scripts/spec-gates/test_run.py
+
+      - name: Resolve the active change id
+        id: change
+        run: |
+          git fetch origin "${{ github.base_ref }}"
+          # Exactly one directory under openspec/changes/ (excluding archive/) is
+          # the change under review. Zero means an artifact-free PR — skip.
+          IDS=$(find openspec/changes -mindepth 1 -maxdepth 1 -type d \
+                  -not -name archive -printf '%f\n' 2>/dev/null || true)
+          COUNT=$(printf '%s' "$IDS" | grep -c . || true)
+          if [ "$COUNT" = "1" ]; then
+            echo "id=$IDS" >> "$GITHUB_OUTPUT"
+          else
+            echo "id=" >> "$GITHUB_OUTPUT"
+            echo "Found $COUNT active changes; skipping the gates."
+          fi
+
+      - name: Run spec-drift gates
+        # SECURITY (CWE-78 script injection): the change id comes from a directory
+        # name, which a fork PR controls and which git allows to contain shell
+        # metacharacters. It MUST reach the shell through env: rather than
+        # ${{ }}, because Actions macro-expands ${{ }} into the script body
+        # before bash parses it — the same reasoning documented on prose-audit.
+        if: steps.change.outputs.id != ''
+        env:
+          CHANGE_ID: ${{ steps.change.outputs.id }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -f
+          python scripts/spec-gates/run.py "$CHANGE_ID" --base "origin/$BASE_REF"

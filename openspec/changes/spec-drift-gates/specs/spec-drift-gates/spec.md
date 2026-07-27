@@ -35,7 +35,7 @@ The gate script SHALL implement seven checks.
 
 `G2 invariance` SHALL scan the change's proposal and design for claims that a named artifact is unchanged, and SHALL report `FAIL` when such a claim is unqualified and names a file present in the diff. A claim that names which specific aspect is unchanged SHALL be treated as qualified and reported as `REVIEW`.
 
-`G3 deleted-literal` SHALL collect prose-shaped string literals removed by the diff and not reintroduced by it, and SHALL report `FAIL` when any of them still occurs in the repository. A literal SHALL be treated as prose-shaped only when it is between 12 and 80 characters, contains whitespace and at least three consecutive lowercase letters, and contains none of `<`, `>`, `{`, `}`, `(`, `)`, `;`, `=`.
+`G3 deleted-literal` SHALL collect prose-shaped string literals removed by the diff and not reintroduced by it, and SHALL report `FAIL` when any of them still occurs in the repository. A literal SHALL be treated as prose-shaped only when it is between 12 and 80 characters, contains whitespace and at least three consecutive lowercase letters, and contains none of `<`, `>`, `{`, `}`, `;`, `=`. Parentheses SHALL NOT disqualify a literal: user-facing messages routinely contain them.
 
 `G4 scope parity` SHALL compare the proposal's enumerated file list and delta-spec list against the actual diff and the change's `specs/` directory, and SHALL report `FAIL` on any mismatch in either direction.
 

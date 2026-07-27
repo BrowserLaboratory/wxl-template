@@ -33,7 +33,7 @@
 - 不取代 `prose-audit`。兩者的定義域不同:prose-audit 檢查散文品質,spec-gates 檢查跨檔案的真值一致性。
 - 不修改 `spectra archive` 本身。G7 是偵測而非修復;archive 的 `@trace` 行為屬上游工具問題,本變更只確保它不再靜默發生。
 - 不自動修復任何 finding。閘門只回報,修法由人決定——RCA 已證實自動化的修復正是注入源。
-- 不改變 `quality-gates.yml` 中既有四個 job 的行為。
+- 不改變 `quality-gates.yml` 中**既有四個 job 的定義與行為**;本變更只在該檔末尾新增一個 job。
 
 ## Alternatives Considered
 

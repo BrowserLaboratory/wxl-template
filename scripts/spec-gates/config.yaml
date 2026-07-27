@@ -1,0 +1,11 @@
+# Spec-drift gate configuration.
+#
+# claim_phrases: noun phrases whose truth conditions THIS change altered. G1
+# enumerates every occurrence of each and reports the ones that are neither
+# hedged nor sitting under a stated premise. Declare them per change in
+# openspec/changes/<id>/gates.yaml, which takes precedence over this file.
+claim_phrases: []
+
+# Wording that counts as "already conditional". Leave empty to use the built-in
+# English and Traditional Chinese defaults in run.py.
+hedge_markers: []
