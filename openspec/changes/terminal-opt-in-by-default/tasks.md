@@ -11,7 +11,7 @@
 ## 2. 實作:layout 的分頁計算
 
 - [x] 2.1 改寫 `.vitepress/theme/layouts/ChallengeLayout.vue` 的 `tabs` computed,實作 design.md「Implementation Contract」表格的三條規則:缺席走預設四項、空陣列走 browser 注入、非空陣列走 browser 與清單的聯集。排序一律沿用 `ALL_TABS` 的既有順序,重複元素不產生重複分頁。完成判準:群組 1 的五則測試全部轉綠。驗證:`pnpm test --run tests/unit/layouts/ChallengeLayout.test.ts`。
-- [x] 2.2 確認面板區塊未被更動:五個 `data-panel` 的 `v-show` 條件維持原樣,未引入 `v-if`。完成判準:`git diff` 在該範圍內只有 `tabs` computed 的變更。驗證:檢視 `ChallengeLayout.vue` 的完整 diff。
+- [x] 2.2 確認面板區塊未被更動:五個 `data-panel` 的 `v-show` 條件維持原樣,未引入 `v-if`。完成判準:五個 `data-panel` 的 `v-show` 條件與 main 逐字相同,且全檔未引入 `v-if`。(注:9.1 與 10.2 後續在同檔加入了 `hasTab`、`onSendToRepeater` 守衛與 `canSendToRepeater` 綁定,故本判準不再涵蓋「diff 只有 tabs computed」。)驗證:比對五個 `v-show` 條件與 main,並 grep `v-if="activeTab`。
 - [x] 2.3 確認既有測試無迴歸,特別是讀取 `WxlshPanel` props 的三則(它們依賴面板永遠掛載這個前提)。完成判準:`pnpm test --run tests/unit/layouts/` 全綠。驗證:執行該目錄的全部測試。
 
 ## 3. analyze 的輸出與其測試
@@ -103,3 +103,15 @@
 - [x] 12.1 複驗 RCA 的三項關鍵實證主張。完成判準:三項皆可獨立重現。驗證:(a) `git grep -n -i "send to repeater" 98751c6 -- ':!openspec/changes/archive'` 同時命中 `docs/guide/network.md:15`、其 zh-TW 鏡像與 `openspec/specs/network-traffic-panel/spec.md:74`——即 rounds 2 與 3 的全部 blocking 在 round 1 修復當下就已同時在清單上;(b) `git show b6b7d8f -- scripts/challenge-analyze.ts` 只動 `undefined` 分支,故 design.md 的「`tools` 存在時輸出不變」寫下時為真;(c) `git blame -L 15,15 263d310 -- docs/guide/network.md` 指向 merge base `000094c8`。
 - [x] 12.2 修正 RCA 以 G2 閘門找到、三輪稽核皆未報的殘留:`design.md:69` 仍以全稱句宣稱「未出現在分頁列的面板…其惰性初始化不會觸發」,但 98751c6 早已把 delta spec 的孿生句收窄為條件式。該全稱句確實為假——`RepeatPanel.vue:120` 的 `onMounted` 無條件讀取 localStorage 快照,與容器尺寸無關。改為只陳述有尺寸守衛的兩個面板並點名反例。驗證:讀 `RepeatPanel.vue:120`、`CodeEditorPanel.vue:48-49`、`WxlshPanel.vue:174-175` 三處。
 - [x] 12.3 手動實跑 RCA 提出的 G1–G5 閘門於本 change。完成判準:每道閘門給出可判定的結果,誤報須指出原因。驗證:G1(Send to Repeater 與 Terminal 的全部命中皆帶條件或落在已聲明前提段落)PASS;G2 命中兩筆但皆為**限定式**宣稱(「不改 validate 的合法性驗證規則」「不改 index.md 關於執行位置的敘述」),非裸宣稱——顯示該閘門需要限定式處理;G3(已刪除字面值)命中三筆全在 tasks.md 作為歷史引用,非現行宣稱,PASS;G4(範圍列舉 vs 實際 diff)PASS;G5 命中 `challenge-tools-control` 缺 baseline scenario `Default all tabs enabled`——**誤報**,該 scenario 是本次刻意移除並由 `Terminal excluded by default` 取代,顯示 G5 需要「刻意移除且記錄」的例外。
+
+## 13. Round 4 audit(凍結行為協定)
+
+背景:依 RCA 結論改造協定後的第一輪。兩條新規則:(1) 行為凍結——HEAD 不得觸及 `.vitepress/` 或 `scripts/`,任何唯一正解需改 runtime 行為的 finding 最高只能評 Medium 且須註明應另開 change;(2) 六道機械閘門先跑,稽核只審 grep 看不見的部分。結果 **clean: true**,0 blocking、0 inconclusive、0 failed layers,4 個稽核層全數完成。8 筆 advisory 去重後為 6 個相異缺陷,其中 5 個純文字或純測試、1 個需改行為並已依規則延後。
+
+- [x] 13.1 修正 `network.md:54` 的 Tip(英中兩版)。該句無條件指示「找到可疑請求後立刻使用 Send to Repeater」,而按鈕已是條件渲染——與 round 3 那筆 blocking 同類,round 3 的修復漏了它。由 G1 機械掃描查出,三輪稽核共 50 個 agent 皆未報。完成判準:`grep "Send to Repeater"` 的每一處命中皆帶條件、屬章節標題、屬程式碼識別字,或落在已聲明前提的段落內。驗證:31 個命中逐項判定表。
+- [x] 13.2 補上 delta spec 與 design 契約表對「非陣列 `tools`」的規則。實作處理三種狀態(缺席、陣列、非陣列),但 spec 與契約表只描述兩種,使一個有具名測試的行為沒有規範歸屬。完成判準:規則明訂非陣列視同缺席且不得擲錯。驗證:對照 `ChallengeLayout.vue` 的 `Array.isArray` 分支與 `it.each` 三案例。
+- [x] 13.3 修正 tasks 2.2 已失效的完成判準。原判準寫「`git diff` 在該範圍內只有 `tabs` computed 的變更」,但 9.1 與 10.2 後續在同檔加入了 `hasTab`、`onSendToRepeater` 守衛與 `canSendToRepeater` 綁定。改為現仍可驗證的敘述並註明後續變更。完成判準:判準與 HEAD 相符。驗證:比對五個 `v-show` 條件與 main,並 grep `v-if="activeTab`。
+- [x] 13.4 修正 `terminal.md` 英中兩版的段落順序。新增的授予說明被插在「wxlsh 將指令分為數層」之前,導致文中先引用第 1–4 層與第 5 層、後才定義分層概念。完成判準:先定義分層,再說授予。驗證:兩版並排閱讀。
+- [x] 13.5 為契約中「依既有分頁順序而非作者書寫順序」補上迴歸測試。該條款為真但無任何測試能偵測其回歸。完成判準:analyze 與 validate 各有一則以 `tools: [code, network]` 斷言 `browser, network, code` 的測試。驗證:執行兩檔。
+- [x] 13.6 **不修**:`activeTab` 未與 `tabs` 對帳的問題。SPA 導覽切換挑戰時 layout 實例被保留,若新舊挑戰的 `tools` 不同,可能出現「面板作用中但分頁列無對應按鈕」。稽核員在拋棄式 clone 中寫測試證實可重現,但也證實**以現有內容不可達**(僅 `door-is-open` 有語系鏡像,且英中兩版 `tools` 相同)。此為 Low 且唯一正解需改 runtime 行為,依凍結規則列為另案。建議修法:`watchEffect` 在 `!hasTab(activeTab.value)` 時重置為 browser,或在 `.vitepress/theme/index.ts` 為 `h(ChallengeLayout)` 加上以頁面路徑為值的 `:key`(後者同時修掉既有的 `useAttackSession(slug.value, …)` 非響應式擷取)。
+- [x] 13.7 全面複驗:`pnpm test --run`、`pnpm docs:build`、G1–G6 閘門、`spectra validate`。驗證:記錄通過數與閘門狀態。

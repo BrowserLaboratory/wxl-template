@@ -386,6 +386,18 @@ describe('analyzeChallenge', () => {
     }).toolsSummary).toBe('browser, code')
   })
 
+  it('lists tabs in canonical order, not the order the author wrote', () => {
+    createPerFolderChallenge(tmpDir, 'author-order', {
+      frontmatter: ['title: "Order"', 'backend: flask', 'app: app.py', 'tools: [code, network]'].join('\n'),
+    })
+
+    expect(analyzeChallenge({
+      slug: 'author-order',
+      mdPath: join(tmpDir, 'author-order', 'index.md'),
+      isPerFolder: true,
+    }).toolsSummary).toBe('browser, network, code')
+  })
+
   it('reports browser alone for an empty tools array', () => {
     createPerFolderChallenge(tmpDir, 'empty-tools', {
       frontmatter: ['title: "Empty"', 'backend: flask', 'app: app.py', 'tools: []'].join('\n'),

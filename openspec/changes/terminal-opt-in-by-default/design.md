@@ -57,6 +57,7 @@
 | 欄位缺席(`undefined`) | Browser、Network、Repeater、Code |
 | `[]` | Browser |
 | 非空陣列 | Browser 與陣列元素的聯集 |
+| 非陣列(例如裸 `tools:`,YAML 解析為 null) | 同欄位缺席,回傳預設四項且不擲錯 |
 
 非空陣列情境的排列順序,依既有分頁順序(browser、network、repeater、terminal、code),不依作者書寫順序。陣列中重複的元素不產生重複分頁。
 

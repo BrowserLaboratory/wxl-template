@@ -51,7 +51,7 @@ The Network Traffic Log integrates tightly with the HTTP Repeater. When you spot
 3. The complete request is written into the Repeater's raw request editor as one HTTP message
 4. Switch to the **Repeater** panel to edit and resend it
 
-> **Tip**: Once you find a suspicious request, use Send to Repeater right away. This avoids repeating actions in the Browser panel and cluttering the log with noise.
+> **Tip**: Where the Repeater is available, use Send to Repeater as soon as you spot a suspicious request. This avoids repeating actions in the Browser panel and cluttering the log with noise.
 
 ## HTTP Repeater
 

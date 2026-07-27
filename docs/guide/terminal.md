@@ -23,9 +23,9 @@ type 'help' for available commands
 
 ## Command Tiers
 
-The Terminal is granted per challenge: it appears only when the challenge author lists `terminal` among the challenge's tools, so a challenge without a Terminal tab is working as intended rather than broken. Where the tab is present, Tiers 1–4 are all available.
-
 wxlsh groups its commands into tiers. Tier 5 is a reserved namespace for penetration-testing tools that has not been implemented yet — see the Tier 5 section below.
+
+The Terminal is granted per challenge: it appears only when the challenge author lists `terminal` among the challenge's tools, so a challenge without a Terminal tab is working as intended rather than broken. Where the tab is present, Tiers 1–4 are all available.
 
 There is no filesystem layer in the shell. Commands such as `ls`, `cat`, `head`, `tail`, `cp`, `mv`, and `rm` are deliberately absent. Running one prints the command name back at you along with a pointer to `help`:
 

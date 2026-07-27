@@ -51,7 +51,7 @@ Network Traffic Log 與 HTTP Repeater 緊密整合。若你發現某筆請求值
 3. 完整的請求會以單一 HTTP 訊息的形式寫入 Repeater 的 raw request 編輯區
 4. 切換至 **Repeater** 面板進行編輯與重送
 
-> **提示**：找到可疑請求後，立刻使用 Send to Repeater，避免在 Browser 面板重複操作而產生過多雜訊紀錄。
+> **提示**：在有提供 Repeater 的挑戰中，一發現可疑請求就立刻使用 Send to Repeater，避免在 Browser 面板重複操作而產生過多雜訊紀錄。
 
 ## HTTP Repeater 功能說明
 

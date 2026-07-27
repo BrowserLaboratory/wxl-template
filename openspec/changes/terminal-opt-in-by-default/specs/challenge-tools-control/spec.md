@@ -10,6 +10,8 @@ When the `tools` field is present, the displayed tab set SHALL be the union of `
 
 A `tools` field present but set to an empty array SHALL be treated as an explicitly empty allowlist, yielding `browser` alone — not as equivalent to an absent field.
 
+A `tools` field whose value is not an array — for example a bare `tools:` line, which YAML parses as null — SHALL be treated as absent, yielding the default tab set, rather than as an empty allowlist. The layout reads raw frontmatter, so this case reaches it unvalidated and SHALL NOT raise.
+
 Omitting `browser` from a non-empty `tools` list SHALL NOT be reported as an error by any validation or authoring tool; the tab is injected silently.
 
 #### Scenario: Terminal excluded by default
