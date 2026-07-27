@@ -154,6 +154,8 @@ Copy the flag and submit it on the challenge page to complete the task.
 
 The Browser panel is not the only source the Traffic Log records. Because every panel dispatches through the same layer, you can probe from the Terminal, sweep from the Code Editor, and still review and replay everything from one list.
 
+This walkthrough uses a challenge that offers a Terminal tab. On a challenge without one, start at Step 2 and probe from the Code Editor instead — the Traffic Log behaves the same either way.
+
 **Scenario**: an endpoint returns different content for some `id` values, and you want to find which one hides the flag.
 
 ### Step 1: Probe once from the Terminal

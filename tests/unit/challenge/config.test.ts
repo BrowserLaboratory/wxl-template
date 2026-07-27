@@ -116,7 +116,7 @@ describe('ChallengeConfig tools field', () => {
     ).toThrow(/invalid tool/)
   })
 
-  it('accepts empty tools array (no tabs shown)', () => {
+  it('accepts empty tools array and preserves it verbatim (layout resolves it to browser alone)', () => {
     const config = validateChallengeConfig({ ...minimal, tools: [] })
     expect(config.tools).toEqual([])
   })

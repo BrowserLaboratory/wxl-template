@@ -124,7 +124,9 @@ app: app.py              # required — path relative to the challenge's src/ ro
 difficulty: easy
 category: web
 packages: []             # extra Python packages to install via micropip
-tools: [ browser, network, repeater, code ]
+tools: [ browser, network, repeater, code ]   # omit the field to get exactly these four;
+                                              # Terminal appears only when you list it, and
+                                              # browser is added back if you leave it out
 source_visible: false    # true = white-box, false = black-box (default)
 wasmModule: /challenge/door-is-open/runtime.wasm  # produced by keygen
 ---

@@ -283,7 +283,8 @@ export function analyzeChallenge(challenge: ChallengeFile): AnalysisResult {
 
   let toolsSummary: string
   if (fm.tools === undefined) {
-    toolsSummary = 'all enabled (default)'
+    // Spell out the default rather than calling it "all" — Terminal is opt-in.
+    toolsSummary = 'browser, network, repeater, code (default — terminal excluded)'
   } else if (Array.isArray(fm.tools) && fm.tools.length === VALID_TOOLS.length) {
     toolsSummary = 'all enabled'
   } else if (Array.isArray(fm.tools)) {

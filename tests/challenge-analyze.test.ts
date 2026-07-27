@@ -352,7 +352,7 @@ describe('analyzeChallenge', () => {
     expect(result.warnings.some((w) => w.includes('Hardcoded localhost'))).toBe(true)
   })
 
-  it('reports tools summary as default when tools not set', () => {
+  it('names the tabs the default actually yields when tools is not set', () => {
     createPerFolderChallenge(tmpDir, 'default-tools')
 
     const result = analyzeChallenge({
@@ -361,7 +361,7 @@ describe('analyzeChallenge', () => {
       isPerFolder: true,
     })
 
-    expect(result.toolsSummary).toBe('all enabled (default)')
+    expect(result.toolsSummary).toBe('browser, network, repeater, code (default — terminal excluded)')
   })
 
   it('reports specific tools when set', () => {

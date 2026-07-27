@@ -72,10 +72,14 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: 'terminal', label: 'Terminal' },
   { id: 'code', label: 'Code' },
 ]
+// Terminal is opt-in: a challenge only gets a shell when its author asks for one.
+const DEFAULT_TABS: Tab[] = ['browser', 'network', 'repeater', 'code']
 const tabs = computed(() => {
   const allowedTools: string[] | undefined = fm.value.tools
-  if (!allowedTools || allowedTools.length === 0) return ALL_TABS
-  return ALL_TABS.filter(t => allowedTools.includes(t.id))
+  if (allowedTools === undefined) return ALL_TABS.filter(t => DEFAULT_TABS.includes(t.id))
+  // An explicit allowlist always keeps Browser — every challenge here is web
+  // exploitation, so a page with no browser is never what the author meant.
+  return ALL_TABS.filter(t => t.id === 'browser' || allowedTools.includes(t.id))
 })
 const activeTab = ref<Tab>('browser')
 

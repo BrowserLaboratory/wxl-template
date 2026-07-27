@@ -154,6 +154,8 @@ Welcome, admin! Your flag is: flag{sql_injection_success}
 
 Browser 面板並不是 Traffic Log 唯一的來源。由於所有面板都經同一層 dispatch 送出請求，你可以在 Terminal 探測、在 Code Editor 大量掃描，最後仍在同一份清單裡檢視並重送。
 
+本段流程以有提供 Terminal 分頁的挑戰為例。若該挑戰沒有 Terminal，直接從步驟二開始、改用 Code Editor 探測即可——Traffic Log 的行為完全相同。
+
 **場景**：某個 endpoint 會依 `id` 值回傳不同內容，你想找出藏著 flag 的那一個。
 
 ### 步驟一：先用 Terminal 探測一次
