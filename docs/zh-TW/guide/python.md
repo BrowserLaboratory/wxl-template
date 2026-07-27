@@ -35,7 +35,7 @@ Code Editor 面板提供一個完整的 Python 3 程式碼編輯與執行環境�
 
 平台會以 micropip 安裝真正的 `requests` 套件，再 monkey-patch 它的傳輸層（`HTTPAdapter.send`），讓請求改走平台的 dispatch bridge 送到挑戰後端，而不是真的連上網路。由於套件本身是原版的，組裝請求的 API 都可以照常使用——`get`、`post`、`put`、`delete`、`Session`、auth 輔助函式等等——而且它送出的請求會與其他面板的流量一起記錄在 Network Traffic Log 中。
 
-> **Cookie 不會自動處理。** 被 patch 過的傳輸層是直接建構回應物件，並未走 adapter 原本的回應處理路徑，因此 `Set-Cookie` 不會被解析進 `response.cookies`，也不會進入 `Session` 的 cookie jar——session 不會自動帶著登入 cookie 往下走。此外，`Set-Cookie` 在 Fetch API 中屬於禁用的回應標頭，平台改以 `X-Wxlsh-Set-Cookie` 這個名稱轉送，請自行從 `response.headers` 取出，並在後續請求手動設定 `Cookie` 標頭。
+> **Cookie 不會自動處理。** 被 patch 過的傳輸層是直接建構回應物件，並未走 adapter 原本的回應處理路徑，因此 `Set-Cookie` 不會被解析進 `response.cookies`，也不會進入 `Session` 的 cookie jar——session 不會自動帶著登入 cookie 往下走。標頭本身還是收得到：請自行讀取 `response.headers['Set-Cookie']`，並在後續請求手動設定 `Cookie` 標頭。若回應帶有多個 `Set-Cookie`，它們會被合併成同一個值，以 `, ` 分隔。
 
 最常用的兩個呼叫：
 
