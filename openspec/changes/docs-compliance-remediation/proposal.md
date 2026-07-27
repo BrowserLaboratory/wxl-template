@@ -9,7 +9,7 @@
 - **C 群組(README 部署誤導)**:移除 wasm-pack devDependency 的錯誤宣稱並改寫 Cloudflare Pages 段、GitHub Pages 範例改為與實際 deploy workflow 一致(含 SITE_BASE)、challenge frontmatter 範例改用現行格式(含 layout 欄位、移除 deprecated 的 fs 對映)、Node 版本要求修正為 22.6+、Available scripts 表補齊(含 fork:init)、架構圖補 wxlsh-parser、Prerequisites 補 wasm-tools。
 - **D 群組(guide drift)**:修正英中兩版 network 指南的記錄範圍描述(四面板皆經 trackedDispatch)、Repeater UI 描述(Raw HTTP textarea + Saved Snapshots)、python 指南的 requests 描述(micropip 安裝完整套件)、移除不存在的快捷鍵與 UI 元素描述、修正 Pentest Notes 儲存機制描述(IndexedDB)與 URL 欄位描述。
 - **E 群組(CONTRIBUTE 矛盾)**:統一 branch 前綴為 feature/、補齊 TOC 兩個遺漏章節。
-- **F2(spec delta)**:更新 platform-documentation spec 三條過時 requirement——Terminal Guide 的內建指令清單改為要求與 wxlsh-commands spec 的指令系統一致(含 pipe 與歷史持久化);Network Guide 的 Repeater 描述改為與實作一致(raw HTTP 編輯模型、四面板皆記錄)。不先修這兩條,B/D 群組的 docs 修復會直接違反現行 SHALL。
+- **F2(spec delta)**:更新 platform-documentation spec 三條過時 requirement——Terminal Guide 的內建指令清單改為要求與 wxlsh-commands spec 的指令系統一致(含 pipe 與歷史持久化);Network Guide 的 Repeater 描述改為與實作一致(raw HTTP 編輯模型、四面板皆記錄);Python Guide 的 requests 描述改為 micropip 安裝的原版套件與被 patch 的 `HTTPAdapter.send`,並禁止宣稱經 Service Worker 路由。不先修這三條,B/D 群組的 docs 修復會直接違反現行 SHALL。
 
 ## Non-Goals
 

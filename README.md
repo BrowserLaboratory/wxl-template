@@ -76,7 +76,7 @@ The dev server starts at `http://localhost:5173` by default.
 | `pnpm wasm:tools` | Attempt to install `wasm-tools` into the Rust toolchain; it silences failures and always exits 0, so confirm with `wasm-tools --version` |
 | `pnpm fork:init` | Rewrite the project identity after forking (author, GitHub URLs, and optionally the VitePress `base`). Requires `--author` and `--repo`; the package name changes only with `--name` or `--rebrand`, and `SITE_BASE` in `deploy.yml` is never touched |
 | `pnpm challenge:keygen` | Generate the encrypted WASM module for every challenge |
-| `pnpm create:challenge` | Interactively scaffold a new challenge |
+| `pnpm create:challenge` | Scaffold a new challenge from flags; `--name <slug>` is required and a bare run exits 1 with its usage line |
 | `pnpm challenge:validate` | Validate every challenge's frontmatter and file layout |
 | `pnpm challenge:analyze` | Report the content and configuration of a challenge |
 | `pnpm challenge:retype` | Mutate an existing challenge's backend / difficulty / tags / category |
@@ -169,12 +169,12 @@ Two settings live in the GitHub UI rather than in this repository:
 After forking, run `fork:init` with its required flags to rewrite the project identity:
 
 ```bash
-pnpm fork:init --author "<Your Name>" --repo <owner>/<repo> --base /<repo>/
+pnpm fork:init --author "<Your Name>" --repo <owner>/<repo>
 ```
 
-It rewrites `package.json`, the GitHub URLs, and the VitePress `base` in `.vitepress/config.mts`. **It does not touch `SITE_BASE`.** The script refuses to overwrite an existing `.github/workflows/deploy.yml` — and a fork always has one — so it prints `left untouched` and moves on, leaving `SITE_BASE: /wxl-template/` in place. Edit that value to `/<repo>/` yourself, or the deployment 404s exactly as described above.
+It rewrites `package.json` and the GitHub URLs. **It does not touch `SITE_BASE`.** The script refuses to overwrite an existing `.github/workflows/deploy.yml` — and a fork always has one — so it prints `left untouched` and moves on, leaving `SITE_BASE: /wxl-template/` in place. Edit that value to `/<repo>/` yourself, or the deployment 404s exactly as described above.
 
-Mind what `--base` does to `.vitepress/config.mts`. Passing `--base /<repo>/` replaces the env-conditional `base: process.env.SITE_BASE ?? '/'` with a hard-coded literal, after which `SITE_BASE` no longer influences the build. **Omit `--base` entirely** to leave that line untouched. Do not reach for `--base none` expecting the env-conditional form — `none` deletes the `base` declaration outright, so VitePress falls back to `/` and `SITE_BASE` becomes a no-op, which is the 404 case described above.
+The example omits `--base` deliberately: with the flag absent the script leaves `.vitepress/config.mts` alone, so the env-conditional `base: process.env.SITE_BASE ?? '/'` survives and `SITE_BASE` stays in control. Passing `--base /<repo>/` instead replaces that line with a hard-coded literal, after which `SITE_BASE` no longer influences the build. Do not reach for `--base none` expecting the env-conditional form — `none` deletes the `base` declaration outright, so VitePress falls back to `/` and `SITE_BASE` becomes a no-op, which is the 404 case described above.
 
 ### Deploying to Cloudflare Pages
 

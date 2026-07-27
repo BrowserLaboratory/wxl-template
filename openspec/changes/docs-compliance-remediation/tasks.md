@@ -99,3 +99,12 @@
 - [x] 12.4 [P] 修正 proposal.md 的 F2 描述:spec delta 已由兩條 MODIFIED requirement 增為三條(task 9.3 補上 Python Guide),Why 與 Impact 兩處同步更新。驗證:與 specs/platform-documentation/spec.md 的 `### Requirement:` 數量核對。
 - [x] 12.5 全面複驗:repo prose gate、pnpm docs:build、英中區塊型別序列比對、spectra validate 與 analyze。驗證:0 blocking、build exit 0、四組配對逐塊相同、valid 且無 Critical/Warning。
 
+
+## 13. Round 5 audit 修復(確認輪)
+
+背景:round 5(7 agents 全數完成、0 錯誤、0 dead layer)回報 1 筆 blocking(3/3 一致上訴)與 4 筆 advisory,去重後為三個相異缺陷。關鍵數據:round 4 修復 commit `26384f3` 對外部文件的四處新增,經本輪逐行查證後**零缺陷**;blocking 那筆是 round 3 修復(`189e958`)留下的未同步殘留,並非新注入。本群組全部採刪除或計數修正,不新增任何機制性宣稱。
+
+- [x] 13.1 修正 README GitHub Pages 段的 fork:init 範例自相矛盾:第 172 行範例帶 `--base /<repo>/`,但第 177 行粗體寫「Omit `--base` entirely」且說明帶旗標會使 `SITE_BASE` 失效——與整段主張的 SITE_BASE 機制相反。溯源:`a43d264` 引入該範例時搭配的是「`--base none` 保留 env-conditional」句,`189e958` 修正了該句卻未同步範例。修法:範例移除 `--base`,並同步刪除第 175 行「and the VitePress `base` in `.vitepress/config.mts`」子句(不帶旗標時 `setViteBase` 原樣返回,不改該檔)。驗證:讀 fork-init.ts:379-399 函式本體確認三分支——`base === undefined` 直接 `return cfg`、字串且非 literal 宣告塌成硬編碼、`base === null`(`--base none`,見第 118 行)整行刪除。
+- [x] 13.2 修正 README scripts 表對 `create:challenge` 的描述:原寫「Interactively scaffold」,但該腳本無任何互動提示,缺 `--name` 時直接印 usage 並 exit 1。此筆為 change 之前就存在的 drift(`be29fe4` 即如此),前四輪均未查獲。驗證:`grep -E "readline|prompt|createInterface|stdin" scripts/create-challenge.ts` 無命中;裸跑 exit code 為 1。
+- [x] 13.3 修正 proposal.md F2 條目的自相矛盾:task 12.4 只把「兩條」改為「三條」,句子其餘部分仍只列舉兩條 requirement 且結尾仍寫「不先修這兩條」。此為 round 4 修復自身唯一產生的缺陷(Low,且位於 change artifact 而非外部文件)。補上 Python Guide 一項並修正結尾計數。驗證:與 specs/platform-documentation/spec.md:52-66 的 Python requirement 措辭核對。
+- [x] 13.4 全面複驗:repo prose gate、pnpm docs:build、spectra validate。驗證:README 0 blocking、build exit 0、change valid。
