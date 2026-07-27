@@ -178,11 +178,12 @@ export function validateChallenge(mdPath: string): ValidationResult {
       })
     } else {
       // Show the tabs that actually render, so the injected browser is visible.
+      // Word it the same way challenge:analyze does — the two must not drift.
       const rendered = VALID_TOOLS.filter((t) => t === 'browser' || tools.includes(t))
       checks.push({
         label: 'tools',
         passed: true,
-        message: `[${rendered.join(', ')}]`,
+        message: rendered.length === VALID_TOOLS.length ? 'all enabled' : `[${rendered.join(', ')}]`,
       })
     }
   } else {

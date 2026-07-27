@@ -81,3 +81,17 @@
 - [x] 10.6 修正 `network.md` 英中兩版的兩處:Send to Repeater 流程未說明按鈕的條件性;round 1 加入的「沒有 Terminal 就從步驟二開始」與後續步驟自相矛盾(步驟三仍引用步驟一的 curl 記錄)。改為「略過步驟一、改在 Code Editor 發出同樣的探測」,並補上沒有 Repeater 時步驟四不適用。完成判準:走查全段無自相矛盾。驗證:兩版逐步比對。
 - [x] 10.7 修正 `tests/challenge-analyze.test.ts` 中仍以 `'all enabled (default)'` 作為種子與斷言的三處——`analyzeChallenge` 已不可能產生該字串。完成判準:全檔搜尋該字串零命中。驗證:執行該檔測試。
 - [x] 10.8 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。
+
+## 11. Round 3 audit 修復
+
+背景:round 3(18 agents 全數完成、0 錯誤、0 dead layer)回報 2 筆 blocking(同一缺陷的英中兩版)與 16 筆 advisory。blocking 是 round 2 的修復只改了同一宣稱的其中一處:`network.md:50` 加了條件語氣,結構性描述所在的 `:15` 卻原封不動,同檔自相矛盾。三輪用盡仍未 clean,已依協定啟動多 Opus clean-context RCA。
+
+- [x] 11.1 修正 `network.md` 英中兩版第 15 行的結構性描述:該句無條件宣稱展開記錄會出現 Send to Repeater 按鈕,round 2 讓按鈕變成條件渲染後即為假。修法改用「先 grep 出同一宣稱的全部出現位置再逐一處理」,而非只修被指出的那一處。完成判準:`grep -n "Send to Repeater"` 的每一處命中,不是本身帶條件語氣,就是位於已聲明前提的段落內。驗證:兩版各七處逐一判定。
+- [x] 11.2 為「End-to-End Workflow Example」補上前提聲明(該段步驟三至五全部依賴 Repeater),並修正 round 2 加入的「後續步驟的讀法也一樣」——步驟三仍指名要找 `curl` 那一筆,而 Code Editor 路徑不會產生它。完成判準:兩段走查皆無自相矛盾。驗證:逐步比對英中兩版。
+- [x] 11.3 修正 delta spec 漏帶 baseline scenario 的問題:`network-traffic-panel` 的 MODIFIED 區塊是整塊替換,我的 delta 只帶了兩個 scenario,archive 時會把 baseline 的「Send to Repeater preserves original request headers and body」整條刪除。補回該 scenario。完成判準:delta 的 scenario 數不少於 baseline 且新增的條件性 scenario 保留。驗證:與 `openspec/specs/network-traffic-panel/spec.md` 逐條比對。
+- [x] 11.4 修正首頁 i18n 的 `step2_desc`(英中兩版):該句指示解題者「使用 Browser、Terminal、Code Editor、Repeater」,是對讀者的指令而非平台能力描述,原本用來排除首頁的 Non-Goal 理由不涵蓋它。改為條件語氣並同步 proposal 的 Non-Goal 說明。完成判準:JSON 仍可解析且英中做出相同宣稱。驗證:`json.load` 兩檔並比對語意。
+- [x] 11.5 補上 layout→NetworkPanel 的 `canSendToRepeater` 接線測試。該接線是 round 2 根因修法的關鍵,卻無任何測試觀察它——原因是測試中的 NetworkPanel mock 只宣告了 `trafficLog` 一個 prop,新 prop 會落入 attrs 而不可見。完成判準:mock 宣告該 prop,且授予與未授予兩種情境各有斷言。驗證:`it.each` 兩案例。
+- [x] 11.6 修正 `challenge-validate.ts` 與 `challenge-analyze.ts` 對「五項全開」描述不一致:analyze 輸出 `all enabled`,validate 輸出完整清單。統一為同一措辭。完成判準:同一份 frontmatter 兩支腳本給出一致描述。驗證:對照兩支腳本的分支。
+- [x] 11.7 補上 `tools: []` 的 analyze 測試——那是本次變更下輸出改變最明顯的輸入(原本空字串,現為 browser),卻無測試覆蓋。完成判準:該案例有具名測試。驗證:執行該檔。
+- [x] 11.8 更新 proposal 的 Impact 與 design 的範圍邊界:rounds 1、2 擴大了改動面(第四份 delta spec、NetworkPanel 的新 prop、validate 的輸出、首頁 i18n),兩份 artifact 的列舉卻停留在初版。以 `git diff main...HEAD --name-only` 為真實來源重寫。完成判準:列舉與實際 diff 一致。驗證:逐檔核對。
+- [x] 11.9 全面複驗:`pnpm test --run`、`pnpm docs:build`、七個 Markdown 檔的 prose gate、`spectra validate` 與 `analyze`。驗證:記錄通過數與 findings 層級。

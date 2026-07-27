@@ -12,7 +12,7 @@ Network Traffic Log 面板會自動記錄挑戰發出的每一個 HTTP 請求與
 | Status | HTTP 回應狀態碼（搭配顏色標示） |
 | Time | 請求從發出到收到回應的時間（毫秒） |
 
-點擊清單中的任一筆記錄，展開區域會出現兩個子頁籤與一個 **Send to Repeater** 按鈕：
+點擊清單中的任一筆記錄，展開區域會出現兩個子頁籤；若該挑戰有授予 Repeater 分頁，還會出現一個 **Send to Repeater** 按鈕：
 
 - **Request**：完整請求，以單一封 raw HTTP 訊息呈現——請求行、標頭、空行、本體
 - **Response**：原始回應——狀態行、標頭、空行、本體
@@ -103,7 +103,7 @@ JSON 格式（`application/json`）：
 
 以下示範一個完整的測試流程，從發現問題到成功利用漏洞：
 
-**場景**：某挑戰的後台登入頁面疑似有 SQL Injection 漏洞
+**場景**：某挑戰的後台登入頁面疑似有 SQL Injection 漏洞。本段流程假設挑戰有授予 Repeater 分頁；未授予時步驟三至五不適用。
 
 ### 步驟一：Browser 面板觀察
 
@@ -154,7 +154,7 @@ Welcome, admin! Your flag is: flag{sql_injection_success}
 
 Browser 面板並不是 Traffic Log 唯一的來源。由於所有面板都經同一層 dispatch 送出請求，你可以在 Terminal 探測、在 Code Editor 大量掃描，最後仍在同一份清單裡檢視並重送。
 
-本段流程假設挑戰同時授予 Terminal 與 Repeater。若沒有 Terminal，略過步驟一、改在 Code Editor 發出同樣的探測即可——Traffic Log 記錄的結果完全相同，後續步驟的讀法也一樣。若沒有 Repeater，步驟四則不適用。
+本段流程假設挑戰同時授予 Terminal 與 Repeater。若沒有 Terminal，略過步驟一、改在 Code Editor 發出同樣的探測即可——Traffic Log 記錄的結果完全相同，只是步驟三不會有 `curl` 那一筆可找。若沒有 Repeater，步驟四則不適用。
 
 **場景**：某個 endpoint 會依 `id` 值回傳不同內容，你想找出藏著 flag 的那一個。
 

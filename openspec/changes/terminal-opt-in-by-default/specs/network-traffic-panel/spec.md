@@ -12,6 +12,11 @@ When the challenge withholds the Repeater tab, the button SHALL NOT be rendered,
 - **THEN** the RepeatPanel SHALL be activated and its request editor SHALL contain the raw HTTP request including the method line, all headers, and the form body
 - **AND** the active tab SHALL switch to Repeater
 
+#### Scenario: Send to Repeater preserves original request headers and body
+
+- **WHEN** a user sends a traffic entry with custom headers and a JSON body to Repeater
+- **THEN** the RepeatPanel request editor SHALL contain all original request headers and the exact JSON body from the traffic entry
+
 #### Scenario: Send to Repeater is absent when the challenge withholds the Repeater
 
 - **WHEN** a challenge declares `tools: [browser, network]` and a user expands a traffic entry

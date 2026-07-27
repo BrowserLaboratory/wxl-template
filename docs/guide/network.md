@@ -12,7 +12,7 @@ The Network Traffic Log panel automatically records every HTTP request the chall
 | Status | HTTP response status code (colour-coded) |
 | Time | Time elapsed from request dispatch to response receipt (milliseconds) |
 
-Clicking any entry in the list expands a detail area with two sub-tabs and a **Send to Repeater** button:
+Clicking any entry in the list expands a detail area with two sub-tabs, plus a **Send to Repeater** button on challenges that grant the Repeater tab:
 
 - **Request**: the complete request rendered as one raw HTTP message — request line, headers, blank line, body
 - **Response**: the raw response — status line, headers, blank line, body
@@ -103,7 +103,7 @@ JSON format (`application/json`):
 
 The following walks through a complete test flow, from spotting the issue to successfully exploiting the vulnerability:
 
-**Scenario**: The admin login page of a challenge appears to be vulnerable to SQL Injection
+**Scenario**: The admin login page of a challenge appears to be vulnerable to SQL Injection. This walkthrough assumes the challenge grants the Repeater tab; without it, Steps 3 to 5 do not apply.
 
 ### Step 1: Observe in the Browser Panel
 
@@ -154,7 +154,7 @@ Copy the flag and submit it on the challenge page to complete the task.
 
 The Browser panel is not the only source the Traffic Log records. Because every panel dispatches through the same layer, you can probe from the Terminal, sweep from the Code Editor, and still review and replay everything from one list.
 
-This walkthrough assumes a challenge that grants both the Terminal and the Repeater. Without a Terminal, skip Step 1 and issue the same probe from the Code Editor — the Traffic Log records it identically, and the later steps read the same. Without a Repeater, Step 4 does not apply.
+This walkthrough assumes a challenge that grants both the Terminal and the Repeater. Without a Terminal, skip Step 1 and issue the same probe from the Code Editor — the Traffic Log records it identically, though Step 3 then has no `curl` entry to look for. Without a Repeater, Step 4 does not apply.
 
 **Scenario**: an endpoint returns different content for some `id` values, and you want to find which one hides the flag.
 

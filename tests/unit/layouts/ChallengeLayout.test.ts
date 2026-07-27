@@ -36,7 +36,7 @@ vi.mock('../../../.vitepress/theme/components/RepeatPanel.vue', () => ({
   default: defineComponent({ props: ['slug', 'dispatch', 'disabled', 'injectedRequest'], template: '<div data-repeat-panel :data-disabled="disabled" :data-injected="injectedRequest" />' }),
 }))
 vi.mock('../../../.vitepress/theme/components/NetworkPanel.vue', () => ({
-  default: defineComponent({ props: ['trafficLog'], emits: ['clear', 'sendToRepeater'], template: '<div data-network-panel />' }),
+  default: defineComponent({ props: ['trafficLog', 'canSendToRepeater'], emits: ['clear', 'sendToRepeater'], template: '<div data-network-panel />' }),
 }))
 vi.mock('../../../.vitepress/theme/components/CodeEditorPanel.vue', () => ({
   default: defineComponent({ props: ['slug', 'dispatch', 'disabled', 'pyodide', 'onCodeExecuted'], template: '<div data-code-panel :data-disabled="disabled" />' }),
@@ -272,6 +272,26 @@ describe('ChallengeLayout (VitePress layout)', () => {
     // door-is-open ships exactly this list; the new rules must be a no-op for it.
     expect(await tabIdsFor(['browser', 'network', 'repeater', 'code']))
       .toEqual(['browser', 'network', 'repeater', 'code'])
+  })
+
+  it.each([
+    [['browser', 'network'], false],
+    [['browser', 'network', 'repeater'], true],
+  ])('tells NetworkPanel whether the Repeater is available for %j', async (tools, expected) => {
+    const { useData } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo', difficulty: 'easy', category: 'web', backend: 'flask',
+          slug: 'sqli-demo', description: 'x', markdownBody: '# x', tools,
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const wrapper = mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+
+    const { default: NetworkPanelComponent } = await import('../../../.vitepress/theme/components/NetworkPanel.vue')
+    expect(wrapper.findComponent(NetworkPanelComponent).props('canSendToRepeater')).toBe(expected)
   })
 
   it('does not duplicate a tab id repeated in the allowlist', async () => {

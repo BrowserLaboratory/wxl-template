@@ -22,7 +22,7 @@
 - 不觸碰 `commands` 欄位與 Tier 5 指令管線。
 - 不改變面板的掛載方式,不改 `create-challenge.ts` 的樣板,不新增 Playwright 測試。
 - 不修改任何挑戰的 frontmatter。
-- 不改 `challenge-validate.ts` 對 `tools` 值的**驗證邏輯**;但其 `else` 分支印出的預設說明字串會隨本次變更失真,屬必修範圍。
+- 不改 `challenge-validate.ts` 對 `tools` 值的**合法性驗證規則**;但其描述預設值與生效分頁的輸出字串會隨本次變更失真,屬必修範圍。
 
 ## Decisions
 
@@ -86,9 +86,9 @@ frontmatter 的 `tools` 欄位型別不變:選填的合法 tab ID 陣列。合�
 
 **範圍邊界**
 
-*In scope*:layout 的分頁計算、analyze 的摘要字串、三份 spec 的對應 requirement、README 的 frontmatter 註解、解題者指南中因本變更而失真的敘述。
+*In scope*:layout 的分頁計算與 Repeater 跳轉守衛、NetworkPanel 的 Send to Repeater 條件渲染、analyze 與 validate 的分頁摘要字串、四份 spec 的對應 requirement(含 network-traffic-panel)、README 的 frontmatter 註解、首頁 i18n 中指示使用 Terminal 的句子,以及解題者指南中因本變更而失真的敘述。
 
-*Out of scope*:任何挑戰的 frontmatter、`create-challenge.ts`、`challenge-validate.ts` 的驗證邏輯、`commands` 欄位、面板掛載方式、Playwright、首頁內容與 `homepage-content` spec。
+*Out of scope*:任何挑戰的 frontmatter、`create-challenge.ts`、`challenge-validate.ts` 的合法性驗證規則、`commands` 欄位、面板掛載方式(維持 `v-show`)、Playwright、首頁的功能卡與 `homepage-content` spec。
 
 ## Risks / Trade-offs
 

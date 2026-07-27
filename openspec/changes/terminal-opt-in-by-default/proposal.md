@@ -29,8 +29,8 @@
 - 不動 `commands` 欄位。`challenge-tools-control` spec 明載其 frontmatter 至 WxlshPanel 的管線尚未接通,屬 future work。
 - 不改 `scripts/create-challenge.ts` 的 frontmatter 樣板。新挑戰將沿用新預設,`tools` 欄位的說明改寫在 README 的 frontmatter 範例旁。
 - 不改面板的掛載方式(維持 `v-show`),不新增 Playwright 測試。
-- 不改 `docs/guide/index.md` 關於工具「在瀏覽器內執行」的敘述,以及首頁的 Terminal 功能卡——兩者描述的是平台能力與執行位置,不因本次變更而失真。
-- 不改 `scripts/challenge-validate.ts` 對 `tools` 值的驗證邏輯。其 `else` 分支印出的預設說明字串則必須同步——該字串描述的正是本次變更改掉的預設。
+- 不改 `docs/guide/index.md` 關於工具「在瀏覽器內執行」的敘述,以及首頁的 Terminal 功能卡——兩者描述的是平台能力與執行位置,不因本次變更而失真。首頁 i18n 中指示解題者「使用 Terminal」的那一句則不在此列:它是對讀者的指令而非能力描述,已一併條件化。
+- 不改 `scripts/challenge-validate.ts` 對 `tools` 值的**合法性驗證規則**。其描述預設值與生效分頁的輸出字串(`if` 與 `else` 兩個分支)則必須同步——它們描述的正是本次變更改掉的行為。
 
 ## Alternatives Considered
 
@@ -40,14 +40,20 @@
 
 ## Impact
 
-- Affected specs: challenge-tools-control(delta)、challenge-layout(delta)、challenge-framework(delta)
+- Affected specs: challenge-tools-control(delta)、challenge-layout(delta)、challenge-framework(delta)、network-traffic-panel(delta)
 - Affected code:
   - Modified:
     - .vitepress/theme/layouts/ChallengeLayout.vue
+    - .vitepress/theme/components/NetworkPanel.vue
+    - .vitepress/theme/i18n/messages/en.json
+    - .vitepress/theme/i18n/messages/zh-TW.json
     - scripts/challenge-analyze.ts
+    - scripts/challenge-validate.ts
     - tests/unit/layouts/ChallengeLayout.test.ts
-    - tests/challenge-analyze.test.ts
+    - tests/unit/components/NetworkPanel.test.ts
     - tests/unit/challenge/config.test.ts
+    - tests/challenge-analyze.test.ts
+    - tests/challenge-validate.test.ts
     - README.md
     - docs/guide/terminal.md
     - docs/guide/index.md
@@ -55,3 +61,5 @@
     - docs/zh-TW/guide/terminal.md
     - docs/zh-TW/guide/index.md
     - docs/zh-TW/guide/network.md
+    - openspec/specs/challenge-tools-control/spec.md
+    - openspec/specs/challenge-layout/spec.md

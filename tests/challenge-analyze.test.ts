@@ -386,6 +386,18 @@ describe('analyzeChallenge', () => {
     }).toolsSummary).toBe('browser, code')
   })
 
+  it('reports browser alone for an empty tools array', () => {
+    createPerFolderChallenge(tmpDir, 'empty-tools', {
+      frontmatter: ['title: "Empty"', 'backend: flask', 'app: app.py', 'tools: []'].join('\n'),
+    })
+
+    expect(analyzeChallenge({
+      slug: 'empty-tools',
+      mdPath: join(tmpDir, 'empty-tools', 'index.md'),
+      isPerFolder: true,
+    }).toolsSummary).toBe('browser')
+  })
+
   it('names the tabs the default actually yields when tools is not set', () => {
     createPerFolderChallenge(tmpDir, 'default-tools')
 
