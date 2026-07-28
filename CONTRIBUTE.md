@@ -154,7 +154,7 @@ The bold span must come *after* the file reference — that is what distinguishe
 
 The gate does not check whether the aspect you marked is genuinely unchanged; it only routes the claim to `REVIEW` so a person reads it. Marking a blanket claim in bold will get it past the `FAIL`, and the reviewer, not the gate, is what stops that.
 
-G2 resolves a reference to a changed file by full path or by a path-boundary suffix, so `` `config.yaml` `` matches `scripts/spec-gates/config.yaml`. Write enough of the path to be unambiguous when a filename occurs in more than one directory — this repository has three files named `run.py`.
+G2 resolves a reference to a changed file by full path or by a path-boundary suffix, so `` `config.yaml` `` matches `scripts/spec-gates/config.yaml`. Write enough of the path to be unambiguous when a filename occurs in more than one directory — `scripts/prose-audit/` and `scripts/spec-gates/` each hold a `run.py` and a `test_run.py`.
 
 ### Declaring claim phrases for G1
 
