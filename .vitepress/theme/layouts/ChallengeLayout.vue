@@ -72,11 +72,18 @@ const ALL_TABS: { id: Tab; label: string }[] = [
   { id: 'terminal', label: 'Terminal' },
   { id: 'code', label: 'Code' },
 ]
+// Terminal is opt-in: a challenge only gets a shell when its author asks for one.
+const DEFAULT_TABS: Tab[] = ['browser', 'network', 'repeater', 'code']
 const tabs = computed(() => {
-  const allowedTools: string[] | undefined = fm.value.tools
-  if (!allowedTools || allowedTools.length === 0) return ALL_TABS
-  return ALL_TABS.filter(t => allowedTools.includes(t.id))
+  // Raw frontmatter, so config.ts's array check has not run. A bare `tools:`
+  // line parses as null; anything malformed falls back rather than throwing.
+  const allowedTools: unknown = fm.value.tools
+  if (!Array.isArray(allowedTools)) return ALL_TABS.filter(t => DEFAULT_TABS.includes(t.id))
+  // An explicit allowlist always keeps Browser — every challenge here is web
+  // exploitation, so a page with no browser is never what the author meant.
+  return ALL_TABS.filter(t => t.id === 'browser' || allowedTools.includes(t.id))
 })
+const hasTab = (id: Tab) => tabs.value.some(t => t.id === id)
 const activeTab = ref<Tab>('browser')
 
 // ─── Challenge dispatch: directly call runtime (bypasses SW round-trip) ──────
@@ -178,6 +185,9 @@ function onCodeExecuted(event: { code: string; output: string; error: boolean; d
 // ─── Send to Repeater ─────────────────────────────────────────────────────────
 const repeaterInjectedRequest = ref<string | null>(null)
 function onSendToRepeater(rawRequest: string) {
+  // Honour the allowlist: without a Repeater tab there is no way back out of
+  // the panel, so a challenge that withheld it must not be navigated into it.
+  if (!hasTab('repeater')) return
   repeaterInjectedRequest.value = rawRequest
   activeTab.value = 'repeater'
 }
@@ -534,7 +544,7 @@ onUnmounted(() => {
           <CodeEditorPanel :slug="slug" :dispatch="codeDispatch" :disabled="toolsDisabled" :pyodide="pyodideInstance" :onCodeExecuted="onCodeExecuted" />
         </div>
         <div v-show="activeTab === 'network'" data-panel="network" class="flex-1 overflow-hidden">
-          <NetworkPanel :trafficLog="trafficLog" @clear="clearTrafficLog" @sendToRepeater="onSendToRepeater" />
+          <NetworkPanel :trafficLog="trafficLog" :canSendToRepeater="hasTab('repeater')" @clear="clearTrafficLog" @sendToRepeater="onSendToRepeater" />
         </div>
       </main>
     </div>

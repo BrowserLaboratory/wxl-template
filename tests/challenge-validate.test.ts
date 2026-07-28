@@ -247,6 +247,44 @@ describe('validateChallenge', () => {
       expect(cmdsCheck?.message).toContain('sqlmap')
     })
 
+    it('lists tabs in canonical order, not the order the author wrote', () => {
+      const slugDir = join(tmpDir, 'author-order')
+      const srcDir = join(slugDir, 'src')
+      mkdirSync(srcDir, { recursive: true })
+
+      writeFileSync(join(slugDir, 'index.md'), [
+        '---', 'title: "Order"', 'backend: fastapi', 'app: app.py',
+        'tools: [code, network]', '---',
+      ].join('\n'))
+      writeFileSync(join(srcDir, 'app.py'), 'from fastapi import FastAPI')
+      writeFileSync(join(srcDir, 'flag.txt'), 'flag{test}')
+
+      const toolsCheck = validateChallenge(join(slugDir, 'index.md')).checks.find(c => c.label === 'tools')
+      expect(toolsCheck?.message).toBe('[browser, network, code]')
+    })
+
+    it('names the tabs the default yields when tools is absent', () => {
+      const slugDir = join(tmpDir, 'no-tools')
+      const srcDir = join(slugDir, 'src')
+      mkdirSync(srcDir, { recursive: true })
+
+      writeFileSync(join(slugDir, 'index.md'), [
+        '---',
+        'title: "No Tools"',
+        'backend: fastapi',
+        'app: app.py',
+        '---',
+      ].join('\n'))
+
+      writeFileSync(join(srcDir, 'app.py'), 'from fastapi import FastAPI')
+      writeFileSync(join(srcDir, 'flag.txt'), 'flag{test}')
+
+      const toolsCheck = validateChallenge(join(slugDir, 'index.md')).checks.find(c => c.label === 'tools')
+      expect(toolsCheck?.message).toBe(
+        'not specified (default: browser, network, repeater, code — terminal excluded)',
+      )
+    })
+
     it('accepts commands: all', () => {
       const slugDir = join(tmpDir, 'cmds-all')
       const srcDir = join(slugDir, 'src')

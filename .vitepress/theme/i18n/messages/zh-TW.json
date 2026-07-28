@@ -18,7 +18,7 @@
     "step1_title": "選擇挑戰",
     "step1_desc": "前往題目總覽，依難度或類別選擇適合的挑戰題目。",
     "step2_title": "使用工具",
-    "step2_desc": "使用內建的 Browser、Terminal、Code Editor、Repeater 分析並利用漏洞。",
+    "step2_desc": "使用該挑戰提供的工具——Browser、Code Editor、Repeater，以及有授予時的 Terminal——分析並利用漏洞。",
     "step3_title": "提交 Flag",
     "step3_desc": "找到 Flag 後，輸入到題目頁面的提交框並確認答案是否正確。"
   },

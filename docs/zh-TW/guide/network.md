@@ -12,14 +12,14 @@ Network Traffic Log 面板會自動記錄挑戰發出的每一個 HTTP 請求與
 | Status | HTTP 回應狀態碼（搭配顏色標示） |
 | Time | 請求從發出到收到回應的時間（毫秒） |
 
-點擊清單中的任一筆記錄，展開區域會出現兩個子頁籤與一個 **Send to Repeater** 按鈕：
+點擊清單中的任一筆記錄，展開區域會出現兩個子頁籤；若該挑戰有授予 Repeater 分頁，還會出現一個 **Send to Repeater** 按鈕：
 
 - **Request**：完整請求，以單一封 raw HTTP 訊息呈現——請求行、標頭、空行、本體
 - **Response**：原始回應——狀態行、標頭、空行、本體
 
 兩個頁籤顯示的都是完整訊息而非逐欄拆解，因此可以直接整段複製到 Repeater 或腳本裡。
 
-> **注意**：所有工具面板共用同一層 dispatch，因此記錄涵蓋全部來源——Browser 面板、Repeater、Terminal 的 `curl` 與 `wget`，以及 Code Editor 中 `requests` 模組發出的請求。清單本身不會標示某筆請求來自哪個面板，請改用序號與時間把記錄對應回產生它的操作。
+> **注意**：所有工具面板共用同一層 dispatch，因此記錄涵蓋全部來源——Browser 面板、Repeater、Code Editor 中 `requests` 模組發出的請求，以及挑戰有授予 Terminal 時該處 `curl` 與 `wget` 發出的請求。清單本身不會標示某筆請求來自哪個面板，請改用序號與時間把記錄對應回產生它的操作。
 
 ## HTTP 狀態碼說明
 
@@ -47,11 +47,11 @@ Network Traffic Log 面板會自動記錄挑戰發出的每一個 HTTP 請求與
 Network Traffic Log 與 HTTP Repeater 緊密整合。若你發現某筆請求值得進一步分析或修改，可透過以下步驟將其送至 Repeater：
 
 1. 在 Network Traffic Log 清單中，點擊要分析的請求條目
-2. 展開詳細資訊後，點擊「**Send to Repeater**」按鈕
+2. 展開詳細資訊後，點擊「**Send to Repeater**」按鈕。此按鈕僅出現在有授予 Repeater 分頁的挑戰；未授予時按鈕不會出現，而不是點了沒反應
 3. 完整的請求會以單一 HTTP 訊息的形式寫入 Repeater 的 raw request 編輯區
 4. 切換至 **Repeater** 面板進行編輯與重送
 
-> **提示**：找到可疑請求後，立刻使用 Send to Repeater，避免在 Browser 面板重複操作而產生過多雜訊紀錄。
+> **提示**：在有提供 Repeater 的挑戰中，一發現可疑請求就立刻使用 Send to Repeater，避免在 Browser 面板重複操作而產生過多雜訊紀錄。
 
 ## HTTP Repeater 功能說明
 
@@ -103,7 +103,7 @@ JSON 格式（`application/json`）：
 
 以下示範一個完整的測試流程，從發現問題到成功利用漏洞：
 
-**場景**：某挑戰的後台登入頁面疑似有 SQL Injection 漏洞
+**場景**：某挑戰的後台登入頁面疑似有 SQL Injection 漏洞。本段流程假設挑戰有授予 Repeater 分頁；未授予時步驟三至五不適用。
 
 ### 步驟一：Browser 面板觀察
 
@@ -153,6 +153,8 @@ Welcome, admin! Your flag is: flag{sql_injection_success}
 ## Terminal 與 Code Editor 搭配 Traffic Log
 
 Browser 面板並不是 Traffic Log 唯一的來源。由於所有面板都經同一層 dispatch 送出請求，你可以在 Terminal 探測、在 Code Editor 大量掃描，最後仍在同一份清單裡檢視並重送。
+
+本段流程假設挑戰同時授予 Terminal 與 Repeater。若沒有 Terminal，略過步驟一、改在 Code Editor 發出同樣的探測即可——Traffic Log 記錄的結果完全相同，只是步驟三不會有 `curl` 那一筆可找。若沒有 Repeater，步驟四則不適用。
 
 **場景**：某個 endpoint 會依 `id` 值回傳不同內容，你想找出藏著 flag 的那一個。
 

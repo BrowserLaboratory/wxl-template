@@ -100,6 +100,18 @@ describe('NetworkPanel', () => {
     expect(wrapper.emitted('clear')).toBeTruthy()
   })
 
+  it('omits the Send to Repeater button when the challenge withheld the Repeater', async () => {
+    const wrapper = mount(NetworkPanel, {
+      props: { trafficLog: [makeEntry({ id: 1 })], canSendToRepeater: false },
+    })
+
+    await wrapper.find('[data-traffic-row]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    // A visible button that silently does nothing is worse than no button.
+    expect(wrapper.find('[data-send-to-repeater]').exists()).toBe(false)
+  })
+
   it('emits sendToRepeater with formatted raw HTTP request on click', async () => {
     const entry = makeEntry({
       id: 1,

@@ -12,14 +12,14 @@ The Network Traffic Log panel automatically records every HTTP request the chall
 | Status | HTTP response status code (colour-coded) |
 | Time | Time elapsed from request dispatch to response receipt (milliseconds) |
 
-Clicking any entry in the list expands a detail area with two sub-tabs and a **Send to Repeater** button:
+Clicking any entry in the list expands a detail area with two sub-tabs, plus a **Send to Repeater** button on challenges that grant the Repeater tab:
 
 - **Request**: the complete request rendered as one raw HTTP message — request line, headers, blank line, body
 - **Response**: the raw response — status line, headers, blank line, body
 
 Because both tabs show whole messages rather than field-by-field breakdowns, you can copy either one straight into the Repeater or into a script.
 
-> **Note**: Every tool panel shares one dispatch layer, so the log captures requests from all of them — the Browser panel, the Repeater, `curl` and `wget` in the Terminal, and the `requests` module inside the Code Editor. The list itself does not label which panel a request came from, so use the sequence number and timing to line entries up with the action that produced them.
+> **Note**: Every tool panel shares one dispatch layer, so the log captures requests from all of them — the Browser panel, the Repeater, the `requests` module inside the Code Editor, and, where the challenge grants a Terminal, `curl` and `wget` there too. The list itself does not label which panel a request came from, so use the sequence number and timing to line entries up with the action that produced them.
 
 ## HTTP Status Codes
 
@@ -47,11 +47,11 @@ What common status codes mean during a penetration test:
 The Network Traffic Log integrates tightly with the HTTP Repeater. When you spot a request worth analysing or tampering with further, send it to the Repeater with these steps:
 
 1. In the Network Traffic Log list, click the request entry you want to analyse
-2. After the detail panel expands, click the "**Send to Repeater**" button
+2. After the detail panel expands, click the "**Send to Repeater**" button. It appears only on challenges that grant the Repeater tab — where the tab is withheld, the button is absent rather than inert
 3. The complete request is written into the Repeater's raw request editor as one HTTP message
 4. Switch to the **Repeater** panel to edit and resend it
 
-> **Tip**: Once you find a suspicious request, use Send to Repeater right away. This avoids repeating actions in the Browser panel and cluttering the log with noise.
+> **Tip**: Where the Repeater is available, use Send to Repeater as soon as you spot a suspicious request. This avoids repeating actions in the Browser panel and cluttering the log with noise.
 
 ## HTTP Repeater
 
@@ -103,7 +103,7 @@ JSON format (`application/json`):
 
 The following walks through a complete test flow, from spotting the issue to successfully exploiting the vulnerability:
 
-**Scenario**: The admin login page of a challenge appears to be vulnerable to SQL Injection
+**Scenario**: The admin login page of a challenge appears to be vulnerable to SQL Injection. This walkthrough assumes the challenge grants the Repeater tab; without it, Steps 3 to 5 do not apply.
 
 ### Step 1: Observe in the Browser Panel
 
@@ -153,6 +153,8 @@ Copy the flag and submit it on the challenge page to complete the task.
 ## Combining the Terminal and Code Editor With the Traffic Log
 
 The Browser panel is not the only source the Traffic Log records. Because every panel dispatches through the same layer, you can probe from the Terminal, sweep from the Code Editor, and still review and replay everything from one list.
+
+This walkthrough assumes a challenge that grants both the Terminal and the Repeater. Without a Terminal, skip Step 1 and issue the same probe from the Code Editor — the Traffic Log records it identically, though Step 3 then has no `curl` entry to look for. Without a Repeater, Step 4 does not apply.
 
 **Scenario**: an endpoint returns different content for some `id` values, and you want to find which one hides the flag.
 

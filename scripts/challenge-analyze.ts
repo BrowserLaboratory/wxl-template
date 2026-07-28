@@ -283,11 +283,13 @@ export function analyzeChallenge(challenge: ChallengeFile): AnalysisResult {
 
   let toolsSummary: string
   if (fm.tools === undefined) {
-    toolsSummary = 'all enabled (default)'
-  } else if (Array.isArray(fm.tools) && fm.tools.length === VALID_TOOLS.length) {
-    toolsSummary = 'all enabled'
+    // Spell out the default rather than calling it "all" — Terminal is opt-in.
+    toolsSummary = 'browser, network, repeater, code (default — terminal excluded)'
   } else if (Array.isArray(fm.tools)) {
-    toolsSummary = (fm.tools as string[]).join(', ')
+    // Report the tabs that actually render, so the injected browser shows up.
+    // Compare by content, not length — a duplicate-padded list is not "all".
+    const rendered = VALID_TOOLS.filter(t => t === 'browser' || (fm.tools as string[]).includes(t))
+    toolsSummary = rendered.length === VALID_TOOLS.length ? 'all enabled' : rendered.join(', ')
   } else {
     toolsSummary = 'unknown'
   }

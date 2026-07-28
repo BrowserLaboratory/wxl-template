@@ -34,7 +34,7 @@ The challenge page exposes several built-in tool panels:
 - Use the **Browser** panel to navigate the target site and observe its behavior
 - Use the **Network Traffic Log** panel to intercept and analyze HTTP requests
 - Use the **Code Editor** to write and run Python attack scripts
-- Use the **Terminal** to invoke the built-in command-line utilities
+- Use the **Terminal**, where the challenge offers it, to invoke the built-in command-line utilities
 - Use the **HTTP Repeater** to edit and replay specific requests
 - Use **Pentest Notes** to record observations and intermediate results
 
@@ -47,7 +47,7 @@ Once you successfully exploit the vulnerability you obtain a flag string (typica
 | Tool | Panel label | Primary purpose |
 |---|---|---|
 | Code Editor / Pyodide | Code | Run Python 3 scripts inside the browser, with HTTP request simulation |
-| Terminal / wxlsh | Terminal | Invoke built-in command-line utilities, including encoders and `curl`-style commands |
+| Terminal / wxlsh | Terminal | Invoke built-in command-line utilities, including encoders and `curl`-style commands. Offered only by challenges that ask for it, so the tab is absent unless the challenge grants it |
 | Built-in browser | Browser | Browse and interact with the target challenge application |
 | Network Traffic Log | Network | Record and inspect every HTTP request and response in full |
 | HTTP Repeater | Repeater | Modify the method, headers, and parameters of a request and replay it |
@@ -65,7 +65,7 @@ Make sure your script calls `print()` to emit output. Pyodide also takes a momen
 
 **Q: The Network Traffic Log shows no requests — why?**
 
-Every tool panel shares one dispatch layer, so the log captures requests from the Browser panel, the Repeater, the Terminal's `curl` and `wget`, and the Code Editor's `requests` calls alike. An empty log usually means no request has been issued yet — interact with the challenge first.
+Every tool panel shares one dispatch layer, so the log captures requests from the Browser panel, the Repeater, the Code Editor's `requests` calls, and — on challenges that offer a Terminal — its `curl` and `wget` alike. An empty log usually means no request has been issued yet — interact with the challenge first.
 
 **Q: Do Pentest Notes disappear after closing the page?**
 

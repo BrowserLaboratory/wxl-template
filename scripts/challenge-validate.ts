@@ -177,14 +177,21 @@ export function validateChallenge(mdPath: string): ValidationResult {
         message: `invalid tool(s): ${invalid.join(', ')}`,
       })
     } else {
+      // Show the tabs that actually render, so the injected browser is visible.
+      // Word it the same way challenge:analyze does — the two must not drift.
+      const rendered = VALID_TOOLS.filter((t) => t === 'browser' || tools.includes(t))
       checks.push({
         label: 'tools',
         passed: true,
-        message: `[${tools.join(', ')}]`,
+        message: rendered.length === VALID_TOOLS.length ? 'all enabled' : `[${rendered.join(', ')}]`,
       })
     }
   } else {
-    checks.push({ label: 'tools', passed: true, message: 'not specified (default all)' })
+    checks.push({
+      label: 'tools',
+      passed: true,
+      message: 'not specified (default: browser, network, repeater, code — terminal excluded)',
+    })
   }
 
   // ── Check 7: commands values valid ──────────────────────────────────────

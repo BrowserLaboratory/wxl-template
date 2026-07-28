@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import type { TrafficEntry } from '../composables/useTrafficLog'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   trafficLog: TrafficEntry[]
-}>()
+  /** False when the challenge withheld the Repeater tab — hides the send action. */
+  canSendToRepeater?: boolean
+}>(), { canSendToRepeater: true })
 
 const emit = defineEmits<{
   clear: []
@@ -149,6 +151,7 @@ function onClear() {
               </button>
               <div class="flex-1" />
               <button
+                v-if="props.canSendToRepeater"
                 data-send-to-repeater
                 class="px-2 py-1 mb-1 rounded text-[0.75em] border border-[var(--ch-border)] bg-[var(--ch-bg-soft)] color-[var(--ch-text-1)] cursor-pointer hover:border-[var(--ch-accent)] hover:color-[var(--ch-accent)]"
                 @click.stop="sendToRepeater(entry)"

@@ -34,7 +34,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 - 使用 **Browser** 面板瀏覽目標網站並觀察行為
 - 使用 **Network Traffic Log** 面板攔截並分析 HTTP 請求
 - 使用 **Code Editor** 撰寫 Python 攻擊腳本並執行
-- 使用 **Terminal** 執行內建指令列工具
+- 若該挑戰有提供 **Terminal**，可用它執行內建指令列工具
 - 使用 **HTTP Repeater** 修改並重送特定請求
 - 使用 **Pentest Notes** 記錄觀察與測試結果
 
@@ -47,7 +47,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 | 工具名稱 | 面板標籤 | 主要用途 |
 |---|---|---|
 | Code Editor / Pyodide | Code | 在瀏覽器內執行 Python 3 腳本，支援 HTTP 請求模擬 |
-| Terminal / wxlsh | Terminal | 執行內建指令列工具，包含編碼轉換與 curl 等指令 |
+| Terminal / wxlsh | Terminal | 執行內建指令列工具，包含編碼轉換與 curl 等指令。僅在挑戰主動提供時出現，未授予的挑戰就看不到這個分頁 |
 | 內建瀏覽器 | Browser | 直接瀏覽並互動目標挑戰網站 |
 | Network Traffic Log | Network | 記錄並檢視所有 HTTP 請求與回應的完整內容 |
 | HTTP Repeater | Repeater | 修改 HTTP 請求的方法、標頭、參數後重新送出 |
@@ -65,7 +65,7 @@ Web eXploitation Laboratory (WXL) 是一個完全在瀏覽器端執行的 Web �
 
 **Q：Network Traffic Log 看不到任何請求？**
 
-所有工具面板共用同一層 dispatch，因此 Browser 面板、Repeater、Terminal 的 `curl` 與 `wget`，以及 Code Editor 的 `requests` 呼叫都會被記錄下來。清單空白通常代表還沒發出任何請求——請先與挑戰互動。
+所有工具面板共用同一層 dispatch，因此 Browser 面板、Repeater、Code Editor 的 `requests` 呼叫，以及有提供 Terminal 的挑戰中 `curl` 與 `wget` 發出的請求，都會被記錄下來。清單空白通常代表還沒發出任何請求——請先與挑戰互動。
 
 **Q：關閉頁面後，Pentest Notes 的內容會消失嗎？**
 
