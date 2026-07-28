@@ -12,6 +12,9 @@ and G5 must not fail a baseline scenario whose removal was deliberate and record
 """
 from __future__ import annotations
 
+import contextlib
+import io
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -522,6 +525,117 @@ check(
     ).status == "REVIEW",
     "G5: a deliberate removal recorded in tasks -> REVIEW",
 )
+
+# ── G6 added-lines trace ─────────────────────────────────────────────────────
+# G6 had no test of any kind: replacing gate_added_lines_trace's whole body with
+# `raise NotImplementedError` left the suite green. It also handed the printer
+# bare strings, so its hits could not be enumerated by file and line as the spec
+# requires of every REVIEW outcome.
+
+_DIFF = """diff --git a/docs/a.md b/docs/a.md
+--- a/docs/a.md
++++ b/docs/a.md
+@@ -9,0 +10,2 @@
++The router will always return the cached response for a repeated request.
++short
+diff --git a/README.md b/README.md
+--- a/README.md
++++ b/README.md
+@@ -3 +3 @@
++每個挑戰一律會在載入時註冊 service worker,不需要手動重新整理頁面。
+"""
+
+check(
+    lambda: gates.added_prose_lines(_DIFF)[0][0] == "docs/a.md",
+    "G6: the file of an added line comes from the diff header",
+)
+check(
+    lambda: gates.added_prose_lines(_DIFF)[0][1] == 10,
+    "G6: the line number of an added line comes from the hunk header",
+)
+check(
+    lambda: [r[1] for r in gates.added_prose_lines(_DIFF) if r[0] == "docs/a.md"] == [10, 11],
+    "G6: consecutive added lines increment the line number",
+)
+check(
+    lambda: [r for r in gates.added_prose_lines(_DIFF) if r[0] == "README.md"][0][1] == 3,
+    "G6: a hunk header without a line count still yields a line number",
+)
+check(
+    lambda: not any(r[2].startswith("++") for r in gates.added_prose_lines(_DIFF)),
+    "G6: the +++ header is not read as an added line",
+)
+check(
+    lambda: len(gates.added_prose_lines(_DIFF)) == 3,
+    "G6: every added line is collected across both files",
+)
+
+
+def _g6():
+    return gates.gate_added_lines_trace(gates.added_prose_lines(_DIFF))
+
+
+check(lambda: _g6().status == "REVIEW", "G6: the outcome is REVIEW")
+check(
+    lambda: gates.gate_added_lines_trace([]).status == "REVIEW",
+    "G6: an empty diff is still REVIEW, never FAIL",
+)
+check(
+    lambda: all(
+        isinstance(h.get("file"), str) and isinstance(h.get("line"), int)
+        for h in _g6().detail["mechanism_sentences"]
+    ),
+    "G6: every hit carries a file and a line",
+)
+check(
+    lambda: {h["file"] for h in _g6().detail["mechanism_sentences"]} == {"docs/a.md", "README.md"},
+    "G6: mechanism assertions are found in both English and Chinese",
+)
+check(
+    lambda: all(len(h["text"]) > 10 for h in _g6().detail["mechanism_sentences"])
+    and len(_g6().detail["mechanism_sentences"]) == 2,
+    "G6: a line carrying no mechanism assertion is not reported",
+)
+
+# ── Printed output ───────────────────────────────────────────────────────────
+# Nothing asserted on the printer, so the 400-character truncation that dropped
+# 24 of 31 real G1 hits went unnoticed -- in the exact output mode CI runs.
+
+
+def printed(verdicts, as_json=False) -> str:
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        gates._print(verdicts, as_json)
+    return buf.getvalue()
+
+
+_MANY = gates.Verdict(
+    "G1 claim-parity", "REVIEW",
+    {"uncovered": [(f"docs/file-{i:03d}.md", i, f"a claim sentence number {i}") for i in range(40)]},
+)
+
+check(
+    lambda: all(f"file-{i:03d}.md" in printed([_MANY]) for i in range(40)),
+    "print: every hit of a 40-hit REVIEW appears in the default output",
+)
+check(
+    lambda: printed([_MANY]).count("a claim sentence number ") == 40,
+    "print: no hit is dropped or collapsed",
+)
+check(
+    lambda: "REVIEW" in printed([_MANY]) and "G1 claim-parity" in printed([_MANY]),
+    "print: the status and gate name are shown",
+)
+check(
+    lambda: json.loads(printed([_MANY], as_json=True))[0]["detail"]["uncovered"][39][1] == 39,
+    "print: --json carries the full detail too",
+)
+check(
+    lambda: "0" in printed([gates.Verdict("G6 added-lines trace", "REVIEW",
+                                          {"added_prose_lines": 0})]),
+    "print: a zero-valued count is still printed rather than skipped",
+)
+
 
 # ── G7 archive trace-parity ──────────────────────────────────────────────────
 

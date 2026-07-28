@@ -304,14 +304,42 @@ _MECHANISM = re.compile(
     re.IGNORECASE)
 
 
-def gate_added_lines_trace(added_prose) -> Verdict:
+_HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,\d+)? @@")
+
+
+def added_prose_lines(diff_text: str):
+    """(file, line, text) for every line the diff adds.
+
+    A REVIEW outcome must enumerate its hits by file and line, so G6 cannot be
+    handed bare strings: an author given a sentence but not its location has to
+    grep the diff back by hand.
+    """
+    rows, path, lineno = [], None, 0
+    for line in diff_text.splitlines():
+        if line.startswith("+++ "):
+            ref = line[4:].strip()
+            path = ref[2:] if ref.startswith(("a/", "b/")) else ref
+            continue
+        if line.startswith("---") or line.startswith("diff --git"):
+            continue
+        hunk = _HUNK.match(line)
+        if hunk:
+            lineno = int(hunk.group(1))
+            continue
+        if line.startswith("+") and path and path != "/dev/null":
+            rows.append((path, lineno, line[1:].strip()))
+            lineno += 1
+    return rows
+
+
+def gate_added_lines_trace(added_rows) -> Verdict:
     """Mechanism assertions among the prose a change adds, for a human to trace to
     source. The recurring defect is a sentence asserted one step beyond the code
     the author actually read."""
-    sentences = [ln for ln in added_prose if _MECHANISM.search(ln)]
+    hits = [{"file": f, "line": n, "text": t[:200]}
+            for f, n, t in added_rows if len(t) > 40 and _MECHANISM.search(t)]
     return Verdict("G6 added-lines trace", "REVIEW",
-                   {"added_prose_lines": len(added_prose),
-                    "mechanism_sentences": [s[:160] for s in sentences]})
+                   {"added_prose_lines": len(added_rows), "mechanism_sentences": hits})
 
 
 # ── G7 archive trace-parity ──────────────────────────────────────────────────
@@ -475,10 +503,9 @@ def run_gates(change_id: str, base: str):
                             "FAIL" if unrecorded else ("REVIEW" if merged else "PASS"),
                             {"dropped": list(merged.values())}))
 
-    prose = [ln[1:].strip() for ln in sh("git", "diff", "-U0", f"{base}...HEAD", "--",
-                                         "docs/", "README.md", "CONTRIBUTE.md").splitlines()
-             if ln.startswith("+") and not ln.startswith("+++") and len(ln) > 40]
-    verdicts.append(gate_added_lines_trace(prose))
+    verdicts.append(gate_added_lines_trace(added_prose_lines(
+        sh("git", "diff", "-U0", f"{base}...HEAD", "--",
+           "docs/", "README.md", "CONTRIBUTE.md"))))
     return verdicts
 
 
@@ -496,8 +523,23 @@ def _print(verdicts, as_json: bool) -> None:
     for v in verdicts:
         print(f"{v.status:<7} {v.gate}")
         for key, val in v.detail.items():
-            if val or isinstance(val, int):
-                print(f"        {key}: {json.dumps(val, ensure_ascii=False)[:400]}")
+            if not (val or isinstance(val, int)):
+                continue
+            # A list is the hit enumeration the spec requires REVIEW and FAIL to
+            # carry, so it is printed one entry per line and never truncated. An
+            # earlier version json-dumped it and cut the result at 400
+            # characters, which silently dropped 24 of 31 hits on a real run --
+            # in exactly the output mode CI uses.
+            if isinstance(val, list):
+                print(f"        {key}: {len(val)}")
+                for item in val:
+                    print(f"          - {json.dumps(item, ensure_ascii=False)}")
+            elif isinstance(val, dict):
+                print(f"        {key}: {len(val)}")
+                for k, item in val.items():
+                    print(f"          - {k}: {json.dumps(item, ensure_ascii=False)}")
+            else:
+                print(f"        {key}: {json.dumps(val, ensure_ascii=False)}")
     n_fail = sum(1 for v in verdicts if v.status == "FAIL")
     n_review = sum(1 for v in verdicts if v.status == "REVIEW")
     print(f"\n{len(verdicts)} gates | FAIL={n_fail} | REVIEW={n_review}")

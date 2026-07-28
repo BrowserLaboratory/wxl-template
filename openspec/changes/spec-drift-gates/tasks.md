@@ -14,7 +14,7 @@
 ## 2. 實作閘門腳本
 
 - [x] 2.1 實作 `scripts/spec-gates/run.py` 的 CLI 與三種模式(預設檢查、`--snapshot`、`--verify-archive`),含 `--help` 與 `--json`。完成判準:1.1 與 1.8 轉綠。驗證:執行三種模式各一次。
-- [x] 2.2 實作 G1 至 G6 六道閘門,依 design.md 的 Implementation Contract 逐條對應。完成判準:1.2 至 1.6 全部轉綠。驗證:執行 `pytest scripts/spec-gates/test_run.py`。
+- [x] 2.2 實作 G1 至 G6 六道閘門,依 design.md 的 Implementation Contract 逐條對應。完成判準:1.2 至 1.6 全部轉綠。驗證:執行 `python scripts/spec-gates/test_run.py`(本群組第 3 行已載明不需 pytest)。
 - [x] 2.3 實作 G7 的快照與比對兩段模式。完成判準:1.7 轉綠。驗證:同上。
 - [x] 2.4 撰寫 `scripts/spec-gates/config.yaml` 與 `requirements.txt`。config 提供 `claim_phrases` 與 `hedge_markers` 兩鍵的預設值(前者為空、後者含中英常見措辭);requirements 只列 PyYAML。完成判準:腳本在 `openspec/changes/<id>/gates.yaml` 存在時優先讀取它。驗證:以兩種情境各執行一次。
 

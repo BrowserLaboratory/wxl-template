@@ -41,7 +41,7 @@ The gate script SHALL implement seven checks.
 
 `G5 delta scenario parity` SHALL compare each MODIFIED requirement's scenario set in the delta against the baseline, and SHALL report `FAIL` when a baseline scenario is absent from the delta and its title does not appear in the change's tasks file. When the title does appear, the outcome SHALL be `REVIEW`.
 
-`G6 added-lines trace` SHALL list mechanism assertions among the prose lines the change adds. G6 SHALL NOT report `FAIL`.
+`G6 added-lines trace` SHALL list mechanism assertions among the prose lines the change adds, each with the file and line the diff places it at. G6 SHALL NOT report `FAIL`.
 
 `G7 archive trace-parity` SHALL compare per-capability requirement and `@trace` block counts against a snapshot taken before archiving, and SHALL report `FAIL` when either count decreases.
 
