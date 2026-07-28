@@ -180,6 +180,8 @@ python scripts/spec-gates/run.py --verify-archive <change-id>
 
 The verify step exits non-zero if any capability lost a requirement or a `@trace` block. Restore what was dropped from git before committing the archive.
 
+The snapshot goes to `.git/spec-gates/<change-id>.json`, outside the working tree, so it leaves nothing for you to clean up and nothing for the next gate run to trip over. Pass `--out` to put it elsewhere, and `--snapshot-file` to point the verify step at a snapshot that is not in the default location. The two modes are mutually exclusive: giving both is an error rather than a silent choice of one.
+
 ## Adding a new challenge
 
 Use `scripts/create-challenge.ts` to scaffold a new challenge:

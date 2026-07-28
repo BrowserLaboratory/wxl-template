@@ -6,7 +6,9 @@ The repository SHALL provide a deterministic gate script at `scripts/spec-gates/
 
 The script SHALL classify each gate's outcome as exactly one of `PASS`, `REVIEW`, or `FAIL`. It SHALL exit non-zero if and only if at least one gate reports `FAIL`. A `REVIEW` outcome SHALL appear in the output with every hit enumerated by file and line, and SHALL NOT affect the exit code.
 
-The script SHALL NOT modify any file in the repository.
+The script SHALL NOT create or modify any file in the working tree. The snapshot that `G7` compares against SHALL be written outside the working tree, so that taking one cannot alter the result of a subsequent gate run.
+
+Snapshot and verify are separate modes. Supplying both SHALL be rejected with exit code 2 rather than resolved silently in favour of either.
 
 #### Scenario: A pull request with no drift passes the gate job
 
@@ -20,6 +22,18 @@ The script SHALL NOT modify any file in the repository.
 - **THEN** the G3 gate SHALL report `FAIL`
 - **AND** the script SHALL exit non-zero
 - **AND** the output SHALL name the surviving occurrence with its file and line
+
+#### Scenario: Taking a snapshot leaves the working tree untouched
+
+- **WHEN** the snapshot mode runs for a change
+- **THEN** `git status --porcelain -uall` SHALL report exactly what it reported before
+- **AND** a subsequent gate run SHALL produce the same verdicts as if no snapshot had been taken
+
+#### Scenario: The two archive modes cannot be combined
+
+- **WHEN** both a snapshot mode and a verify mode are requested in one invocation
+- **THEN** the script SHALL exit 2
+- **AND** the message SHALL name the option that supplies a snapshot to the verify mode
 
 #### Scenario: Review-level hits do not block
 

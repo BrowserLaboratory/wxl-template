@@ -776,6 +776,112 @@ check(
     "CLI: any FAIL -> exit 1",
 )
 
+# ── Snapshot and verify-archive modes ────────────────────────────────────────
+# Neither mode had a single test. Between them they shipped a flag name that
+# contradicted the published contract, a silent mode switch, and a write into
+# the repository root that the next gate run then reported as an undeclared file.
+
+REPO = HERE.parent.parent
+_CHANGE = "spec-drift-gates"
+
+
+def _snapshot_default() -> Path:
+    return REPO / ".git" / "spec-gates" / f"{_CHANGE}.json"
+
+
+def _clean_snapshots():
+    p = _snapshot_default()
+    if p.exists():
+        p.unlink()
+
+
+def _tracked_dirty() -> list:
+    out = subprocess.run(["git", "status", "--porcelain", "-uall"],
+                         capture_output=True, text=True, cwd=str(REPO))
+    return [ln for ln in out.stdout.splitlines() if ln.strip()]
+
+
+_clean_snapshots()
+_BEFORE = _tracked_dirty()
+_SNAP = run_cli(["--snapshot", _CHANGE])
+
+check(lambda: _SNAP.returncode == 0, "snapshot: a valid change exits 0")
+check(lambda: _snapshot_default().exists(),
+      "snapshot: the default destination is inside .git, outside the working tree")
+check(
+    lambda: not (REPO / f".spectra-gates-{_CHANGE}.json").exists(),
+    "snapshot: nothing is written to the repository root",
+)
+# The spec's "SHALL NOT modify any file in the repository" was contradicted by a
+# write the next G4 run then counted as an undeclared changed file.
+check(
+    lambda: _tracked_dirty() == _BEFORE,
+    "snapshot: the working tree is unchanged, so the next gate run is unaffected",
+)
+check(
+    lambda: json.loads(_snapshot_default().read_text(encoding="utf-8")),
+    "snapshot: the file holds the per-capability counts",
+)
+
+check(
+    lambda: run_cli(["--verify-archive", _CHANGE]).returncode == 0,
+    "verify-archive: counts unchanged since the snapshot -> exit 0",
+)
+check(
+    lambda: "PASS" in run_cli(["--verify-archive", _CHANGE]).stdout,
+    "verify-archive: the verdict is printed",
+)
+
+
+def _verify_dropped():
+    tmp = REPO / ".git" / "spec-gates" / "dropped.json"
+    tmp.write_text(json.dumps({"spec-drift-gates": {"requirements": 99, "traces": 99}}),
+                   encoding="utf-8")
+    r = run_cli(["--verify-archive", _CHANGE, "--snapshot-file", str(tmp)])
+    tmp.unlink()
+    return r
+
+
+check(lambda: _verify_dropped().returncode == 1,
+      "verify-archive: a dropped count exits 1")
+check(lambda: "FAIL" in _verify_dropped().stdout,
+      "verify-archive: a dropped count is reported as FAIL")
+check(
+    lambda: run_cli(["--verify-archive", _CHANGE,
+                     "--snapshot-file", "/nonexistent/snap.json"]).returncode == 2,
+    "verify-archive: a missing snapshot exits 2",
+)
+
+# design.md published `--verify-archive <id> --snapshot <path>`. `--snapshot`
+# takes a CHANGE_ID and was tested first, so the documented invocation silently
+# ran snapshot mode against a filesystem path.
+check(
+    lambda: run_cli(["--verify-archive", _CHANGE, "--snapshot", "/tmp/x.json"]).returncode == 2,
+    "CLI: --snapshot together with --verify-archive is rejected, not silently switched",
+)
+check(
+    lambda: "--snapshot-file" in run_cli(
+        ["--verify-archive", _CHANGE, "--snapshot", "/tmp/x.json"]).stderr,
+    "CLI: the rejection names the flag the caller meant",
+)
+check(
+    lambda: run_cli(["--snapshot", "no-such-change"]).returncode == 2,
+    "snapshot: an unknown change exits 2",
+)
+
+
+def _out_flag():
+    tmp = REPO / ".git" / "spec-gates" / "custom.json"
+    r = run_cli(["--snapshot", _CHANGE, "--out", str(tmp)])
+    ok = r.returncode == 0 and tmp.exists()
+    if tmp.exists():
+        tmp.unlink()
+    return ok
+
+
+check(_out_flag, "snapshot: --out redirects the destination")
+_clean_snapshots()
+
 # ── Summary ──────────────────────────────────────────────────────────────────
 
 failed = [label for ok, label in results if not ok]

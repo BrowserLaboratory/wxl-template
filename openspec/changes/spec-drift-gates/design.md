@@ -51,9 +51,14 @@
 
 ```
 python scripts/spec-gates/run.py <change-id> [--base <ref>] [--json]
-python scripts/spec-gates/run.py --snapshot <change-id> --out <path>
-python scripts/spec-gates/run.py --verify-archive <change-id> --snapshot <path>
+python scripts/spec-gates/run.py --snapshot <change-id> [--out <path>]
+python scripts/spec-gates/run.py --verify-archive <change-id> [--snapshot-file <path>]
+python scripts/spec-gates/run.py --resolve-change --base <ref>
 ```
+
+`--snapshot` 與 `--verify-archive` 是兩個互斥模式,同時給出即為錯誤(exit 2)。供給 `--verify-archive` 讀取的快照路徑是 `--snapshot-file`,不是 `--snapshot`——後者接的是 change id。
+
+快照預設寫入 `.git/spec-gates/<change-id>.json`。放在 `.git` 之下而非 repo 根目錄,是因為腳本不得更動工作區:寫在根目錄的殘留檔會被 `changed_files_from` 算進 diff 集合,使**下一次** G4 無故 FAIL。
 
 預設 base 為 `main`。`--json` 輸出機器可讀格式;預設輸出為人類可讀的逐閘門摘要。
 

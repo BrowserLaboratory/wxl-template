@@ -550,6 +550,17 @@ def run_gates(change_id: str, base: str):
     return verdicts
 
 
+# Snapshots live under .git/, which is outside the working tree. Writing them to
+# the repository root left an untracked file that the spec forbids ("SHALL NOT
+# modify any file in the repository") and that the next G4 run then counted as an
+# undeclared changed file, failing the following change for no reason.
+SNAPSHOT_DIR = ".git/spec-gates"
+
+
+def snapshot_path(change_id: str) -> Path:
+    return Path(SNAPSHOT_DIR) / f"{change_id}.json"
+
+
 def affected_specs(change_id: str) -> dict:
     specs_dir = Path("openspec/changes") / change_id / "specs"
     caps = sorted(os.listdir(specs_dir)) if specs_dir.is_dir() else []
@@ -598,8 +609,10 @@ def main() -> int:
                     help="record requirement/@trace counts before archiving")
     ap.add_argument("--verify-archive", metavar="CHANGE_ID",
                     help="compare counts against a snapshot after archiving")
-    ap.add_argument("--out", help="snapshot output path (with --snapshot)")
-    ap.add_argument("--snapshot-file", help="snapshot input path (with --verify-archive)")
+    ap.add_argument("--out", metavar="PATH",
+                    help=f"snapshot output path (with --snapshot; default {SNAPSHOT_DIR}/<id>.json)")
+    ap.add_argument("--snapshot-file", metavar="PATH",
+                    help="snapshot input path (with --verify-archive)")
     ap.add_argument("--resolve-change", action="store_true",
                     help="print the change ids the diff against --base touches, one per line")
     args = ap.parse_args()
@@ -609,18 +622,29 @@ def main() -> int:
             print(cid)
         return 0
 
+    if args.snapshot and args.verify_archive:
+        # --snapshot takes a CHANGE_ID and was tested first, so this combination
+        # silently ran snapshot mode against whatever path was supplied. The
+        # published contract used to name --snapshot here; it means --snapshot-file.
+        print("error: --snapshot and --verify-archive are separate modes; "
+              "to supply a snapshot to --verify-archive use --snapshot-file",
+              file=sys.stderr)
+        return 2
+
     if args.snapshot:
         counts = spec_counts(affected_specs(args.snapshot))
         if not counts:
             print(f"error: no delta specs found for change '{args.snapshot}'", file=sys.stderr)
             return 2
-        out = Path(args.out or f".spectra-gates-{args.snapshot}.json")
+        out = Path(args.out) if args.out else snapshot_path(args.snapshot)
+        out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(counts, indent=2), encoding="utf-8")
         print(f"snapshot written to {out} ({len(counts)} capabilities)")
         return 0
 
     if args.verify_archive:
-        snap = Path(args.snapshot_file or f".spectra-gates-{args.verify_archive}.json")
+        snap = Path(args.snapshot_file) if args.snapshot_file \
+            else snapshot_path(args.verify_archive)
         if not snap.exists():
             print(f"error: snapshot not found at {snap}", file=sys.stderr)
             return 2
