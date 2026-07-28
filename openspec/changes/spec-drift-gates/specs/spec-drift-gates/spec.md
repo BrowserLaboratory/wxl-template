@@ -4,7 +4,9 @@
 
 The repository SHALL provide a deterministic gate script at `scripts/spec-gates/run.py` that detects statements falsified by a change without being edited by it. The script SHALL be wired into `.github/workflows/quality-gates.yml` as a job that runs on `pull_request` events.
 
-The script SHALL classify each gate's outcome as exactly one of `PASS`, `REVIEW`, or `FAIL`. It SHALL exit non-zero if and only if at least one gate reports `FAIL`. A `REVIEW` outcome SHALL appear in the output with every hit enumerated by file and line, and SHALL NOT affect the exit code.
+The script SHALL classify each gate's outcome as exactly one of `PASS`, `REVIEW`, or `FAIL`. When the gates are evaluated it SHALL exit `1` if and only if at least one gate reports `FAIL`, and `0` otherwise. A `REVIEW` outcome SHALL appear in the output with every hit enumerated by file and line, and SHALL NOT affect the exit code.
+
+Exit code `2` SHALL mean the gates could not be evaluated at all — an unknown change id, an unusable `git`, or contradictory options — and SHALL be reported as a message rather than a traceback. A subprocess that fails SHALL NOT be reported as one that produced no output: `git grep` exiting `1` for "no match" is a result, and any other non-zero exit is an error that SHALL propagate. Treating the two alike would let `G3` report `PASS` because its search failed.
 
 The script SHALL NOT create or modify any file in the working tree. The snapshot that `G7` compares against SHALL be written outside the working tree, so that taking one cannot alter the result of a subsequent gate run.
 
@@ -22,6 +24,12 @@ Snapshot and verify are separate modes. Supplying both SHALL be rejected with ex
 - **THEN** the G3 gate SHALL report `FAIL`
 - **AND** the script SHALL exit non-zero
 - **AND** the output SHALL name the surviving occurrence with its file and line
+
+#### Scenario: A failed search is not mistaken for a clean result
+
+- **WHEN** a gate's underlying `git` invocation exits with a code that is neither success nor a documented "no match"
+- **THEN** the script SHALL exit 2 with a message naming the command and its output
+- **AND** no gate SHALL report `PASS` on the strength of the empty output that failure produced
 
 #### Scenario: Taking a snapshot leaves the working tree untouched
 

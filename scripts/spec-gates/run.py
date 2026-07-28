@@ -43,8 +43,27 @@ class Verdict:
     detail: dict = field(default_factory=dict)
 
 
-def sh(*args: str) -> str:
-    return subprocess.run(args, capture_output=True, text=True).stdout
+class GateError(RuntimeError):
+    """The gates could not be evaluated. Distinct from a gate reporting FAIL."""
+
+
+def sh(*args: str, ok=(0,)) -> str:
+    """stdout of a command, refusing to let a failure look like empty output.
+
+    `git grep` exits 1 for "no match" and 128 for an error, and both were being
+    returned as an empty string. G3 asks whether a deleted literal survives
+    anywhere, so a grep that errored read as "it survives nowhere" and the gate
+    passed silently. Callers that have a benign non-zero code declare it in `ok`.
+    """
+    try:
+        proc = subprocess.run(args, capture_output=True, text=True)
+    except (FileNotFoundError, NotADirectoryError, PermissionError) as exc:
+        raise GateError(f"cannot run {args[0]!r}: {exc}") from exc
+    if proc.returncode not in ok:
+        raise GateError(
+            f"{' '.join(args)} exited {proc.returncode}: "
+            f"{(proc.stderr or proc.stdout).strip()[:400]}")
+    return proc.stdout
 
 
 # ── G1 claim-parity ──────────────────────────────────────────────────────────
@@ -465,13 +484,13 @@ def changed_files(base: str) -> set:
 
 def _grep_lines(pattern: str, skip_prefix: str, fixed=True):
     args = ["git", "grep", "-n"] + (["-F"] if fixed else []) + [pattern, "--", EXCLUDE_ARCHIVE]
-    return [h for h in sh(*args).splitlines() if not h.startswith(skip_prefix)]
+    return [h for h in sh(*args, ok=(0, 1)).splitlines() if not h.startswith(skip_prefix)]
 
 
 def grep_phrase(phrase: str, skip_prefix: str):
     rows = []
     for hit in [h for h in sh("git", "grep", "-n", "-i", "-F", phrase, "--",
-                              EXCLUDE_ARCHIVE).splitlines()
+                              EXCLUDE_ARCHIVE, ok=(0, 1)).splitlines()
                 if not h.startswith(skip_prefix)]:
         parts = hit.split(":", 2)
         if len(parts) != 3:
@@ -663,7 +682,7 @@ def main() -> int:
     if not (Path("openspec/changes") / args.change_id).is_dir():
         print(f"error: no change directory at openspec/changes/{args.change_id}", file=sys.stderr)
         return 2
-    if not sh("git", "rev-parse", "--git-dir").strip():
+    if not sh("git", "rev-parse", "--git-dir", ok=(0, 128)).strip():
         print("error: not a git repository, or git is unavailable", file=sys.stderr)
         return 2
 
@@ -673,4 +692,11 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except GateError as exc:
+        # Exit 2 is "the gates could not be evaluated", distinct from exit 1
+        # "a gate reported FAIL". A traceback here would read as a crash in the
+        # gate rather than a broken environment.
+        print(f"error: {exc}", file=sys.stderr)
+        sys.exit(2)

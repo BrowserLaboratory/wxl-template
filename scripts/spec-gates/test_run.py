@@ -15,6 +15,7 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -28,6 +29,15 @@ import run as gates  # noqa: E402
 results: list[tuple[bool, str]] = []
 
 
+def _capture_error(fn):
+    """The exception fn raises, or None."""
+    try:
+        fn()
+    except Exception as exc:  # noqa: BLE001 - the message is what is under test
+        return exc
+    return None
+
+
 def check(cond, label: str) -> None:
     """cond may be a bool or a callable; an exception counts as a failure so one
     structural gap does not abort the whole run and hide the rest of the picture."""
@@ -38,6 +48,65 @@ def check(cond, label: str) -> None:
         ok, err = False, f"  ({type(exc).__name__}: {exc})"
     results.append((ok, label))
     print(f"  {'PASS' if ok else 'FAIL'}  {label}{err}")
+
+
+# ── sh(): subprocess failures must not read as empty output ──────────────────
+# `git grep` exits 1 for "no match" and 128 for an error, and sh() returned
+# stdout for both. G3 asks whether a deleted literal survives anywhere; a failed
+# grep therefore looked exactly like "it survives nowhere" and the gate passed.
+
+
+def _raises(fn, exc=Exception):
+    try:
+        fn()
+    except exc:
+        return True
+    except Exception:
+        return False
+    return False
+
+
+# Assembled at runtime: these gates grep the whole repository, and this file is
+# part of it, so a literal needle written here would find itself.
+ABSENT = "zqx" + "-not-present-" + "anywhere"
+
+check(
+    lambda: gates.sh("git", "grep", "-l", ABSENT, "--", ".", ok=(0, 1)) == "",
+    "sh: git grep's 'no match' exit 1 is an accepted outcome, not an error",
+)
+check(
+    lambda: _raises(lambda: gates.sh("git", "grep", ABSENT, "--", "/nonexistent-pathspec"),
+                    gates.GateError),
+    "sh: an unexpected exit code raises rather than returning empty output",
+)
+check(
+    lambda: "git" in str(
+        _capture_error(lambda: gates.sh("git", "grep", ABSENT, "--", "/nonexistent-pathspec"))
+    ),
+    "sh: the raised message names the command that failed",
+)
+check(
+    lambda: _raises(lambda: gates.sh("definitely-not-a-real-binary-xyz"), gates.GateError),
+    "sh: a missing binary raises GateError rather than FileNotFoundError",
+)
+check(
+    lambda: gates.sh("git", "rev-parse", "--git-dir", ok=(0, 128)).strip() != "",
+    "sh: an explicitly tolerated exit code still returns its output",
+)
+
+# G3's adapter must keep tolerating "no match" while a real failure propagates.
+check(
+    lambda: gates._grep_lines(ABSENT, "nothing/") == [],
+    "G3: a literal with no occurrence yields an empty hit list, not an error",
+)
+check(
+    lambda: len(gates._grep_lines("gate_invariance", "nothing/")) > 0,
+    "G3: a literal that does occur is found",
+)
+check(
+    lambda: gates.grep_phrase(ABSENT, "nothing/") == [],
+    "G1: a phrase with no occurrence yields an empty hit list",
+)
 
 
 # ── G1 claim-parity ──────────────────────────────────────────────────────────
@@ -767,6 +836,20 @@ check(
     lambda: run_cli(["no-such-change-exists"]).returncode == 2,
     "CLI: an unknown change id exits 2",
 )
+
+# The spec's failure mode for an unusable git was never implemented: the script
+# raised FileNotFoundError out of subprocess and exited 1 with a traceback.
+def _no_git():
+    env = {"PATH": "/nonexistent", "HOME": os.environ.get("HOME", "/tmp")}
+    return subprocess.run([sys.executable, str(RUN), "spec-drift-gates"],
+                          capture_output=True, text=True, cwd=str(HERE.parent.parent), env=env)
+
+
+check(lambda: _no_git().returncode == 2, "CLI: git unavailable exits 2")
+check(lambda: "Traceback" not in _no_git().stderr,
+      "CLI: git unavailable reports an error rather than a traceback")
+check(lambda: "git" in _no_git().stderr.lower(),
+      "CLI: the message says git is the problem")
 check(
     lambda: gates.exit_code_for([gates.Verdict("g", "PASS", {}), gates.Verdict("h", "REVIEW", {})]) == 0,
     "CLI: PASS and REVIEW only -> exit 0",
