@@ -16,6 +16,7 @@ Usage:
     run.py <change-id> [--base REF] [--json]
     run.py --snapshot <change-id> [--out PATH]
     run.py --verify-archive <change-id> [--snapshot-file PATH]
+    run.py --resolve-change [--base REF]
 """
 from __future__ import annotations
 
@@ -123,8 +124,26 @@ def gate_invariance(lines, changed_files) -> Verdict:
     """
     bare, qualified = [], []
     changed = set(changed_files)
+    # A claim may name its files on the lines that follow it -- "下列檔案不變:"
+    # then a bulleted list. Requiring the keyword and the reference on one line
+    # let the most natural way of writing the claim through untouched.
+    #
+    # The reach opens only for a *lead-in*: a line ending in a colon, whose list
+    # follows at a deeper indent. An unconditional window carried the claim onto
+    # sibling bullets, and a bullet merely discussing the word 不變 then failed
+    # the next bullet that named a changed file.
+    lead_indent = None
     for line_no, text in lines:
-        if not _INVARIANCE.search(text):
+        has_kw = bool(_INVARIANCE.search(text))
+        indent = len(text) - len(text.lstrip())
+        if lead_indent is not None:
+            if not text.strip() or indent <= lead_indent:
+                lead_indent = None
+            elif not has_kw:
+                has_kw = True  # inherited from the lead-in
+        if has_kw and re.search(r"[:：]\s*$", text):
+            lead_indent = indent
+        if not has_kw:
             continue
         for ref, end in _references(text):
             hit = next((f for f in sorted(changed)
@@ -146,18 +165,36 @@ def gate_invariance(lines, changed_files) -> Verdict:
 _CODE_SHAPED = re.compile(r"[<>{};=]")
 
 
+_CJK = re.compile(r"[㐀-䶿一-鿿豈-﫿]")
+_LIST_SEP = re.compile(r"[,,、;;/|]")
+
+
 def is_prose_literal(s: str) -> bool:
     """A message a human reads, not an identifier or a markup fragment.
 
     Parentheses do NOT disqualify: `not specified (default all)` is exactly the
     kind of user-facing string this gate exists to chase, and an earlier draft of
     this rule excluded it.
+
+    Two shapes qualify, because one rule cannot serve both scripts. The original
+    rule demanded a 12-character floor, embedded whitespace, and three
+    consecutive ASCII lowercase letters -- all three of which a Chinese message
+    fails on principle rather than by accident. This repository writes its
+    user-facing strings in Chinese, so G3 was switched off for exactly the
+    strings it most needed to see.
     """
-    if not 12 <= len(s) <= 80:
+    if len(s) > 80 or _CODE_SHAPED.search(s) or s.lstrip().startswith(","):
         return False
-    if " " not in s or s.lstrip().startswith(","):
+    cjk = len(_CJK.findall(s))
+    if cjk >= 6:
+        # A delimiter-separated run of short tokens is a list, not a sentence.
+        parts = [p.strip() for p in _LIST_SEP.split(s) if p.strip()]
+        if len(parts) >= 3 and all(len(p) <= 4 for p in parts):
+            return False
+        return True
+    if not 12 <= len(s):
         return False
-    if _CODE_SHAPED.search(s):
+    if " " not in s:
         return False
     return bool(re.search(r"[a-z]{3}", s))
 
@@ -177,7 +214,10 @@ def gate_deleted_literal(removed, added, grep) -> Verdict:
 
 # ── G4 scope parity ──────────────────────────────────────────────────────────
 
-_FILE_TOKEN = re.compile(r"[\w./-]+\.[A-Za-z0-9]+")
+# The extension must contain a letter. Accepting a purely numeric one made
+# `0.0.8` in "bumps php-wasm to 0.0.8" a declared file, which G4 then reported as
+# listed-but-absent from the diff.
+_FILE_TOKEN = re.compile(r"[\w./-]+\.[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*")
 
 
 def impact_files(proposal_text: str) -> set:
@@ -214,7 +254,10 @@ def impact_files(proposal_text: str) -> set:
 
 
 _SPECS_ENTRY = re.compile(r"^\s*-\s*\**\s*Affected specs\s*\**\s*[:：]", re.IGNORECASE)
-_IDENT = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)+")
+# A capability name need not be hyphenated. Requiring a hyphen here was invisible
+# to both the unit fixtures and the whole-archive replay, because every existing
+# capability in this repository happens to contain one.
+_IDENT = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
 
 
 def named_specs(proposal_text: str, vocabulary):
@@ -300,6 +343,25 @@ def gate_scope_parity(diff_files, listed_files, disk_specs, named_specs) -> Verd
 
 # ── G5 delta scenario parity ─────────────────────────────────────────────────
 
+_NEGATION = re.compile(
+    r"不予移除|不移除|不刪除|保留|維持|do(?:es)?\s+not\s+remove|without\s+removing|"
+    r"must\s+not\s+be\s+removed|keep|retain",
+    re.IGNORECASE)
+
+
+def _records_removal(scenario: str, tasks_text: str) -> bool:
+    """Does the tasks file record this scenario's removal as deliberate?
+
+    A bare substring test could not tell an affirmation from its negation, so a
+    line promising *not* to remove a scenario counted as a record of removing it
+    -- turning the exemption into a way to name the scenario and be excused.
+    Only the lines that mention it are examined, so a negation elsewhere in the
+    file cannot suppress a genuine record.
+    """
+    mentions = [ln for ln in tasks_text.splitlines() if scenario in ln]
+    return any(not _NEGATION.search(ln) for ln in mentions)
+
+
 def gate_scenario_parity(delta_scenarios, baseline_scenarios, tasks_text) -> Verdict:
     """A MODIFIED block replaces the baseline requirement wholesale, so a scenario
     the delta omits is silently deleted from the corpus — unless the removal was
@@ -308,7 +370,7 @@ def gate_scenario_parity(delta_scenarios, baseline_scenarios, tasks_text) -> Ver
     for req, delta_set in delta_scenarios.items():
         for missing in sorted(baseline_scenarios.get(req, set()) - set(delta_set)):
             dropped.append({"requirement": req, "scenario": missing,
-                            "recorded_as_deliberate": missing in tasks_text})
+                            "recorded_as_deliberate": _records_removal(missing, tasks_text)})
     unrecorded = [d for d in dropped if not d["recorded_as_deliberate"]]
     if unrecorded:
         return Verdict("G5 delta scenario parity", "FAIL", {"dropped": dropped})
@@ -563,9 +625,12 @@ def run_gates(change_id: str, base: str):
                             "FAIL" if unrecorded else ("REVIEW" if merged else "PASS"),
                             {"dropped": list(merged.values())}))
 
+    # Every markdown file the change adds prose to, not a hardcoded three. The
+    # earlier scope excluded openspec/ entirely, so a change's own spec and
+    # design -- where its normative sentences live, and the densest source of
+    # mechanism assertions in this repository -- were never traced.
     verdicts.append(gate_added_lines_trace(added_prose_lines(
-        sh("git", "diff", "-U0", f"{base}...HEAD", "--",
-           "docs/", "README.md", "CONTRIBUTE.md"))))
+        sh("git", "diff", "-U0", f"{base}...HEAD", "--", "*.md", EXCLUDE_ARCHIVE))))
     return verdicts
 
 
@@ -620,7 +685,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(
         prog="run.py", description="Spec-drift gates (G1-G7).",
         epilog="Modes: default check; --snapshot before archiving; "
-               "--verify-archive after archiving.")
+               "--verify-archive after archiving; --resolve-change to list the "
+               "change ids a diff touches.")
     ap.add_argument("change_id", nargs="?", help="change id under openspec/changes/")
     ap.add_argument("--base", default="main", help="base ref for the diff (default: main)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")

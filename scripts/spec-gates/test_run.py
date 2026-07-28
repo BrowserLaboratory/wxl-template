@@ -4,11 +4,15 @@
 Standalone — run with `python scripts/spec-gates/test_run.py` (no pytest needed).
 Exits 0 if every assertion holds, 1 otherwise.
 
-The gate functions take their evidence as arguments rather than shelling out, so
-each verdict is testable without building a fixture git repository. Two cases are
-regression guards for false positives found while running the prototype by hand
-against a real change: G3 must not treat a moved identifier as a deleted message,
-and G5 must not fail a baseline scenario whose removal was deliberate and recorded.
+Most gate functions take their evidence as arguments rather than shelling out, so
+each verdict is testable without building a fixture git repository. `run_gates` --
+the integration path the CLI and CI execute -- is exercised against a real git
+repository built in a temp directory, because wiring defects are invisible to the
+unit assertions: a gate can be fed the wrong input, or dropped from the list
+entirely, with every part still passing.
+
+Several assertions are regression guards for false positives found by running the
+gates against real changes and against the whole archive.
 """
 from __future__ import annotations
 
@@ -186,7 +190,8 @@ check(
 )
 
 # Matching by basename substring made a claim about one file answer for another
-# that merely shares a filename. This repository has three `run.py` files.
+# that merely shares a filename. `scripts/prose-audit/` and `scripts/spec-gates/`
+# each hold a `run.py`.
 def _g2_homonym():
     return gates.gate_invariance(
         [(1, "- 不改 `scripts/prose-audit/run.py`。")], {"scripts/spec-gates/run.py"}
@@ -242,6 +247,58 @@ check(
     "G2: a bold span after the file reference qualifies the claim",
 )
 
+# The keyword and the file reference had to fall on one line, so the ordinary
+# way of writing this claim -- a lead-in followed by a bulleted list -- escaped
+# the gate entirely.
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 下列檔案不變:"), (2, "  - `scripts/foo.ts`"), (3, "  - `scripts/bar.ts`")],
+        {"scripts/foo.ts"},
+    ).status == "FAIL",
+    "G2: a claim whose list continues onto later lines is still caught",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- The following are unchanged:"), (2, "  - `scripts/foo.ts` — **the parser only**")],
+        {"scripts/foo.ts"},
+    ).status == "REVIEW",
+    "G2: a continuation line carrying a bold marker is qualified, not bare",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 下列檔案不變:"), (2, "  - `scripts/bar.ts`")], {"scripts/foo.ts"}
+    ).status == "PASS",
+    "G2: a continuation list naming only untouched files passes",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 下列檔案不變:"), (2, ""), (3, "## Next section"), (4, "- `scripts/foo.ts` 已更新")],
+        {"scripts/foo.ts"},
+    ).status == "PASS",
+    "G2: the claim's reach stops at a blank line and a new heading",
+)
+# Regression: the first continuation implementation carried the claim onto the
+# next three lines unconditionally, so a bullet that merely *mentions* the word
+# 不變 mid-sentence swallowed its sibling bullets. Dogfooding caught it FAILing
+# this change's own proposal, where one bullet describes G2 and a later sibling
+# names a file the diff touched.
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- **G2 invariance**:交叉檢查「X 不變」型的宣稱。"),
+         (2, "- **G3 deleted-literal**:比對 `scripts/foo.ts` 的字面值。")],
+        {"scripts/foo.ts"},
+    ).status == "PASS",
+    "G2: a sibling bullet is not swallowed by a claim that merely mentions 不變",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 說明:此處討論「不變」的語意。"),
+         (2, "- 另一項:`scripts/foo.ts` 的處理方式。")],
+        {"scripts/foo.ts"},
+    ).status == "PASS",
+    "G2: reach requires a lead-in, not any mention of the keyword",
+)
+
 # ── G3 deleted-literal ───────────────────────────────────────────────────────
 
 check(
@@ -287,6 +344,30 @@ check(
 check(
     lambda: gates.is_prose_literal("all tabs are enabled by default") is True,
     "G3: a human-readable message is a prose literal",
+)
+
+# The rule required three consecutive ASCII lowercase letters, so every
+# user-facing string written in Chinese -- the project's default language for
+# user-facing text -- was invisible to G3. The gate was effectively off for them.
+check(
+    lambda: gates.is_prose_literal("未指定,預設全部啟用") is True,
+    "G3: a Chinese user-facing message is a prose literal",
+)
+check(
+    lambda: gates.is_prose_literal("此挑戰未授予 Terminal 分頁") is True,
+    "G3: a mixed Chinese and English message is a prose literal",
+)
+check(
+    lambda: gates.is_prose_literal("送出旗標") is False,
+    "G3: a short Chinese label is below the length floor, as for English",
+)
+check(
+    lambda: gates.is_prose_literal("挑戰,分頁,旗標,面板,終端") is False,
+    "G3: a comma-separated Chinese token list is not a message",
+)
+check(
+    lambda: gates.is_prose_literal("<div>未指定,預設全部啟用</div>") is False,
+    "G3: markup disqualifies a Chinese literal too",
 )
 
 # ── G4 scope parity ──────────────────────────────────────────────────────────
@@ -341,6 +422,43 @@ check(
         "docs/a.md\n", ["?? scripts/new_thing.py", " M docs/a.md"]
     ),
     "G4: a newly added, not-yet-staged file counts as changed",
+)
+
+# Only the `Modified:` branch of the marker alternation was ever exercised, and
+# this change's own proposal declares its files under `New:` -- so the branch the
+# change depends on was the untested one.
+for _marker in ("New", "Removed", "新增", "修改", "移除"):
+    check(
+        (lambda m: lambda: gates.impact_files(
+            f"## Impact\n\n- Affected code:\n  - {m}: scripts/x.py\n") == {"scripts/x.py"})(_marker),
+        f"G4: the `{_marker}:` marker branch is parsed",
+    )
+check(
+    lambda: gates.impact_files(
+        "## Impact\n\n- Affected code:\n  - New:\n    - a.ts\n  - Removed:\n    - b.ts\n"
+    ) == {"a.ts", "b.ts"},
+    "G4: New and Removed lists are both collected in one Impact section",
+)
+
+# _FILE_TOKEN matched any dotted token, so a version number in an ordinary
+# parenthetical became a declared file and G4 then reported it as missing.
+check(
+    lambda: gates.impact_files(
+        "## Impact\n\n- Affected code:\n  - Modified: a.ts (bumps php-wasm to 0.0.8)\n"
+    ) == {"a.ts"},
+    "G4: a version number is not read as a declared file",
+)
+check(
+    lambda: gates.impact_files(
+        "## Impact\n\n- Affected code:\n  - Modified: a.ts, 覆蓋率由 0.82 升至 0.91\n"
+    ) == {"a.ts"},
+    "G4: a decimal figure in prose is not read as a declared file",
+)
+check(
+    lambda: "v1.2.3" not in gates.impact_files(
+        "## Impact\n\n- Affected code:\n  - Modified: pkg/mod.go — pinned to v1.2.3\n"
+    ),
+    "G4: a version tag is not read as a declared file",
 )
 
 # ── G4 named-spec extraction ─────────────────────────────────────────────────
@@ -425,6 +543,14 @@ check(
     lambda: _named("Affected specs: `challenge-list` and the code-editor-panel spec")
     == {"challenge-list"},
     "G4: a capability name absent from the vocabulary is not invented",
+)
+# Every capability in this repository happens to be hyphenated, so a pattern
+# requiring a hyphen passed the unit fixtures and the whole-archive replay alike.
+# The integration test on a synthetic repo is what surfaced it.
+check(
+    lambda: gates.named_specs("## Impact\n\n- Affected specs: `widget`\n", {"widget"})
+    == {"widget"},
+    "G4: a single-word capability name is extracted, not skipped for lacking a hyphen",
 )
 
 # The three below are regression guards from replaying the parser over the real
@@ -607,6 +733,22 @@ check(
         "- [x] 1.1 撰寫測試骨架。\n- [x] 1.2 實作 G5。\n",
     ).status == "FAIL",
     "G5: a non-empty tasks file that never names the scenario does not excuse the loss",
+)
+# A bare substring test cannot tell an affirmation from its negation, so a task
+# line promising NOT to remove a scenario counted as a record of removing it.
+check(
+    lambda: gates.gate_scenario_parity(
+        {_REQ: {_KEEP}}, {_REQ: {_KEEP, _GONE}},
+        f"- [x] 3.1 保留「{_GONE}」,不予移除。",
+    ).status == "FAIL",
+    "G5: a task line stating the scenario is NOT removed does not excuse the loss",
+)
+check(
+    lambda: gates.gate_scenario_parity(
+        {_REQ: {_KEEP}}, {_REQ: {_KEEP, _GONE}},
+        f"- [x] 3.1 do not remove the scenario {_GONE} under any circumstances",
+    ).status == "FAIL",
+    "G5: an English negation likewise does not excuse the loss",
 )
 
 # ── G5 delta section awareness ───────────────────────────────────────────────
@@ -829,8 +971,9 @@ check(
 def _help():
     return run_cli(["--help"]).stdout
 check(
-    lambda: "--snapshot" in _help() and "--verify-archive" in _help(),
-    "CLI: --help documents all three modes",
+    lambda: all(f in _help() for f in
+                ("--snapshot", "--verify-archive", "--snapshot-file", "--resolve-change")),
+    "CLI: --help documents every mode, not just the three it launched with",
 )
 check(
     lambda: run_cli(["no-such-change-exists"]).returncode == 2,
@@ -964,6 +1107,153 @@ def _out_flag():
 
 check(_out_flag, "snapshot: --out redirects the destination")
 _clean_snapshots()
+
+# ── run_gates(): the integration path CI actually executes ───────────────────
+# Every assertion above tests a part. `run_gates` is what wires the parts to the
+# repository -- which diff each gate sees, which file feeds which adapter, how a
+# verdict list is assembled -- and nothing exercised it. A whole gate could be
+# wired to the wrong input, or dropped from the list, with the suite still green.
+#
+# These build a real git repository in a temp directory and run the real thing.
+
+import shutil          # noqa: E402
+import tempfile        # noqa: E402
+
+
+def _git(cwd, *args):
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+
+
+def build_fixture_repo(tmp: Path) -> Path:
+    """A repo with a baseline spec on `main` and a change on HEAD.
+
+    The change deliberately carries one of each gate's trigger so a single run
+    can assert on all seven verdicts.
+    """
+    r = tmp / "repo"
+    (r / "openspec" / "specs" / "widget").mkdir(parents=True)
+    (r / "openspec" / "changes" / "demo" / "specs" / "widget").mkdir(parents=True)
+    (r / "docs").mkdir()
+    (r / "scripts").mkdir()
+
+    (r / "openspec" / "specs" / "widget" / "spec.md").write_text(
+        "# widget\n\n## Requirements\n\n"
+        "### Requirement: Widget renders\n\n"
+        "#### Scenario: it renders when enabled\n\n- **WHEN** enabled\n- **THEN** it renders\n\n"
+        "#### Scenario: it hides when disabled\n\n- **WHEN** disabled\n- **THEN** it hides\n",
+        encoding="utf-8")
+    (r / "scripts" / "widget.ts").write_text(
+        'export const MSG = "the widget is always visible here"\n', encoding="utf-8")
+    (r / "docs" / "guide.md").write_text("# Guide\n\nThe widget is shown.\n", encoding="utf-8")
+
+    _git(r, "init", "-q", "-b", "main")
+    _git(r, "config", "user.email", "t@example.com")
+    _git(r, "config", "user.name", "t")
+    _git(r, "add", "-A")
+    _git(r, "commit", "-qm", "baseline")
+
+    # The change lands on a branch: run_gates diffs `base...HEAD`, which is empty
+    # when both are the same commit. Committing the change onto main made every
+    # diff-derived gate see nothing, and two of these assertions caught it.
+    _git(r, "checkout", "-q", "-b", "change")
+
+    # The change: edits a file, deletes a prose literal, ships a delta that drops
+    # a baseline scenario, and writes an invariance claim about a file it edited.
+    (r / "scripts" / "widget.ts").write_text(
+        'export const MSG = "the widget appears only when granted"\n', encoding="utf-8")
+    (r / "openspec" / "changes" / "demo" / "proposal.md").write_text(
+        "# demo\n\n## Impact\n\n- Affected specs: `widget`\n"
+        "- Affected code:\n  - Modified: scripts/widget.ts\n", encoding="utf-8")
+    (r / "openspec" / "changes" / "demo" / "design.md").write_text(
+        "# design\n\n- 不改 `docs/guide.md`。\n", encoding="utf-8")
+    (r / "openspec" / "changes" / "demo" / "tasks.md").write_text(
+        "# tasks\n\n- [x] 1.1 do the thing\n", encoding="utf-8")
+    (r / "openspec" / "changes" / "demo" / "specs" / "widget" / "spec.md").write_text(
+        "## MODIFIED Requirements\n\n### Requirement: Widget renders\n\n"
+        "#### Scenario: it renders when enabled\n\n- **WHEN** enabled\n- **THEN** it renders\n",
+        encoding="utf-8")
+    _git(r, "add", "-A")
+    _git(r, "commit", "-qm", "change")
+    return r
+
+
+def in_fixture(fn):
+    """Run fn(repo_path) with cwd set to a fresh fixture repo."""
+    tmp = Path(tempfile.mkdtemp(prefix="spec-gates-fixture-"))
+    cwd = os.getcwd()
+    try:
+        repo = build_fixture_repo(tmp)
+        os.chdir(repo)
+        return fn(repo)
+    finally:
+        os.chdir(cwd)
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+_INTEGRATION = []
+
+
+def integration():
+    if not _INTEGRATION:
+        _INTEGRATION.append(in_fixture(lambda _r: gates.run_gates("demo", "main")))
+    return _INTEGRATION[0]
+
+
+def gate_named(prefix):
+    return next((v for v in integration() if v.gate.startswith(prefix)), None)
+
+
+check(lambda: len(integration()) == 6,
+      "run_gates: every gate G1-G6 appears in the verdict list")
+check(lambda: [v.gate[:2] for v in integration()] == ["G1", "G2", "G3", "G4", "G5", "G6"],
+      "run_gates: the gates are assembled in order, none dropped or duplicated")
+check(lambda: all(v.status in ("PASS", "REVIEW", "FAIL") for v in integration()),
+      "run_gates: every verdict carries a legal status")
+
+# G3: the change deleted "the widget is always visible here" and docs/guide.md
+# does not carry it, so nothing survives -- but the literal must have been
+# *collected*, which proves the diff reached the gate.
+check(lambda: gate_named("G3").detail["checked"] >= 1,
+      "run_gates: G3 receives the diff's removed literals")
+
+# G2: design.md claims docs/guide.md is unchanged and the diff did not touch it,
+# so this must PASS -- the claim is true. It proves the artifact files were read.
+check(lambda: gate_named("G2") is not None and gate_named("G2").status == "PASS",
+      "run_gates: G2 reads the change's own proposal and design")
+
+# G5: the delta's MODIFIED block drops "it hides when disabled" and tasks.md
+# never names it, so this is the unrecorded-loss case.
+check(lambda: gate_named("G5").status == "FAIL",
+      "run_gates: G5 compares the delta against the real baseline spec")
+check(
+    lambda: any("hides when disabled" in str(d) for d in gate_named("G5").detail["dropped"]),
+    "run_gates: G5 names the dropped scenario",
+)
+
+# G4: proposal names `widget` and ships specs/widget; Modified: names the one
+# non-artifact file the diff touched.
+check(lambda: gate_named("G4").status == "PASS",
+      "run_gates: G4 reconciles the proposal against the real diff and specs dir")
+
+check(lambda: gates.exit_code_for(integration()) == 1,
+      "run_gates: a FAIL verdict drives the exit code")
+
+
+def _unrelated_pr(repo):
+    """A change directory whose PR touches nothing else must not FAIL."""
+    Path("docs/guide.md").write_text("# Guide\n\nThe widget is shown. Extra line.\n",
+                                     encoding="utf-8")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-qm", "docs only")
+    return gates.run_gates("demo", "main")
+
+
+check(
+    lambda: any(v.gate.startswith("G6") and v.status == "REVIEW"
+                for v in in_fixture(_unrelated_pr)),
+    "run_gates: G6 sees prose added under docs/",
+)
+
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 

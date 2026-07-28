@@ -75,12 +75,19 @@ python scripts/spec-gates/run.py --resolve-change --base <ref>
 | G3 deleted-literal | 存在被移除且未在新增行重現的散文型字面值,仍在全庫有命中 |
 | G4 scope parity | proposal 的檔案清單與實際不符;或 proposal **有寫** delta spec 宣告但與磁碟不符。完全沒寫該宣告時為 REVIEW |
 | G5 delta scenario parity | 存在未在 tasks.md 記錄的 baseline scenario 遺失 |
-| G6 added-lines trace | 不會 FAIL——恆為 REVIEW,輸出機制性斷言清單 |
+| G6 added-lines trace | 不會 FAIL——恆為 REVIEW,輸出機制性斷言清單(範圍:archive 以外全部 markdown,含本 change 自己的 artifact) |
 | G7 archive trace-parity | 任一 baseline spec 的 `@trace` 或 requirement 計數低於快照 |
 
 **G3 的字面值判定**
 
-只取「散文型」字面值:長度 12 至 80、含空白、含至少三個連續小寫字母,且不含 `<`、`>`、`{`、`}`、`;`、`=`,亦不以逗號開頭。此規則來自實跑——原始版本會把重構移動過的識別字與 template 片段誤判為被刪除的訊息字串,產生三筆誤報。
+只取「散文型」字面值。共同條件:長度上限 80、不含 `<`、`>`、`{`、`}`、`;`、`=`,亦不以逗號開頭。其上分兩套規則,任一成立即可:
+
+- **拉丁**:長度至少 12、含空白、含至少三個連續小寫字母。
+- **CJK**:至少六個 CJK 字元,且不是「三個以上、每段至多四字」的分隔符號列表。
+
+此規則來自實跑——原始版本會把重構移動過的識別字與 template 片段誤判為被刪除的訊息字串,產生三筆誤報。
+
+CJK 規則是後補的。原始版本只有拉丁規則,而中文訊息在三個條件上**全部**不成立(密度高故 12 字元門檻過嚴、不使用空白分詞、無 ASCII 小寫字母)——不是偶然落榜,是規則結構性地看不見它。本 repo 的 user-facing 字串以中文為主,等於 G3 對最該管的對象是關閉的。
 
 括號**不**列入排除字元。原型曾一併排除 `(` 與 `)`,但那會濾掉 `not specified (default all)` 這種真正的使用者訊息——正是上一個 change 中 G3 該抓的那一筆。排除字元只保留標記語法與賦值語法的特徵。
 
@@ -112,7 +119,7 @@ change 目錄不存在時以退出碼 2 中止並說明。`git` 不可用時同�
 - `scripts/spec-gates/test_run.py` 涵蓋每道閘門的 PASS、REVIEW、FAIL 三種路徑,並各自包含一則由實跑得出的誤報案例(G3 的識別字、G5 的刻意移除)作為迴歸護欄。
 - 以已封存的 `2026-07-28-terminal-opt-in-by-default` 為輸入執行時,G3 與 G4 為 PASS,G5 為 REVIEW 且指出刻意移除的那一筆。
 - CI 中新增的 job 在既有四個 job 全綠的 PR 上不得產生 FAIL。
-- `python scripts/spec-gates/run.py --help` 可用且說明三種模式。
+- `python scripts/spec-gates/run.py --help` 可用且說明全部四種呼叫方式(預設檢查、`--snapshot`、`--verify-archive`、`--resolve-change`)。
 
 **範圍邊界**
 

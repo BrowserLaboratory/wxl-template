@@ -251,22 +251,34 @@ jobs:
           # The id must come from what this PR changed. Reading it from whichever
           # directory happens to sit under openspec/changes/ binds an unrelated PR
           # to whatever change is live on the base branch at the time.
-          IDS=$(python scripts/spec-gates/run.py --resolve-change --base "origin/$BASE_REF")
-          COUNT=$(printf '%s' "$IDS" | grep -c . || true)
-          # A directory name may contain newlines, which would inject extra keys
-          # into $GITHUB_OUTPUT. Emit only an id matching a conservative charset.
-          if [ "$COUNT" = "1" ] && printf '%s' "$IDS" | grep -qE '^[A-Za-z0-9._-]+$'; then
-            echo "id=$IDS" >> "$GITHUB_OUTPUT"
-          else
-            echo "id=" >> "$GITHUB_OUTPUT"
-            echo "Resolved $COUNT change directories from the diff; skipping the gates."
+          python scripts/spec-gates/run.py --resolve-change --base "origin/$BASE_REF" > /tmp/ids.txt
+          COUNT=$(grep -c . /tmp/ids.txt || true)
+          # A directory name may contain newlines or shell metacharacters. Keep
+          # only ids matching a conservative charset, and say what was dropped
+          # rather than skipping silently.
+          grep -E '^[A-Za-z0-9._-]+$' /tmp/ids.txt > /tmp/safe-ids.txt || true
+          SAFE=$(grep -c . /tmp/safe-ids.txt || true)
+          if [ "$COUNT" != "$SAFE" ]; then
+            echo "::warning::$((COUNT - SAFE)) change id(s) rejected as unsafe; they will not be gated."
           fi
+          echo "count=$SAFE" >> "$GITHUB_OUTPUT"
+          echo "Resolved $SAFE change director(ies) from the diff."
 
       - name: Run spec-drift gates
-        if: steps.change.outputs.id != ''
+        # Every change the PR touches is gated, not just a lone one. Gating only
+        # the single-change case meant a PR spanning two changes — or one opened
+        # while another change was live — received no coverage at all, and said
+        # so only in a log line nobody reads on a green run.
+        if: steps.change.outputs.count != '0'
         env:
-          CHANGE_ID: ${{ steps.change.outputs.id }}
           BASE_REF: ${{ github.base_ref }}
         run: |
           set -f
-          python scripts/spec-gates/run.py "$CHANGE_ID" --base "origin/$BASE_REF"
+          status=0
+          while IFS= read -r id; do
+            [ -n "$id" ] || continue
+            echo "::group::spec-drift gates for $id"
+            python scripts/spec-gates/run.py "$id" --base "origin/$BASE_REF" || status=1
+            echo "::endgroup::"
+          done < /tmp/safe-ids.txt
+          exit "$status"

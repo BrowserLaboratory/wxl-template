@@ -23,7 +23,7 @@
 - **G3 deleted-literal**:diff 移除且未在新增行重現的散文型字串字面值,必須在全庫零命中。
 - **G4 scope parity**:proposal 的 Impact 檔案清單必須與 `git diff --name-only` 一致;若 proposal 寫了 delta spec 宣告,該宣告必須與磁碟上的 specs 目錄一致。宣告不存在時只報 REVIEW——沒作出的斷言無從被推翻。
 - **G5 delta scenario parity**:每個 MODIFIED requirement 的 delta scenario 集合必須涵蓋 baseline 的集合,除非該移除已在 tasks.md 明確記錄。`## ADDED`、`## REMOVED`、`## RENAMED` 區塊不列入比對。
-- **G6 added-lines trace**:列出新增散文中的機制性斷言,供人工逐句對照原始碼出處。
+- **G6 added-lines trace**:列出新增散文中的機制性斷言,供人工逐句對照原始碼出處。範圍為 archive 以外的全部 markdown,包含本 change 自己的 proposal、design、tasks 與 delta spec。
 - **G7 archive trace-parity**:比對 archive 前後各 baseline spec 的 `@trace` 區塊數量,任何減少即失敗。
 
 腳本沿用 `scripts/prose-audit/` 的既有形狀:`run.py` 加 `test_run.py` 加 `config.yaml`,CI 中為獨立 job。閘門的判定分為 PASS、REVIEW、FAIL 三級——只有 FAIL 阻斷,REVIEW 表示需人工判定但不擋。
