@@ -18,7 +18,7 @@
     "step1_title": "Pick a challenge",
     "step1_desc": "Open the challenges page and pick one by difficulty or category.",
     "step2_title": "Use the tools",
-    "step2_desc": "Use the built-in Browser, Terminal, Code Editor, and Repeater to analyse and exploit the vulnerability.",
+    "step2_desc": "Use the tools the challenge offers — Browser, Code Editor, Repeater, and where granted, the Terminal — to analyse and exploit the vulnerability.",
     "step3_title": "Submit the flag",
     "step3_desc": "Once you find the flag, paste it into the submit box on the challenge page to confirm your answer."
   },

@@ -101,8 +101,9 @@ describe('ChallengeConfig tools field', () => {
     fs: { '/flag.txt': './flag.txt' },
   }
 
-  it('accepts config with no tools (defaults)', () => {
+  it('accepts config with no tools and leaves it undefined for the layout to resolve', () => {
     expect(() => validateChallengeConfig(minimal)).not.toThrow()
+    expect(validateChallengeConfig(minimal).tools).toBeUndefined()
   })
 
   it('accepts valid tools: [browser, terminal]', () => {
@@ -116,7 +117,7 @@ describe('ChallengeConfig tools field', () => {
     ).toThrow(/invalid tool/)
   })
 
-  it('accepts empty tools array (no tabs shown)', () => {
+  it('accepts empty tools array and preserves it verbatim (layout resolves it to browser alone)', () => {
     const config = validateChallengeConfig({ ...minimal, tools: [] })
     expect(config.tools).toEqual([])
   })

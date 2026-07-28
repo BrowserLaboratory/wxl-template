@@ -36,7 +36,7 @@ vi.mock('../../../.vitepress/theme/components/RepeatPanel.vue', () => ({
   default: defineComponent({ props: ['slug', 'dispatch', 'disabled', 'injectedRequest'], template: '<div data-repeat-panel :data-disabled="disabled" :data-injected="injectedRequest" />' }),
 }))
 vi.mock('../../../.vitepress/theme/components/NetworkPanel.vue', () => ({
-  default: defineComponent({ props: ['trafficLog'], emits: ['clear', 'sendToRepeater'], template: '<div data-network-panel />' }),
+  default: defineComponent({ props: ['trafficLog', 'canSendToRepeater'], emits: ['clear', 'sendToRepeater'], template: '<div data-network-panel />' }),
 }))
 vi.mock('../../../.vitepress/theme/components/CodeEditorPanel.vue', () => ({
   default: defineComponent({ props: ['slug', 'dispatch', 'disabled', 'pyodide', 'onCodeExecuted'], template: '<div data-code-panel :data-disabled="disabled" />' }),
@@ -218,18 +218,131 @@ describe('ChallengeLayout (VitePress layout)', () => {
     expect(wrapper.find('[data-flag-bar] [data-flag-submit]').exists()).toBe(true)
   })
 
-  it('renders all five interaction tabs when tools field is not set (default)', () => {
-    const wrapper = mount(ChallengeLayout, {
-      global: { stubs: { Content: true } },
-    })
-    const tabs = wrapper.findAll('[data-tab]')
-    expect(tabs).toHaveLength(5)
-    const tabIds = tabs.map(t => t.attributes('data-tab'))
-    expect(tabIds).toContain('browser')
-    expect(tabIds).toContain('network')
-    expect(tabIds).toContain('repeater')
-    expect(tabIds).toContain('terminal')
-    expect(tabIds).toContain('code')
+  // Mount once with a given `tools` frontmatter value and return the rendered
+  // tab ids in DOM order. Omit `tools` entirely by passing undefined.
+  async function tabIdsFor(tools: string[] | undefined) {
+    const { useData } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo',
+          difficulty: 'easy',
+          category: 'web',
+          backend: 'flask',
+          slug: 'sqli-demo',
+          description: 'x',
+          markdownBody: '# x',
+          ...(tools === undefined ? {} : { tools }),
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const wrapper = mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+    return wrapper.findAll('[data-tab]').map(t => t.attributes('data-tab'))
+  }
+
+  it('excludes Terminal when tools field is not set (default)', async () => {
+    expect(await tabIdsFor(undefined)).toEqual(['browser', 'network', 'repeater', 'code'])
+  })
+
+  it('shows the Terminal tab only when the challenge opts in explicitly', async () => {
+    expect(await tabIdsFor(['browser', 'terminal'])).toContain('terminal')
+  })
+
+  it('hides every tab the explicit allowlist leaves out', async () => {
+    const ids = await tabIdsFor(['browser', 'terminal', 'code'])
+    expect(ids).toEqual(['browser', 'terminal', 'code'])
+    expect(ids).not.toContain('network')
+    expect(ids).not.toContain('repeater')
+  })
+
+  it('injects Browser into an explicit allowlist that omits it', async () => {
+    expect(await tabIdsFor(['code'])).toEqual(['browser', 'code'])
+  })
+
+  it('yields Browser alone for an empty tools array', async () => {
+    expect(await tabIdsFor([])).toEqual(['browser'])
+  })
+
+  it('renders tabs in canonical order regardless of the order the author wrote', async () => {
+    expect(await tabIdsFor(['code', 'network'])).toEqual(['browser', 'network', 'code'])
+  })
+
+  it('leaves a challenge that already declares its allowlist unchanged', async () => {
+    // door-is-open ships exactly this list; the new rules must be a no-op for it.
+    expect(await tabIdsFor(['browser', 'network', 'repeater', 'code']))
+      .toEqual(['browser', 'network', 'repeater', 'code'])
+  })
+
+  it.each([
+    [['browser', 'network'], false],
+    [['browser', 'network', 'repeater'], true],
+  ])('tells NetworkPanel whether the Repeater is available for %j', async (tools, expected) => {
+    const { useData } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo', difficulty: 'easy', category: 'web', backend: 'flask',
+          slug: 'sqli-demo', description: 'x', markdownBody: '# x', tools,
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const wrapper = mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+
+    const { default: NetworkPanelComponent } = await import('../../../.vitepress/theme/components/NetworkPanel.vue')
+    expect(wrapper.findComponent(NetworkPanelComponent).props('canSendToRepeater')).toBe(expected)
+  })
+
+  it('does not duplicate a tab id repeated in the allowlist', async () => {
+    expect(await tabIdsFor(['code', 'code', 'browser'])).toEqual(['browser', 'code'])
+  })
+
+  it('ignores an allowlist entry that is not a known tab', async () => {
+    expect(await tabIdsFor(['code', 'sqlmap'])).toEqual(['browser', 'code'])
+  })
+
+  it.each([
+    ['null (a bare `tools:` line in YAML)', null],
+    ['a string', 'browser'],
+    ['a number', 7],
+  ])('falls back to the default tab set when tools is %s', async (_label, value) => {
+    // The layout reads raw frontmatter, so config.ts's array check never runs here.
+    // A malformed value must not take the page down with it.
+    expect(await tabIdsFor(value as unknown as string[]))
+      .toEqual(['browser', 'network', 'repeater', 'code'])
+  })
+
+  it('refuses to open the Repeater from the Traffic Log when the challenge did not grant it', async () => {
+    const { useData } = await import('vitepress')
+    vi.mocked(useData).mockReturnValueOnce({
+      frontmatter: {
+        value: {
+          title: 'SQL Injection Demo',
+          difficulty: 'easy',
+          category: 'web',
+          backend: 'flask',
+          slug: 'sqli-demo',
+          description: 'x',
+          markdownBody: '# x',
+          tools: ['browser', 'network'],
+        },
+      },
+      page: { value: { relativePath: 'challenge/sqli-demo/index.md' } },
+    } as unknown as ReturnType<typeof useData>)
+    const wrapper = mount(ChallengeLayout, { global: { stubs: { Content: true } } })
+
+    await wrapper.find('[data-tab="network"]').trigger('click')
+    await wrapper.vm.$nextTick()
+
+    const { default: NetworkPanelComponent } = await import('../../../.vitepress/theme/components/NetworkPanel.vue')
+    await wrapper.findComponent(NetworkPanelComponent).vm.$emit('sendToRepeater', 'GET / HTTP/1.1\r\n\r\n')
+    await wrapper.vm.$nextTick()
+
+    // The Repeater has no tab here, so it must stay closed rather than becoming
+    // an active panel with no tab button to leave it by.
+    expect(wrapper.find('[data-tab].ch-tab-btn-active').attributes('data-tab')).toBe('network')
+    expect(wrapper.find('[data-panel="repeater"]').attributes('style')).toContain('display: none')
   })
 
   it('shows NetworkPanel when network tab is active', async () => {
