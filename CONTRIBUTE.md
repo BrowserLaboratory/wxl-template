@@ -150,7 +150,11 @@ G2 blocks on `X is unchanged` when the diff touched `X`. Often the claim is true
 - 不改 `scripts/challenge-validate.ts` 對 tools 值的**合法性驗證規則**。
 ```
 
-Without the marker the gate reads it as a claim about the whole file and fails. It keys on the explicit marker rather than trying to infer scope, so that a genuinely blanket claim cannot slip through by being phrased loosely.
+The bold span must come *after* the file reference — that is what distinguishes a scope marker from a bold label opening the sentence. Without a marker the gate reads the claim as covering the whole file and fails.
+
+The gate does not check whether the aspect you marked is genuinely unchanged; it only routes the claim to `REVIEW` so a person reads it. Marking a blanket claim in bold will get it past the `FAIL`, and the reviewer, not the gate, is what stops that.
+
+G2 resolves a reference to a changed file by full path or by a path-boundary suffix, so `` `config.yaml` `` matches `scripts/spec-gates/config.yaml`. Write enough of the path to be unambiguous when a filename occurs in more than one directory — this repository has three files named `run.py`.
 
 ### Declaring claim phrases for G1
 

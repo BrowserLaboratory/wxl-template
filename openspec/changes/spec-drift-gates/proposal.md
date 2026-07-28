@@ -19,7 +19,7 @@
 新增 `scripts/spec-gates/run.py`,實作七道確定性檢查。前六道的原型已在 `terminal-opt-in-by-default` 期間手動執行過並實證有效(見該 change 的 tasks.md 12.3 與 13.x);第七道針對上述的 archive metadata 遺失。
 
 - **G1 claim-parity**:對變更改動了真值條件的名詞短語,掃描其在全庫的每一處出現位置,要求每一處或本身帶條件語氣、或落在已聲明前提的段落內、或被明確記錄為不受影響。
-- **G2 invariance**:交叉檢查 change artifact 中「X 不變」型的宣稱,若 X 出現在實際 diff 中則標記;限定式宣稱與裸宣稱分開處理。
+- **G2 invariance**:交叉檢查 change artifact 中「X 不變」型的宣稱,若 X 出現在實際 diff 中則標記。檔案參照以完整路徑或路徑邊界後綴解析,同名檔不互相牽連;限定式(參照之後有粗體標記)與裸宣稱分開處理。
 - **G3 deleted-literal**:diff 移除且未在新增行重現的散文型字串字面值,必須在全庫零命中。
 - **G4 scope parity**:proposal 的 Impact 檔案清單必須與 `git diff --name-only` 一致;若 proposal 寫了 delta spec 宣告,該宣告必須與磁碟上的 specs 目錄一致。宣告不存在時只報 REVIEW——沒作出的斷言無從被推翻。
 - **G5 delta scenario parity**:每個 MODIFIED requirement 的 delta scenario 集合必須涵蓋 baseline 的集合,除非該移除已在 tasks.md 明確記錄。

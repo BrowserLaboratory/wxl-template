@@ -75,22 +75,47 @@ def gate_claim_parity(phrases, hedges, grep) -> Verdict:
 _INVARIANCE = re.compile(
     r"不變|不改|無異動|unchanged|not affected|no\s+\w*\s*changes?\b", re.IGNORECASE)
 # A qualified claim names *which aspect* is unchanged, so it can hold even when
-# the file itself was edited elsewhere.
-_QUALIFIED = re.compile(r"\*\*[^*]+\*\*|的\w+規則|關於|aspect|semantics|rules")
+# the file itself was edited elsewhere. The marker is a bold span placed after
+# the file reference -- the convention CONTRIBUTE.md documents. Bare words such
+# as "rules" or a bold label opening the line are not scope markers: accepting
+# them let a blanket claim reach REVIEW without saying what it had scoped.
+_QUALIFIED = re.compile(r"\*\*[^*]+\*\*")
+# Backticked spans first, then bare path-shaped tokens.
+_PATH_REF = re.compile(r"`([^`]+)`|((?:[\w.-]+/)*[\w-]+\.[A-Za-z0-9]+)")
+
+
+def _references(text: str):
+    """(reference, end offset) for each file path the line names."""
+    out = []
+    for m in _PATH_REF.finditer(text):
+        ref = (m.group(1) or m.group(2) or "").strip()
+        if ref and not ref.endswith("/"):
+            out.append((ref, m.end()))
+    return out
 
 
 def gate_invariance(lines, changed_files) -> Verdict:
-    """`X is unchanged` in a change artifact, where X is a file the diff touched."""
+    """`X is unchanged` in a change artifact, where X is a file the diff touched.
+
+    A reference resolves to a changed file only when it is that path or a
+    path-boundary suffix of it. Matching on basename alone made a true claim
+    about `scripts/prose-audit/run.py` fail because the diff touched
+    `scripts/spec-gates/run.py` -- and reported the wrong file as the cause.
+    """
     bare, qualified = [], []
-    basenames = {os.path.basename(f): f for f in changed_files if os.path.basename(f)}
+    changed = set(changed_files)
     for line_no, text in lines:
         if not _INVARIANCE.search(text):
             continue
-        for base, full in basenames.items():
-            if base in text:
-                row = {"line": line_no, "names": full, "text": text.strip()[:160]}
-                (qualified if _QUALIFIED.search(text) else bare).append(row)
-                break
+        for ref, end in _references(text):
+            hit = next((f for f in sorted(changed)
+                        if f == ref or f.endswith("/" + ref)), None)
+            if not hit:
+                continue
+            row = {"line": line_no, "names": hit, "text": text.strip()[:160]}
+            marker = _QUALIFIED.search(text, end)
+            (qualified if marker else bare).append(row)
+            break
     if bare:
         return Verdict("G2 invariance", "FAIL", {"bare": bare, "qualified": qualified})
     return Verdict("G2 invariance", "REVIEW" if qualified else "PASS",

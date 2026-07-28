@@ -113,6 +113,63 @@ check(
     "G2: a directory entry does not match every line via an empty basename",
 )
 
+# Matching by basename substring made a claim about one file answer for another
+# that merely shares a filename. This repository has three `run.py` files.
+def _g2_homonym():
+    return gates.gate_invariance(
+        [(1, "- 不改 `scripts/prose-audit/run.py`。")], {"scripts/spec-gates/run.py"}
+    )
+
+
+check(lambda: _g2_homonym().status == "PASS",
+      "G2: a claim naming a different file with the same basename does not FAIL")
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 不改 `scripts/spec-gates/run.py`。")], {"scripts/spec-gates/run.py"}
+    ).status == "FAIL",
+    "G2: a claim naming the full path of a changed file still FAILs",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 不改 `spec-gates/run.py`。")], {"scripts/spec-gates/run.py"}
+    ).status == "FAIL",
+    "G2: a path suffix resolves to the changed file it uniquely identifies",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- `config.yaml` 不變。")], {"scripts/spec-gates/config.yaml"}
+    ).status == "FAIL",
+    "G2: a bare basename that uniquely identifies a changed file still FAILs",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 不改 `scripts/prose-audit/run.py`。")], {"scripts/spec-gates/run.py"}
+    ).detail["bare"] == [],
+    "G2: no row is emitted for a file the claim does not name",
+)
+
+# `_QUALIFIED` also accepted the bare words `rules`, `aspect`, `semantics` and
+# `關於` anywhere on the line, and any bold span anywhere including a leading
+# label -- so a blanket claim escaped FAIL without using the documented marker.
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 不改 `scripts/foo.ts` 的 rules。")], {"scripts/foo.ts"}
+    ).status == "FAIL",
+    "G2: the bare word 'rules' does not qualify a blanket claim",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- **注意**:不改 `scripts/foo.ts`。")], {"scripts/foo.ts"}
+    ).status == "FAIL",
+    "G2: a bold label before the file reference is not a scope marker",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- 不改 `scripts/foo.ts` 對 tools 值的**合法性驗證規則**。")], {"scripts/foo.ts"}
+    ).status == "REVIEW",
+    "G2: a bold span after the file reference qualifies the claim",
+)
+
 # ── G3 deleted-literal ───────────────────────────────────────────────────────
 
 check(
