@@ -72,7 +72,8 @@ def gate_claim_parity(phrases, hedges, grep) -> Verdict:
 
 # ── G2 invariance ────────────────────────────────────────────────────────────
 
-_INVARIANCE = re.compile(r"不變|不改|unchanged|not affected|no change to")
+_INVARIANCE = re.compile(
+    r"不變|不改|無異動|unchanged|not affected|no\s+\w*\s*changes?\b", re.IGNORECASE)
 # A qualified claim names *which aspect* is unchanged, so it can hold even when
 # the file itself was edited elsewhere.
 _QUALIFIED = re.compile(r"\*\*[^*]+\*\*|的\w+規則|關於|aspect|semantics|rules")
@@ -168,14 +169,89 @@ def impact_files(proposal_text: str) -> set:
     return out
 
 
+_SPECS_ENTRY = re.compile(r"^\s*-\s*\**\s*Affected specs\s*\**\s*[:：]", re.IGNORECASE)
+_IDENT = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)+")
+
+
+def named_specs(proposal_text: str, vocabulary):
+    """Capability identifiers the proposal's `Affected specs` entry names.
+
+    Returns ``None`` when the proposal carries no such entry at all. That is
+    not the same as naming none: an absent declaration makes no claim, and a
+    gate whose job is to catch a declaration drifting from reality has nothing
+    to compare. 37 of the 84 archived changes that ship delta specs never write
+    the line.
+
+    Identifiers are resolved against `vocabulary` -- the capability names that
+    actually exist -- rather than by pattern alone. Authors annotate the list
+    in open-ended prose ("new", "（modified delta）", "8 個現有 spec 需更新"),
+    and no stopword list survives contact with it.
+    """
+    section = proposal_text.split("## Impact", 1)
+    body = re.split(r"(?m)^## ", section[1])[0] if len(section) > 1 else proposal_text
+    entry, collecting, marker_indent = None, False, 0
+    for line in body.splitlines():
+        m = _SPECS_ENTRY.match(line)
+        if m:
+            entry = ("" if entry is None else entry) + " " + line[m.end():]
+            collecting, marker_indent = True, len(line) - len(line.lstrip())
+            continue
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip())
+        # Continuation bullets sit deeper than the marker they belong to; a
+        # sibling bullet at the same depth ends the entry. A bullet declaring
+        # what is *unaffected* names specs to exclude -- reading it as a
+        # declaration of scope inverts the author's meaning, and did so on
+        # three archived changes.
+        if collecting and indent > marker_indent:
+            if not _INVARIANCE.search(line):
+                entry += " " + line
+        elif indent <= marker_indent:
+            collecting = False
+    if entry is None:
+        return None
+    # Same inversion inside a parenthetical: "`cap` (no spec change)" mentions
+    # the capability precisely to say it ships no delta.
+    entry = re.sub(r"[（(][^）)]*[）)]",
+                   lambda p: "" if _INVARIANCE.search(p.group(0)) else p.group(0), entry)
+    # A path names its capability in the second-to-last segment.
+    text = re.sub(r"openspec/specs/([a-z0-9-]+)/spec\.md", r" \1 ", entry)
+    return {t for t in _IDENT.findall(text) if t in set(vocabulary)}
+
+
+def change_ids_from_diff(diff_names: str):
+    """Live change directories the diff touches.
+
+    The id must come from what the pull request changed. Reading it from
+    whichever directory happens to sit under `openspec/changes/` binds an
+    unrelated PR to whatever change is live at the time.
+    """
+    out = set()
+    for path in diff_names.split():
+        parts = path.split("/")
+        if len(parts) > 2 and parts[0] == "openspec" and parts[1] == "changes":
+            if parts[2] != "archive":
+                out.add(parts[2])
+    return sorted(out)
+
+
 def gate_scope_parity(diff_files, listed_files, disk_specs, named_specs) -> Verdict:
     detail = {
         "in_diff_not_listed": sorted(set(diff_files) - set(listed_files)),
         "listed_not_in_diff": sorted(set(listed_files) - set(diff_files)),
-        "specs_on_disk_not_named": sorted(set(disk_specs) - set(named_specs)),
-        "specs_named_not_on_disk": sorted(set(named_specs) - set(disk_specs)),
     }
-    return Verdict("G4 scope parity", "FAIL" if any(detail.values()) else "PASS", detail)
+    undeclared = named_specs is None
+    if undeclared:
+        detail["specs_not_declared"] = sorted(disk_specs)
+    else:
+        detail["specs_on_disk_not_named"] = sorted(set(disk_specs) - set(named_specs))
+        detail["specs_named_not_on_disk"] = sorted(set(named_specs) - set(disk_specs))
+    if any(detail[k] for k in ("in_diff_not_listed", "listed_not_in_diff")) or (
+        not undeclared and (detail["specs_on_disk_not_named"] or detail["specs_named_not_on_disk"])
+    ):
+        return Verdict("G4 scope parity", "FAIL", detail)
+    return Verdict("G4 scope parity", "REVIEW" if undeclared and disk_specs else "PASS", detail)
 
 
 # ── G5 delta scenario parity ─────────────────────────────────────────────────
@@ -354,9 +430,10 @@ def run_gates(change_id: str, base: str):
     prop_path = change_dir / "proposal.md"
     prop = prop_path.read_text(encoding="utf-8") if prop_path.exists() else ""
     listed = impact_files(prop)
-    named = set(re.findall(r"([a-z0-9-]+)\((?:delta|新增)\)", prop))
     specs_dir = change_dir / "specs"
     disk = set(os.listdir(specs_dir)) if specs_dir.is_dir() else set()
+    baseline = set(os.listdir("openspec/specs")) if Path("openspec/specs").is_dir() else set()
+    named = named_specs(prop, disk | baseline)
     verdicts.append(gate_scope_parity(
         {f for f in diff if not f.startswith("openspec/changes/")}, listed, disk, named))
 
@@ -415,7 +492,14 @@ def main() -> int:
                     help="compare counts against a snapshot after archiving")
     ap.add_argument("--out", help="snapshot output path (with --snapshot)")
     ap.add_argument("--snapshot-file", help="snapshot input path (with --verify-archive)")
+    ap.add_argument("--resolve-change", action="store_true",
+                    help="print the change ids the diff against --base touches, one per line")
     args = ap.parse_args()
+
+    if args.resolve_change:
+        for cid in change_ids_from_diff(sh("git", "diff", "--name-only", f"{args.base}...HEAD")):
+            print(cid)
+        return 0
 
     if args.snapshot:
         counts = spec_counts(affected_specs(args.snapshot))

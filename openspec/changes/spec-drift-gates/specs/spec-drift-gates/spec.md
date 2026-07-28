@@ -37,7 +37,7 @@ The gate script SHALL implement seven checks.
 
 `G3 deleted-literal` SHALL collect prose-shaped string literals removed by the diff and not reintroduced by it, and SHALL report `FAIL` when any of them still occurs in the repository. A literal SHALL be treated as prose-shaped only when it is between 12 and 80 characters, contains whitespace and at least three consecutive lowercase letters, and contains none of `<`, `>`, `{`, `}`, `;`, `=`. Parentheses SHALL NOT disqualify a literal: user-facing messages routinely contain them.
 
-`G4 scope parity` SHALL compare the proposal's enumerated file list and delta-spec list against the actual diff and the change's `specs/` directory, and SHALL report `FAIL` on any mismatch in either direction.
+`G4 scope parity` SHALL compare the proposal's enumerated file list and delta-spec list against the actual diff and the change's `specs/` directory, and SHALL report `FAIL` on any mismatch in either direction. Delta-spec identifiers SHALL be recognised in every spelling the repository's proposals use, resolved against the set of capability names that exist rather than by pattern alone, and a clause declaring a capability *unaffected* SHALL exclude it rather than name it. When a proposal carries no `Affected specs` entry at all, G4 SHALL report `REVIEW` for the delta-spec comparison and enumerate the undeclared capabilities: an absent declaration asserts nothing and cannot have drifted. The file-list comparison SHALL remain in force regardless.
 
 `G5 delta scenario parity` SHALL compare each MODIFIED requirement's scenario set in the delta against the baseline, and SHALL report `FAIL` when a baseline scenario is absent from the delta and its title does not appear in the change's tasks file. When the title does appear, the outcome SHALL be `REVIEW`.
 
@@ -61,6 +61,19 @@ The gate script SHALL implement seven checks.
 - **WHEN** the change's proposal lists three delta specs and the change directory contains four
 - **THEN** G4 SHALL report `FAIL`
 - **AND** the output SHALL name the spec that is present on disk but unlisted
+
+#### Scenario: A proposal that declares no affected specs is reviewed, not failed
+
+- **WHEN** the change's proposal carries no `Affected specs` entry and the change directory contains delta specs
+- **THEN** G4 SHALL report `REVIEW` for the delta-spec comparison
+- **AND** the output SHALL enumerate the undeclared capabilities
+- **AND** the exit code SHALL be unaffected
+
+#### Scenario: A capability declared unaffected is not counted as declared in scope
+
+- **WHEN** the proposal's `Affected specs` entry names a capability in a clause stating it is unchanged
+- **THEN** G4 SHALL treat that capability as absent from the declaration
+- **AND** a delta spec present on disk for it SHALL be reported as unlisted
 
 #### Scenario: No declared phrases is visible rather than silent
 

@@ -68,7 +68,7 @@ python scripts/spec-gates/run.py --verify-archive <change-id> --snapshot <path>
 | G1 claim-parity | 不會 FAIL——命中未被涵蓋時為 REVIEW |
 | G2 invariance | 存在**裸**宣稱,其點名的檔案出現在 diff 中 |
 | G3 deleted-literal | 存在被移除且未在新增行重現的散文型字面值,仍在全庫有命中 |
-| G4 scope parity | proposal 的檔案清單或 delta spec 清單與實際不符 |
+| G4 scope parity | proposal 的檔案清單與實際不符;或 proposal **有寫** delta spec 宣告但與磁碟不符。完全沒寫該宣告時為 REVIEW |
 | G5 delta scenario parity | 存在未在 tasks.md 記錄的 baseline scenario 遺失 |
 | G6 added-lines trace | 不會 FAIL——恆為 REVIEW,輸出機制性斷言清單 |
 | G7 archive trace-parity | 任一 baseline spec 的 `@trace` 或 requirement 計數低於快照 |

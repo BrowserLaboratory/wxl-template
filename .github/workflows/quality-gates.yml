@@ -237,28 +237,32 @@ jobs:
       - name: Run the gate script's own tests
         run: python scripts/spec-gates/test_run.py
 
-      - name: Resolve the active change id
+      - name: Resolve the change id from the diff
         id: change
+        # SECURITY (CWE-78 script injection): every value below that a fork PR can
+        # influence reaches the shell through env: rather than ${{ }}, because
+        # Actions macro-expands ${{ }} into the script body before bash parses it
+        # — the same reasoning documented on prose-audit.
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          git fetch origin "${{ github.base_ref }}"
-          # Exactly one directory under openspec/changes/ (excluding archive/) is
-          # the change under review. Zero means an artifact-free PR — skip.
-          IDS=$(find openspec/changes -mindepth 1 -maxdepth 1 -type d \
-                  -not -name archive -printf '%f\n' 2>/dev/null || true)
+          set -f
+          git fetch origin "$BASE_REF"
+          # The id must come from what this PR changed. Reading it from whichever
+          # directory happens to sit under openspec/changes/ binds an unrelated PR
+          # to whatever change is live on the base branch at the time.
+          IDS=$(python scripts/spec-gates/run.py --resolve-change --base "origin/$BASE_REF")
           COUNT=$(printf '%s' "$IDS" | grep -c . || true)
-          if [ "$COUNT" = "1" ]; then
+          # A directory name may contain newlines, which would inject extra keys
+          # into $GITHUB_OUTPUT. Emit only an id matching a conservative charset.
+          if [ "$COUNT" = "1" ] && printf '%s' "$IDS" | grep -qE '^[A-Za-z0-9._-]+$'; then
             echo "id=$IDS" >> "$GITHUB_OUTPUT"
           else
             echo "id=" >> "$GITHUB_OUTPUT"
-            echo "Found $COUNT active changes; skipping the gates."
+            echo "Resolved $COUNT change directories from the diff; skipping the gates."
           fi
 
       - name: Run spec-drift gates
-        # SECURITY (CWE-78 script injection): the change id comes from a directory
-        # name, which a fork PR controls and which git allows to contain shell
-        # metacharacters. It MUST reach the shell through env: rather than
-        # ${{ }}, because Actions macro-expands ${{ }} into the script body
-        # before bash parses it — the same reasoning documented on prose-audit.
         if: steps.change.outputs.id != ''
         env:
           CHANGE_ID: ${{ steps.change.outputs.id }}

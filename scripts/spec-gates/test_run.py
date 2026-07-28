@@ -92,6 +92,20 @@ check(
     lambda: gates.gate_invariance([(1, "- 不改 `scripts/bar.ts`。")], {"scripts/foo.ts"}).status == "PASS",
     "G2: an unchanged-claim naming an untouched file -> PASS",
 )
+# The pattern was case-sensitive, so the ordinary sentence-initial English
+# phrasing of an unchanged-claim escaped the gate entirely.
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- `scripts/foo.ts` is Unchanged by this change.")], {"scripts/foo.ts"}
+    ).status == "FAIL",
+    "G2: an unchanged-claim is matched regardless of letter case",
+)
+check(
+    lambda: gates.gate_invariance(
+        [(1, "- No change to `scripts/foo.ts`.")], {"scripts/foo.ts"}
+    ).status == "FAIL",
+    "G2: a sentence-initial 'No change to' is matched",
+)
 check(
     # basename("a/b/") is "" and "" is a substring of every line, so a directory
     # entry would otherwise match every claim in the file.
@@ -199,6 +213,166 @@ check(
     ),
     "G4: a newly added, not-yet-staged file counts as changed",
 )
+
+# ── G4 named-spec extraction ─────────────────────────────────────────────────
+# Every fixture below is a verbatim `Affected specs` line lifted from an archived
+# proposal in this repository. The first implementation recognised only the
+# `capability(delta)` spelling, which is used by exactly one archived change --
+# the one it was developed against -- so G4 reported FAIL on 82 of the other 83.
+# Identifiers are resolved against a vocabulary of real capability names rather
+# than a stopword list, because the annotations authors write around them
+# ("new", "modified delta", "8 個現有 spec 需更新") are open-ended prose.
+
+VOCAB = {
+    "encrypted-virtual-fs", "challenge-framework", "challenge-runtime-init",
+    "challenge-list", "challenge-layout", "challenge-ui", "wxlsh-terminal",
+    "i18n-runtime", "service-worker-router", "python-asgi-runtime",
+    "challenge-design-tokens", "challenge-tools-control", "network-traffic-panel",
+    "ci-quality-gates", "contributor-guide", "platform-documentation",
+}
+
+
+def _named(line: str, vocab=None):
+    return gates.named_specs(f"## Impact\n\n- {line}\n", vocab or VOCAB)
+
+
+check(
+    lambda: _named("**Affected specs**: `encrypted-virtual-fs`、`challenge-framework`、`challenge-runtime-init`")
+    == {"encrypted-virtual-fs", "challenge-framework", "challenge-runtime-init"},
+    "G4: backticked identifiers separated by 頓號 are all extracted",
+)
+check(
+    lambda: _named("**Affected specs**：`challenge-list`（modified delta）。") == {"challenge-list"},
+    "G4: a full-width parenthetical annotation is not read as an identifier",
+)
+check(
+    lambda: _named(
+        "Affected specs: challenge-layout, challenge-ui, wxlsh-terminal（3 個現有 spec 需更新）"
+    ) == {"challenge-layout", "challenge-ui", "wxlsh-terminal"},
+    "G4: a bare comma-separated list without backticks is extracted",
+)
+check(
+    lambda: _named("Affected specs: 新增 `openspec/specs/i18n-runtime/spec.md`。") == {"i18n-runtime"},
+    "G4: a full spec path is reduced to its capability name",
+)
+check(
+    lambda: _named(
+        "Affected specs: `service-worker-router`, `python-asgi-runtime`, new `challenge-runtime-init`"
+    ) == {"service-worker-router", "python-asgi-runtime", "challenge-runtime-init"},
+    "G4: a 'new' prefix does not hide the identifier that follows it",
+)
+check(
+    lambda: _named("Affected specs: `challenge-design-tokens` (new), `challenge-layout`")
+    == {"challenge-design-tokens", "challenge-layout"},
+    "G4: an ASCII parenthetical annotation is not read as an identifier",
+)
+check(
+    lambda: _named(
+        "Affected specs: challenge-tools-control(delta)、challenge-layout(delta)"
+    ) == {"challenge-tools-control", "challenge-layout"},
+    "G4: the original capability(delta) spelling still parses",
+)
+check(
+    lambda: _named("Affected specs: 無現有 spec 異動") == set(),
+    "G4: an explicit 'no specs affected' declaration yields an empty set, not None",
+)
+check(
+    lambda: _named(
+        "Affected specs: none. This change is documentation-only; no capability requirements move."
+    ) == set(),
+    "G4: English prose asserting none contributes no identifiers",
+)
+check(
+    lambda: gates.named_specs("## Impact\n\n- Affected code:\n  - Modified: a.md\n", VOCAB) is None,
+    "G4: a proposal with no Affected-specs line yields None, distinct from an empty set",
+)
+check(
+    lambda: gates.named_specs(
+        "## Impact\n\n- Affected specs:\n  - `challenge-list`\n  - `challenge-ui`\n", VOCAB
+    ) == {"challenge-list", "challenge-ui"},
+    "G4: a multi-line Affected-specs list is followed onto its continuation bullets",
+)
+check(
+    lambda: _named("Affected specs: `challenge-list` and the code-editor-panel spec")
+    == {"challenge-list"},
+    "G4: a capability name absent from the vocabulary is not invented",
+)
+
+# The three below are regression guards from replaying the parser over the real
+# archive: each produced a FAIL that was the parser's fault, not the author's.
+check(
+    lambda: _named(
+        "Affected specs: `ci-quality-gates`（delta-only：ADDED Requirements，無 MODIFIED）"
+    ) == {"ci-quality-gates"},
+    "G4: a full-width colon inside the annotation does not swallow the identifier",
+)
+check(
+    lambda: gates.named_specs(
+        "## Impact\n\n- Affected specs:\n"
+        "  - 修改：openspec/specs/challenge-layout/spec.md\n"
+        "  - 不變：challenge-list、wxlsh-terminal\n",
+        VOCAB,
+    ) == {"challenge-layout"},
+    "G4: a 不變 continuation bullet declares specs out of scope, not in it",
+)
+check(
+    lambda: gates.named_specs(
+        "## Impact\n\n- Affected specs:\n"
+        "  - `ci-quality-gates` (MODIFIED)\n"
+        "  - `platform-documentation` (no spec change; semantic intersection only)\n",
+        VOCAB,
+    ) == {"ci-quality-gates"},
+    "G4: an entry annotated as carrying no spec change is not counted as named",
+)
+
+# An absent declaration cannot be contradicted, so it must not FAIL. 37 of the 84
+# archived changes that carry delta specs never write the line at all; failing
+# them would violate the design's acceptance condition that the new job not FAIL
+# on a PR the existing four jobs pass.
+check(
+    lambda: gates.gate_scope_parity({"a.ts"}, {"a.ts"}, {"cap"}, None).status == "REVIEW",
+    "G4: no spec declaration -> REVIEW rather than FAIL",
+)
+check(
+    lambda: "cap" in str(gates.gate_scope_parity({"a.ts"}, {"a.ts"}, {"cap"}, None).detail),
+    "G4: the undeclared specs are still enumerated under REVIEW",
+)
+check(
+    lambda: gates.gate_scope_parity({"a.ts", "b.ts"}, {"a.ts"}, {"cap"}, None).status == "FAIL",
+    "G4: an absent spec declaration does not suppress the file-list half of the gate",
+)
+check(
+    lambda: gates.gate_scope_parity({"a.ts"}, {"a.ts"}, {"cap"}, set()).status == "FAIL",
+    "G4: an explicit 'none' contradicted by a spec on disk still FAILs",
+)
+
+# ── G4 change-id resolution ──────────────────────────────────────────────────
+# The CI job resolved the id from whatever single directory sat under
+# openspec/changes/, with no link to the PR's diff, so an unrelated PR opened
+# while a change was live ran that change's gates against its own diff.
+
+check(
+    lambda: gates.change_ids_from_diff(
+        "openspec/changes/my-change/proposal.md\nsrc/a.ts\n"
+    ) == ["my-change"],
+    "G4: the change id comes from the diff",
+)
+check(
+    lambda: gates.change_ids_from_diff("src/a.ts\ndocs/b.md\n") == [],
+    "G4: a PR touching no change directory resolves to no id",
+)
+check(
+    lambda: gates.change_ids_from_diff(
+        "openspec/changes/archive/2026-01-01-old/proposal.md\n"
+    ) == [],
+    "G4: an archived change is not a live change id",
+)
+check(
+    lambda: gates.change_ids_from_diff(
+        "openspec/changes/a/proposal.md\nopenspec/changes/b/tasks.md\n"
+    ) == ["a", "b"],
+    "G4: two touched change directories both resolve, sorted",
+)
 check(
     lambda: not any(f.endswith("/") for f in gates.changed_files_from(
         "", ["?? scripts/spec-gates/"]
@@ -211,6 +385,67 @@ check(
     ),
     "G4: the skills lockfile is excluded as incidental",
 )
+
+# ── G4 against the real archive ──────────────────────────────────────────────
+# The first parser was written against a single archived change and recognised
+# only that change's spelling, so G4 reported FAIL on 82 of the 83 others. A
+# handful of hand-written fixtures would not have caught that; only replaying
+# the whole corpus does. Skipped when the archive is unavailable so the suite
+# still runs outside a full checkout.
+
+_ARCHIVE = HERE.parent.parent / "openspec" / "changes" / "archive"
+_SPECS_ROOT = HERE.parent.parent / "openspec" / "specs"
+
+
+def _corpus():
+    """(declared, extracted_something, fail_names) over archived changes with deltas."""
+    vocab = {p.name for p in _SPECS_ROOT.iterdir() if p.is_dir()}
+    declared, extracted, fails = 0, 0, []
+    for d in sorted(_ARCHIVE.iterdir()):
+        sd = d / "specs"
+        if not sd.is_dir():
+            continue
+        prop = d / "proposal.md"
+        text = prop.read_text(encoding="utf-8") if prop.exists() else ""
+        disk = {p.name for p in sd.iterdir() if p.is_dir()}
+        named = gates.named_specs(text, disk | vocab)
+        if named is not None and "affected specs" in text.lower():
+            declared += 1
+            # An entry that names nothing is only correct when it says so.
+            if named or gates._INVARIANCE.search(text) or "無" in text or "none" in text.lower():
+                extracted += 1
+        if gates.gate_scope_parity(set(), set(), disk, named).status == "FAIL":
+            fails.append(d.name)
+    return declared, extracted, fails
+
+
+_CORPUS_CACHE = []
+
+
+def corpus():
+    """Computed on first use, inside a check(), so that a raising gate is
+    reported as a failed assertion rather than aborting the whole run."""
+    if not _CORPUS_CACHE:
+        _CORPUS_CACHE.append(_corpus())
+    return _CORPUS_CACHE[0]
+
+
+if _ARCHIVE.is_dir() and _SPECS_ROOT.is_dir():
+    check(lambda: corpus()[0] >= 40, "G4/corpus: the archive supplies enough declarations")
+    check(
+        lambda: corpus()[1] == corpus()[0],
+        "G4/corpus: every declaration parses to identifiers or an explicit none",
+    )
+    # The residual failures are real, verified drift: each ships an ADDED
+    # capability its proposal never lists. Raising this bound means the parser
+    # regressed; lowering it means drift was fixed and the bound should follow.
+    check(
+        lambda: len(corpus()[2]) <= 5,
+        "G4/corpus: at most 5 archived changes FAIL, all verified real drift",
+    )
+else:  # pragma: no cover - only outside a full checkout
+    print("  SKIP  G4/corpus: openspec archive not present")
+
 
 # ── G5 delta scenario parity ─────────────────────────────────────────────────
 
