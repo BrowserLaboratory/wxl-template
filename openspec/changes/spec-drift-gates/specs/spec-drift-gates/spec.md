@@ -39,7 +39,7 @@ The gate script SHALL implement seven checks.
 
 `G4 scope parity` SHALL compare the proposal's enumerated file list and delta-spec list against the actual diff and the change's `specs/` directory, and SHALL report `FAIL` on any mismatch in either direction. Delta-spec identifiers SHALL be recognised in every spelling the repository's proposals use, resolved against the set of capability names that exist rather than by pattern alone, and a clause declaring a capability *unaffected* SHALL exclude it rather than name it. When a proposal carries no `Affected specs` entry at all, G4 SHALL report `REVIEW` for the delta-spec comparison and enumerate the undeclared capabilities: an absent declaration asserts nothing and cannot have drifted. The file-list comparison SHALL remain in force regardless.
 
-`G5 delta scenario parity` SHALL compare each MODIFIED requirement's scenario set in the delta against the baseline, and SHALL report `FAIL` when a baseline scenario is absent from the delta and its title does not appear in the change's tasks file. When the title does appear, the outcome SHALL be `REVIEW`.
+`G5 delta scenario parity` SHALL compare each MODIFIED requirement's scenario set in the delta against the baseline, and SHALL report `FAIL` when a baseline scenario is absent from the delta and its title does not appear in the change's tasks file. When the title does appear, the outcome SHALL be `REVIEW`. Requirements declared under `## ADDED`, `## REMOVED` or `## RENAMED` SHALL be excluded from the comparison: an added requirement has no baseline counterpart, and a removed one declares its departure rather than losing scenarios by accident.
 
 `G6 added-lines trace` SHALL list mechanism assertions among the prose lines the change adds, each with the file and line the diff places it at. G6 SHALL NOT report `FAIL`.
 
@@ -55,6 +55,12 @@ The gate script SHALL implement seven checks.
 
 - **WHEN** a delta omits a baseline scenario and that scenario's title appears in the change's tasks file
 - **THEN** G5 SHALL report `REVIEW` rather than `FAIL`
+
+#### Scenario: A properly declared removal is not read as a scenario loss
+
+- **WHEN** a delta declares a requirement under `## REMOVED Requirements` and the baseline carries scenarios for it
+- **THEN** G5 SHALL NOT report those scenarios as dropped
+- **AND** the requirement SHALL NOT contribute to G5's outcome
 
 #### Scenario: Scope enumerations that drifted from the diff fail
 

@@ -83,6 +83,10 @@ python scripts/spec-gates/run.py --verify-archive <change-id> --snapshot <path>
 
 baseline scenario 的移除若為刻意,其標題必須出現在該 change 的 tasks.md 中;此時降為 REVIEW 而非 FAIL。此例外同樣來自實跑——`terminal-opt-in-by-default` 刻意移除 `Default all tabs enabled` 並以新 scenario 取代,原始版本誤判為 FAIL。
 
+比對範圍限於 `## MODIFIED Requirements` 區塊。`## ADDED` 沒有 baseline 對應物,`## REMOVED` 宣告的是整條 requirement 的離場而非 scenario 的意外遺失。原始實作不分區塊收集全部 `### Requirement:`,使得**正確宣告的移除**被判為 FAIL;對封存語料重播顯示,G5 判 FAIL 的 change 由 34 降至 19。
+
+該重播的證據強度低於 G4 的:G4 比對的是同一封存目錄內的宣告與磁碟,自成一體;G5 的 baseline 取自當前 HEAD,在封存後已歷經數月演化,故殘留的 19 筆無法歸因為真實 drift。有意義的是 34→19 這個差值,不是絕對數。
+
 **config.yaml**
 
 ```yaml

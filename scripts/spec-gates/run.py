@@ -374,7 +374,44 @@ def spec_counts(paths) -> dict:
     return out
 
 
+_DELTA_SECTION = re.compile(r"^## (ADDED|MODIFIED|REMOVED|RENAMED|NEW) Requirements\s*$")
+
+
+def delta_sections(text: str) -> dict:
+    """{section: {requirement: {scenario, ...}}} for a delta spec.
+
+    G5 is scoped to MODIFIED blocks, because those replace the baseline
+    requirement wholesale. Collecting every `### Requirement:` regardless of its
+    block made a correctly declared REMOVED requirement look like a MODIFIED one
+    whose scenarios had all vanished, and G5 failed the change for declaring a
+    removal properly.
+    """
+    out, section, cur = {}, None, None
+    for line in text.splitlines():
+        m = _DELTA_SECTION.match(line)
+        if m:
+            section, cur = m.group(1), None
+            out.setdefault(section, {})
+            continue
+        if line.startswith("## "):  # any other block ends the delta section
+            section, cur = None, None
+            continue
+        if section is None:
+            continue
+        if line.startswith("### Requirement:"):
+            cur = line.split(":", 1)[1].strip()
+            out[section][cur] = set()
+        elif line.startswith("#### Scenario:") and cur:
+            out[section][cur].add(line.split(":", 1)[1].strip())
+    return out
+
+
 def scenarios_of(path) -> dict:
+    """{requirement: {scenario, ...}} across a whole file, block-agnostic.
+
+    Used for baseline specs, whose requirements sit under a plain
+    `## Requirements`. Delta specs go through `delta_sections` instead.
+    """
     out, cur = {}, None
     p = Path(path)
     if not p.exists():
@@ -494,7 +531,11 @@ def run_gates(change_id: str, base: str):
     tasks_text = tasks_path.read_text(encoding="utf-8") if tasks_path.exists() else ""
     merged = {}
     for cap in sorted(disk):
-        d = scenarios_of(specs_dir / cap / "spec.md")
+        delta_path = specs_dir / cap / "spec.md"
+        text = delta_path.read_text(encoding="utf-8") if delta_path.exists() else ""
+        # MODIFIED only: ADDED has no baseline counterpart, and REMOVED declares
+        # the requirement's departure rather than losing scenarios by accident.
+        d = delta_sections(text).get("MODIFIED", {})
         b = scenarios_of(Path("openspec/specs") / cap / "spec.md")
         for row in gate_scenario_parity(d, b, tasks_text).detail["dropped"]:
             merged[f"{cap}/{row['scenario']}"] = {"capability": cap, **row}

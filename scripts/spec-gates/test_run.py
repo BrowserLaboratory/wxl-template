@@ -510,20 +510,102 @@ else:  # pragma: no cover - only outside a full checkout
 # ── G5 delta scenario parity ─────────────────────────────────────────────────
 
 _REQ = "UI tab allowlist via tools field"
+_KEEP = "Terminal stays hidden when tools omits it"
+_GONE = "Repeater button renders for every challenge"
+
 check(
     lambda: gates.gate_scenario_parity(
-        {_REQ: {"A", "B"}}, {_REQ: {"A", "B"}}, ""
+        {_REQ: {_KEEP, _GONE}}, {_REQ: {_KEEP, _GONE}}, ""
     ).status == "PASS",
     "G5: delta covers every baseline scenario -> PASS",
 )
 def _g5():
-    return gates.gate_scenario_parity({_REQ: {"A"}}, {_REQ: {"A", "B"}}, "")
+    return gates.gate_scenario_parity({_REQ: {_KEEP}}, {_REQ: {_KEEP, _GONE}}, "")
 check(lambda: _g5().status == "FAIL", "G5: an unrecorded baseline scenario loss -> FAIL")
 check(
     lambda: gates.gate_scenario_parity(
-        {_REQ: {"A"}}, {_REQ: {"A", "B"}}, "task 3.1 removes scenario B deliberately"
+        {_REQ: {_KEEP}}, {_REQ: {_KEEP, _GONE}},
+        f"- [x] 3.1 移除 scenario「{_GONE}」,理由見 design.md。",
     ).status == "REVIEW",
     "G5: a deliberate removal recorded in tasks -> REVIEW",
+)
+# The guard above used a one-character title against non-empty tasks text, so
+# mutating `missing in tasks_text` to `bool(tasks_text)` kept the suite green.
+# A non-empty tasks file that does NOT name the scenario must still FAIL.
+check(
+    lambda: gates.gate_scenario_parity(
+        {_REQ: {_KEEP}}, {_REQ: {_KEEP, _GONE}},
+        "- [x] 1.1 撰寫測試骨架。\n- [x] 1.2 實作 G5。\n",
+    ).status == "FAIL",
+    "G5: a non-empty tasks file that never names the scenario does not excuse the loss",
+)
+
+# ── G5 delta section awareness ───────────────────────────────────────────────
+# scenarios_of collected every `### Requirement:` regardless of the
+# ADDED / MODIFIED / REMOVED block it sat under, and run_gates fed it the whole
+# delta. A correctly declared REMOVED requirement therefore looked like a
+# MODIFIED one whose scenarios had all vanished, and G5 reported FAIL on it.
+# The spec has always scoped G5 to MODIFIED; only the code disagreed.
+
+_DELTA = """## ADDED Requirements
+
+### Requirement: Brand new thing
+
+#### Scenario: it works
+
+- **WHEN** something
+- **THEN** something
+
+## MODIFIED Requirements
+
+### Requirement: UI tab allowlist via tools field
+
+#### Scenario: Terminal stays hidden when tools omits it
+
+- **WHEN** tools omits terminal
+- **THEN** the tab is absent
+
+## REMOVED Requirements
+
+### Requirement: Legacy layout registration
+
+**Reason**: replaced by a component.
+
+#### Scenario: the layout is no longer registered
+
+- **WHEN** the theme initialises
+- **THEN** nothing is registered
+"""
+
+check(
+    lambda: set(gates.delta_sections(_DELTA)) == {"ADDED", "MODIFIED", "REMOVED"},
+    "G5: the three delta blocks are parsed separately",
+)
+check(
+    lambda: list(gates.delta_sections(_DELTA)["MODIFIED"]) == [_REQ],
+    "G5: only the MODIFIED requirement lands in the MODIFIED bucket",
+)
+check(
+    lambda: gates.delta_sections(_DELTA)["MODIFIED"][_REQ] == {_KEEP},
+    "G5: the MODIFIED requirement's scenarios are collected",
+)
+check(
+    lambda: "Legacy layout registration" in gates.delta_sections(_DELTA)["REMOVED"],
+    "G5: a REMOVED requirement is kept in its own bucket, not merged",
+)
+check(
+    lambda: gates.gate_scenario_parity(
+        gates.delta_sections(_DELTA)["MODIFIED"],
+        {"Legacy layout registration": {"the layout is no longer registered", "another one"},
+         _REQ: {_KEEP}},
+        "",
+    ).status == "PASS",
+    "G5: a correctly declared REMOVED requirement is not reported as a scenario loss",
+)
+check(
+    lambda: gates.delta_sections("## Requirements\n\n### Requirement: Plain\n\n#### Scenario: s\n")
+    .get("MODIFIED", {}) == {},
+    "G5: a baseline file's plain `## Requirements` block is not read as MODIFIED",
 )
 
 # ── G6 added-lines trace ─────────────────────────────────────────────────────

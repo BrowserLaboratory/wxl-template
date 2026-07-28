@@ -138,7 +138,7 @@ Each gate reports `PASS`, `REVIEW`, or `FAIL`. **Only `FAIL` blocks CI.** `REVIE
 | G2 invariance | A claim that a file is unchanged, where the diff touched it | yes, when the claim is unqualified |
 | G3 deleted-literal | A user-facing string the diff deleted still occurs somewhere | yes |
 | G4 scope parity | The proposal's Impact list matches the actual diff and the delta specs on disk | yes, unless the proposal declares no affected specs at all |
-| G5 delta scenario parity | A delta drops a baseline scenario, silently deleting it from the corpus | yes, unless the tasks file names the scenario |
+| G5 delta scenario parity | A `## MODIFIED` block drops a baseline scenario, silently deleting it from the corpus | yes, unless the tasks file names the scenario |
 | G6 added-lines trace | Mechanism assertions in added prose, for you to trace to source | no |
 | G7 archive trace-parity | `@trace` metadata lost while archiving | yes |
 
