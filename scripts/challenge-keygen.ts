@@ -17,7 +17,7 @@
  *   pnpm challenge:keygen --force [slug]  # re-key even if already processed
  */
 
-import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFileSync, statSync } from 'node:fs'
+import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync, copyFileSync, statSync, renameSync, rmSync } from 'node:fs'
 import { resolve, dirname, join, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { execFileSync } from 'node:child_process'
@@ -368,16 +368,62 @@ function toolExists(name: string): boolean {
   } catch { return false }
 }
 
+/** The `--out-dir` of every `wasm-pack build` invocation in `pnpm wasm:build`. */
+export const WASM_PACK_OUT_DIRS = [
+  '.vitepress/wasm/virtual-fs',
+  '.vitepress/wasm/asgi-bridge',
+  '.vitepress/wasm/wxlsh-parser',
+]
+
+/**
+ * Where the stripped/optimised template is staged, relative to the repo root.
+ *
+ * It MUST NOT sit inside a `wasm-pack` output directory. wasm-pack runs its own
+ * `wasm-opt -O` over every `.wasm` it finds in `--out-dir`, with no feature
+ * flags — so a real module staged there fails the next `pnpm wasm:build` on
+ * `reference-types`. This went unnoticed while the staged template was an empty
+ * 8-byte module, which that pass accepted.
+ */
+export function preparedTemplateRelPath(): string {
+  return '.vitepress/wasm/template.wasm'
+}
+
+/**
+ * Fail loudly when a pass has produced something that is not a usable module.
+ *
+ * Every step of this pipeline exits 0 even when it drops the module's contents,
+ * and an empty module is *structurally valid* — `wasm-tools validate` accepts a
+ * bare 8-byte header, so the verify gate cannot see it either. Size relative to
+ * the input is the only signal that survives. A strip plus an -O4 pass trims a
+ * few hundred bytes off a 77 KB template; losing more than half of it means a
+ * pass wrote nothing, not that it optimised well.
+ */
+export function assertUsableWasm(path: string, inputSize: number, label: string): void {
+  const bytes = readFileSync(path)
+  if (bytes.length < 8 || bytes[0] !== 0x00 || bytes[1] !== 0x61 || bytes[2] !== 0x73 || bytes[3] !== 0x6d) {
+    throw new Error(`${label}: ${path} is missing the WASM magic — the pass wrote ${bytes.length} bytes`)
+  }
+  if (bytes.length < inputSize / 2) {
+    throw new Error(
+      `${label}: ${path} is ${bytes.length} bytes, down from ${inputSize} — the pass discarded the module`,
+    )
+  }
+}
+
 export function prepareTemplateWasm(inputPath: string, outputPath: string): void {
   // Step 1: wasm-strip (remove symbols and debug info)
   // Step 2: wasm-opt -O4 (aggressive optimization, instruction reordering)
   // Both are applied to the template WASM once before per-challenge processing.
 
-  let wasmBytes = readFileSync(inputPath)
+  const inputSize = readFileSync(inputPath).length
 
   if (toolExists('wasm-tools')) {
-    const stripped = execFileSync('wasm-tools', ['strip', inputPath, '-o', '-'], { maxBuffer: 50 * 1024 * 1024 })
-    writeFileSync(outputPath, stripped)
+    // Write to the destination directly. `-o -` does NOT mean stdout: wasm-tools
+    // treats "-" as a literal filename, so the module landed in a file called
+    // "-" in the working directory while the captured stdout — and therefore
+    // the template — was empty.
+    execFileSync('wasm-tools', ['strip', inputPath, '-o', outputPath], { maxBuffer: 50 * 1024 * 1024 })
+    assertUsableWasm(outputPath, inputSize, 'wasm-strip')
     console.log('[prep]  wasm-strip applied')
   } else {
     copyFileSync(inputPath, outputPath)
@@ -385,8 +431,26 @@ export function prepareTemplateWasm(inputPath: string, outputPath: string): void
   }
 
   if (toolExists('wasm-opt')) {
-    execFileSync('wasm-opt', ['-O4', outputPath, '-o', outputPath], { maxBuffer: 50 * 1024 * 1024 })
-    console.log('[prep]  wasm-opt -O4 applied')
+    // `--all-features` is required, not cosmetic: wasm-pack emits reference
+    // types and bulk-memory ops, and binaryen's validator rejects the module
+    // outright without them. This only ever ran clean before because it was
+    // being handed an empty file.
+    //
+    // Optimisation is best-effort — a binaryen that cannot read a newer rustc's
+    // output must not fail the build. Write via a sibling file so that a
+    // rejected run leaves the stripped template intact rather than truncated.
+    const optimised = `${outputPath}.opt`
+    try {
+      execFileSync('wasm-opt', ['-O4', '--all-features', outputPath, '-o', optimised],
+        { maxBuffer: 50 * 1024 * 1024, stdio: 'pipe' })
+      assertUsableWasm(optimised, inputSize, 'wasm-opt')
+      renameSync(optimised, outputPath)
+      console.log('[prep]  wasm-opt -O4 applied')
+    } catch (err) {
+      rmSync(optimised, { force: true })
+      const detail = err instanceof Error ? err.message.split('\n')[0] : String(err)
+      console.warn(`[warn]  wasm-opt failed (${detail}) — keeping the stripped template`)
+    }
   } else {
     console.warn('[warn]  wasm-opt not found — skipping optimization')
   }
@@ -411,8 +475,10 @@ export function wasmMutate(wasmPath: string, seed: number): void {
 
 export function slugToSeed(slug: string): number {
   const hash = createHash('sha256').update(slug).digest()
-  // Use first 4 bytes as u32 LE seed
-  return hash[0] | (hash[1] << 8) | (hash[2] << 16) | (hash[3] << 24)
+  // Use first 4 bytes as u32 LE seed. `<< 24` alone is a *signed* 32-bit op:
+  // without `>>> 0` half of all slugs come out negative, and wasm-tools parses
+  // a negative seed as a flag ("unexpected argument '-1' found").
+  return (hash[0] | (hash[1] << 8) | (hash[2] << 16) | (hash[3] << 24)) >>> 0
 }
 
 // ─── Legacy field names (for detection / warning) ───────────────────────────
@@ -608,7 +674,7 @@ async function main(): Promise<void> {
   }
 
   // Prepare template WASM: strip symbols + optimize
-  const preparedTemplatePath = resolve(root, '.vitepress', 'wasm', 'virtual-fs', 'template.wasm')
+  const preparedTemplatePath = resolve(root, preparedTemplateRelPath())
   prepareTemplateWasm(templateWasmPath, preparedTemplatePath)
 
   // New pattern: docs/challenge/<slug>/index.md

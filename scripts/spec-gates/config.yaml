@@ -1,0 +1,11 @@
+# Spec-drift gate configuration.
+#
+# This file provides only the hedge_markers default. claim_phrases is declared
+# exclusively in the per-change openspec/changes/<id>/gates.yaml — declaring it
+# here has no effect: load_config never reads a claim_phrases key from this
+# file.
+#
+# hedge_markers: wording that counts as "already conditional". Used only when
+# the per-change gates.yaml omits the key entirely. Leave empty to use the
+# built-in English and Traditional Chinese defaults in run.py.
+hedge_markers: []

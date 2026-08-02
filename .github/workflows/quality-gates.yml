@@ -22,11 +22,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
@@ -67,11 +71,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
@@ -175,11 +183,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
@@ -210,3 +222,122 @@ jobs:
 
       - name: Run site-smoke tests
         run: pnpm test:smoke
+
+  spec-gates:
+    # PR-time spec-drift gates: statements this change falsified without editing.
+    # Guarded to pull_request for the same reason as prose-audit — the gates diff
+    # base against head, and github.base_ref is empty on push events.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/spec-gates/requirements.txt
+
+      - name: Install spec-gates dependencies
+        run: pip install -r scripts/spec-gates/requirements.txt
+
+      - name: Run the gate script's own tests
+        run: python scripts/spec-gates/test_run.py
+
+      - name: Resolve change ids from the PR diff
+        id: change
+        # SECURITY (CWE-78 script injection): every value below that a fork PR can
+        # influence reaches the shell through env: rather than ${{ }}, because
+        # Actions macro-expands ${{ }} into the script body before bash parses it
+        # — the same reasoning documented on prose-audit.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -f
+          git fetch origin "$BASE_REF"
+          # The id set must come from what this PR changed. Deriving it from
+          # whichever directory happens to sit under openspec/changes/ binds an
+          # unrelated PR to whatever change is live on the base branch — and with
+          # gates.yaml mandatory, that turns bystander PRs into hard FAILs.
+          # Second path segment of openspec/changes/<id>/..., archive excluded,
+          # de-duplicated. Single space-separated line, same convention as
+          # prose-audit's files= output.
+          IDS=$(git diff --name-only "origin/$BASE_REF...HEAD" -- 'openspec/changes/' \
+            | awk -F/ 'NF > 3 && $3 != "archive" { print $3 }' \
+            | sort -u | tr '\n' ' ')
+          # SECURITY (output injection): IDS derives from fork-controllable
+          # paths. The single-line `echo "ids=$IDS"` form was only safe as long
+          # as git kept C-quoting control characters in --name-only output — an
+          # external invariant this workflow does not control. The heredoc form
+          # with a runtime-random delimiter cannot be terminated early by
+          # crafted content, whatever bytes reach $IDS.
+          delim="spec-gates-ids-$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
+          {
+            echo "ids<<$delim"
+            echo "$IDS"
+            echo "$delim"
+          } >> "$GITHUB_OUTPUT"
+          echo "Resolved change ids from the PR diff: ${IDS:-<none>}"
+
+      - name: Run G7 archive trace-parity (every PR, no id needed)
+        # G7 compares @trace metadata across ALL of openspec/specs/ between the
+        # base ref and the working tree -- a whole-repo diff that needs no change
+        # id, so it
+        # runs on every PR. The id-scoped step below cannot provide that
+        # coverage:
+        #  (a) a PR that never touches openspec/changes/ resolves zero ids and
+        #      that step is skipped -- yet such a PR can delete @trace blocks
+        #      from openspec/specs/**/spec.md directly;
+        #  (b) an archive PR moves openspec/changes/<id>/ into archive/; git's
+        #      rename detection collapses the move into R100 entries listing
+        #      only the archive-side paths, the awk filter excludes archive/,
+        #      and the id set comes out empty -- so G7 never ran on the one
+        #      operation it exists to guard. Every archival in this repo's
+        #      history is recorded as a rename, none as a pure deletion.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python scripts/spec-gates/run.py --trace-parity-only --base "origin/$BASE_REF"
+
+      - name: Run spec-drift gates per touched change
+        # Runs only when the PR touches at least one live change directory: G1
+        # (claim-parity) and G2 (invariance) are per-change judgments and need
+        # a change id. Skipping here leaves no G7 hole — the unconditional step
+        # above already ran it (run.py runs all three gates per id, so G7 is
+        # merely re-evaluated redundantly here, with the same verdict). Every
+        # change the PR does touch is gated, not just a lone one: gating only
+        # the single-change case meant a PR spanning two changes received no
+        # coverage at all.
+        if: steps.change.outputs.ids != ''
+        # SECURITY (CWE-78): the id list is derived from fork-controllable file
+        # paths, so it reaches the shell via env: (never ${{ }} in run:), and
+        # each id must pass a conservative whitelist before first use — an
+        # unexpected name fails the job instead of being executed or skipped.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          CHANGE_IDS: ${{ steps.change.outputs.ids }}
+        run: |
+          set -f
+          # run.py distinguishes "a gate reported FAIL" (exit 1) from "the
+          # gates could not be evaluated" (exit 2: unknown change id, broken
+          # environment, unparseable YAML). Flattening both to 1 hid the
+          # difference from anyone triaging a red job, so the loop keeps the
+          # most severe code seen across all ids: a 2 wins over any 1.
+          status=0
+          for id in $CHANGE_IDS; do
+            [[ "$id" =~ ^[a-z0-9-]+$ ]] || { echo "::error::rejecting unsafe change id: $id"; exit 2; }
+            echo "::group::spec-drift gates for $id"
+            rc=0
+            python scripts/spec-gates/run.py "$id" --base "origin/$BASE_REF" || rc=$?
+            echo "::endgroup::"
+            if [ "$rc" -eq 2 ]; then
+              status=2
+            elif [ "$rc" -ne 0 ] && [ "$status" -ne 2 ]; then
+              status=1
+            fi
+          done
+          exit "$status"

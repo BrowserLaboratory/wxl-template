@@ -1,0 +1,3 @@
+# Spec-drift gates — runtime dependencies.
+# The gates use only the standard library plus YAML config parsing.
+PyYAML==6.0.3

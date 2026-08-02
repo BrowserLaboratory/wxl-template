@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { mkdirSync, writeFileSync, readFileSync, existsSync, utimesSync, rmSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { resolve, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import {
+  prepareTemplateWasm,
+  assertUsableWasm,
+  preparedTemplateRelPath,
+  WASM_PACK_OUT_DIRS,
   serializePayload,
   parsePayload,
   xorEncodeKey,
@@ -304,6 +309,22 @@ describe('slugToSeed', () => {
     const seed = slugToSeed('test')
     expect(Number.isInteger(seed)).toBe(true)
   })
+
+  it('reads the hash as an unsigned u32 when the top bit is set', () => {
+    // The signed reading of this slug's hash is -1882526008, which wasm-tools
+    // rejects as a flag ("unexpected argument '-1' found") — so mutation was
+    // silently skipped for roughly half of all slugs.
+    const seed = slugToSeed('confidential-files')
+    expect(seed).toBe(2412441288)
+  })
+
+  it('never returns a negative seed', () => {
+    for (let i = 0; i < 1000; i++) {
+      const seed = slugToSeed(`slug-${i}`)
+      expect(seed).toBeGreaterThanOrEqual(0)
+      expect(seed).toBeLessThan(2 ** 32)
+    }
+  })
 })
 
 // ─── Source freshness detection (Task 1.1) ──────────────────────────────────
@@ -368,6 +389,134 @@ describe('isOutputStale', () => {
     // (if the input was expected but is missing, we can't verify freshness)
     expect(isOutputStale(outputPath, [join(tmpDir, 'missing.txt')])).toBe(false)
   })
+})
+
+// ─── Template preparation (strip + optimise) ────────────────────────────────
+
+// The template carries no executable code of its own at runtime — the loader
+// only reads its `chall-data` custom section. But an empty template still
+// breaks extraction, because `useWasmLoader.extractCustomSection` starts at
+// byte 8 and a truncated module leaves nothing to walk. These tests pin the
+// two ways the strip pass has silently produced an unusable template.
+
+const REAL_TEMPLATE = resolve(__dirname, '../../../.vitepress/wasm/virtual-fs/virtual_fs_bg.wasm')
+
+function hasWasmTools(): boolean {
+  try {
+    execFileSync('which', ['wasm-tools'], { stdio: 'pipe' })
+    return true
+  } catch {
+    return false
+  }
+}
+
+describe('preparedTemplateRelPath', () => {
+  it('stages the template outside every wasm-pack output directory', () => {
+    // wasm-pack re-optimises everything in its --out-dir with a bare `wasm-opt
+    // -O`, which rejects the reference-types the module uses. Staging the
+    // template there breaks the *next* `pnpm wasm:build`, not the current one.
+    const staged = preparedTemplateRelPath()
+    for (const outDir of WASM_PACK_OUT_DIRS) {
+      expect(staged.startsWith(`${outDir}/`)).toBe(false)
+    }
+  })
+})
+
+describe('assertUsableWasm', () => {
+  let tmpDir: string
+
+  beforeEach(() => {
+    tmpDir = resolve(tmpdir(), `keygen-guard-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    mkdirSync(tmpDir, { recursive: true })
+  })
+
+  afterEach(() => {
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('rejects a zero-byte output', () => {
+    const p = join(tmpDir, 'out.wasm')
+    writeFileSync(p, new Uint8Array(0))
+    expect(() => assertUsableWasm(p, 77_000, 'wasm-strip')).toThrow(/wasm-strip/)
+  })
+
+  it('rejects a header-only module that carries no code', () => {
+    // 8 bytes of magic + version is a structurally valid module, so neither a
+    // non-zero exit code nor `wasm-tools validate` catches it. Size is the only
+    // signal that the contents went missing.
+    const p = join(tmpDir, 'out.wasm')
+    writeFileSync(p, new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]))
+    expect(() => assertUsableWasm(p, 77_000, 'wasm-strip')).toThrow(/8 bytes/)
+  })
+
+  it('rejects a file that is not WASM at all', () => {
+    const p = join(tmpDir, 'out.wasm')
+    writeFileSync(p, Buffer.alloc(50_000, 0x41))
+    expect(() => assertUsableWasm(p, 77_000, 'wasm-strip')).toThrow(/magic/)
+  })
+
+  it('accepts an output that retains most of the input', () => {
+    const p = join(tmpDir, 'out.wasm')
+    const body = Buffer.alloc(70_000, 0x00)
+    body.set([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00], 0)
+    writeFileSync(p, body)
+    expect(() => assertUsableWasm(p, 77_000, 'wasm-strip')).not.toThrow()
+  })
+})
+
+describe('prepareTemplateWasm', () => {
+  let tmpDir: string
+  let cwd: string
+  let input: string
+  let inputReady = false
+
+  const canRun = existsSync(REAL_TEMPLATE) && hasWasmTools()
+
+  beforeEach(() => {
+    tmpDir = resolve(tmpdir(), `keygen-prep-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    mkdirSync(tmpDir, { recursive: true })
+    // Work off a private copy. Reading the build output directly races any
+    // concurrent `pnpm wasm:build`, which rewrites that file in place — and a
+    // torn read says nothing about the code under test, so skip rather than
+    // fail when the source does not look like a complete module.
+    input = join(tmpDir, 'input.wasm')
+    inputReady = false
+    if (canRun) {
+      const src = readFileSync(REAL_TEMPLATE)
+      if (src.length > 50_000 && src[0] === 0x00 && src[1] === 0x61 && src[2] === 0x73 && src[3] === 0x6d) {
+        writeFileSync(input, src)
+        inputReady = true
+      }
+    }
+    // Run from the temp dir so that a tool which writes to a relative path
+    // drops its file here rather than in the repo root.
+    cwd = process.cwd()
+    process.chdir(tmpDir)
+  })
+
+  afterEach(() => {
+    process.chdir(cwd)
+    rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  // `wasm-opt -O4` over a real 77 KB module takes seconds on its own, and these
+  // two run it back to back while the rest of the suite competes for the same
+  // cores. The default 5 s budget was being cleared by a margin that vanished
+  // once the suite grew.
+  it.skipIf(!canRun)('produces a template that retains the input\'s contents', (ctx) => {
+    if (!inputReady) return ctx.skip()
+    const out = join(tmpDir, 'template.wasm')
+    prepareTemplateWasm(input, out)
+    expect(readFileSync(out).length).toBeGreaterThan(readFileSync(input).length / 2)
+  }, 60_000)
+
+  it.skipIf(!canRun)('writes no stray file into the working directory', (ctx) => {
+    if (!inputReady) return ctx.skip()
+    // `wasm-tools strip -o -` treats "-" as a filename, not stdout. That drops
+    // an untracked binary into the repo root on every keygen run.
+    prepareTemplateWasm(input, join(tmpDir, 'template.wasm'))
+    expect(existsSync(join(tmpDir, '-'))).toBe(false)
+  }, 60_000)
 })
 
 describe('getTrackedInputPaths', () => {

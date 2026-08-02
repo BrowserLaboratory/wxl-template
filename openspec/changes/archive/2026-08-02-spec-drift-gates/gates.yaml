@@ -1,0 +1,2 @@
+# G1 claim-parity 的宣告檔。空清單 = 本 change 刻意宣告沒有真值條件被改動的名詞短語。
+claim_phrases: []
