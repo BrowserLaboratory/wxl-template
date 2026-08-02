@@ -321,6 +321,13 @@ export function runForkInit(
         mkdirSync(dirname(abs(DEPLOY_REL)), { recursive: true })
         writeFileSync(abs(DEPLOY_REL), deployContent)
       }
+      // The workflow deploys on a `v*` tag, but a fresh repo's `github-pages`
+      // environment only authorises the default branch. Without the tag rule the
+      // first release fails inside the deploy job, and nothing in that error
+      // points back at an environment setting the fork owner never saw.
+      warnings.push(
+        `${DEPLOY_REL} deploys on a \`v*\` tag push. GitHub's \`github-pages\` environment authorises only the default branch by default, so add a Tag rule \`v*\` under Settings > Environments > github-pages > "Deployment branches and tags" (keep the existing \`main\` rule — workflow_dispatch needs it) before cutting a release.`,
+      )
       for (const k of keysHit) recordSensitive(k, DEPLOY_REL)
       if (args.rebrand) scanResidual(DEPLOY_REL, deployContent)
     } else {

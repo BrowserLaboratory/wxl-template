@@ -215,6 +215,27 @@ describe('runForkInit — A mode (identity, base, URLs, deploy)', () => {
     expect(existsSync(join(root, '.github/workflows/deploy.yml'))).toBe(true)
   })
 
+  it('warns about the github-pages tag rule when it creates the deploy workflow', () => {
+    // The workflow deploys from refs/tags/v*, but a fresh repo's github-pages
+    // environment authorises only the default branch. Without this warning the
+    // first release fails inside the deploy job with an error that never names
+    // the setting responsible — and the fork owner has no reason to look there.
+    const res = runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    const warning = res.warnings.find((w) => w.includes('github-pages'))
+    expect(warning, 'no github-pages environment warning on a fresh fork').toBeTruthy()
+    expect(warning).toMatch(/Tag rule/i)
+    expect(warning).toContain('v*')
+  })
+
+  it('does not repeat the tag-rule warning when deploy.yml already matches', () => {
+    // Second run on an unchanged fork: the file is already correct, so the
+    // advice has been given. Repeating it on every run trains people to ignore
+    // the warning block, which is where the residual inventory also lives.
+    runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    const second = runForkInit(parseForkInitArgs(A_ARGS), { projectRoot: root })
+    expect(second.warnings.some((w) => w.includes('github-pages'))).toBe(false)
+  })
+
   it('--base none does not declare a base', () => {
     runForkInit(parseForkInitArgs(['--author', 'me', '--repo', 'me/myfork', '--base', 'none']), { projectRoot: root })
     const cfg = readFileSync(join(root, '.vitepress/config.mts'), 'utf8')
