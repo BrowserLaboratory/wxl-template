@@ -22,11 +22,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
@@ -67,11 +71,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen
@@ -175,11 +183,15 @@ jobs:
 
       - name: Cache Rust build artifacts
         uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          # taiki-e/install-action installs pinned prebuilt binaries into
+          # $CARGO_HOME/bin; a restored binary cache would shadow them.
+          cache-bin: "false"
 
       - name: Install wasm-pack
         uses: taiki-e/install-action@213ccc1a076163c093f914550b94feb90fab916d # v2.79.2
         with:
-          tool: wasm-pack@0.14.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
+          tool: wasm-pack@0.14.0,wasm-tools@1.249.0  # Pinned per spec ci-quality-gates: CI workflows install build toolchain at fixed versions
 
       - name: Install binaryen (wasm-opt)
         run: sudo apt-get update && sudo apt-get install -y binaryen

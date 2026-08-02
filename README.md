@@ -37,7 +37,7 @@
 - **pnpm** >= 10 (`npm install -g pnpm`)
 - **Rust** toolchain (install via [rustup](https://rustup.rs/))
 - **wasm-pack** (`cargo install wasm-pack`) — not a package dependency; install it into your Rust toolchain
-- **wasm-tools** (`cargo install wasm-tools`, or `pnpm wasm:tools`) — required by the L2 stage of `pnpm challenge:verify`, which runs `wasm-tools validate` on the generated payload. `pnpm challenge:keygen` also uses it for its strip and mutate passes, but degrades to a warning for each when it is absent.
+- **wasm-tools** (`cargo install wasm-tools --version 1.249.0 --locked`, or `pnpm wasm:tools`) — pinned to the same version CI installs; required by the L2 stage of `pnpm challenge:verify`, which runs `wasm-tools validate` on the generated payload. `pnpm challenge:keygen` also uses it for its strip and mutate passes, but degrades to a warning for each when it is absent.
 - **Chromium for Playwright** — required before the first `pnpm challenge:verify` or `pnpm test:smoke` run. After `pnpm install`, install the browser binary once with:
 
   ```bash
@@ -195,7 +195,7 @@ The example omits `--base` deliberately: with the flag absent the script leaves 
 4. Add `NODE_VERSION=24` to the environment variables.
 5. If the site is served from a sub-path, add `SITE_BASE` with that path (leave it unset for a root-domain deployment).
 
-> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not installed here. `pnpm build` does run `pnpm challenge:keygen`, which uses `wasm-tools` for its strip and mutate passes, but keygen degrades to a warning for each when the tool is absent — so the build still succeeds, just without those passes. Add `wasm-tools` to the install line if you want stripped and mutated payloads in production builds.
+> **Note**: Cloudflare Pages does not ship a Rust toolchain by default. `wasm-pack` is a Rust binary, not a package dependency — `pnpm install` will not provide it — so the build command above installs the minimal Rust toolchain along with `wasm-pack` before building. `wasm-tools` is not installed here. `pnpm build` does run `pnpm challenge:keygen`, which uses `wasm-tools` for its strip and mutate passes, but keygen degrades to a warning for each when the tool is absent — so the build still succeeds, just without those passes. Add `wasm-tools` to the install line (`cargo install wasm-tools --version 1.249.0 --locked`, the same version CI pins) if you want stripped and mutated payloads in production builds.
 
 ## License
 
