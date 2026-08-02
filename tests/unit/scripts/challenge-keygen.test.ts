@@ -309,6 +309,22 @@ describe('slugToSeed', () => {
     const seed = slugToSeed('test')
     expect(Number.isInteger(seed)).toBe(true)
   })
+
+  it('reads the hash as an unsigned u32 when the top bit is set', () => {
+    // The signed reading of this slug's hash is -1882526008, which wasm-tools
+    // rejects as a flag ("unexpected argument '-1' found") — so mutation was
+    // silently skipped for roughly half of all slugs.
+    const seed = slugToSeed('confidential-files')
+    expect(seed).toBe(2412441288)
+  })
+
+  it('never returns a negative seed', () => {
+    for (let i = 0; i < 1000; i++) {
+      const seed = slugToSeed(`slug-${i}`)
+      expect(seed).toBeGreaterThanOrEqual(0)
+      expect(seed).toBeLessThan(2 ** 32)
+    }
+  })
 })
 
 // ─── Source freshness detection (Task 1.1) ──────────────────────────────────

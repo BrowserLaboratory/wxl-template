@@ -475,8 +475,10 @@ export function wasmMutate(wasmPath: string, seed: number): void {
 
 export function slugToSeed(slug: string): number {
   const hash = createHash('sha256').update(slug).digest()
-  // Use first 4 bytes as u32 LE seed
-  return hash[0] | (hash[1] << 8) | (hash[2] << 16) | (hash[3] << 24)
+  // Use first 4 bytes as u32 LE seed. `<< 24` alone is a *signed* 32-bit op:
+  // without `>>> 0` half of all slugs come out negative, and wasm-tools parses
+  // a negative seed as a flag ("unexpected argument '-1' found").
+  return (hash[0] | (hash[1] << 8) | (hash[2] << 16) | (hash[3] << 24)) >>> 0
 }
 
 // ─── Legacy field names (for detection / warning) ───────────────────────────
