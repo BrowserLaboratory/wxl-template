@@ -499,12 +499,16 @@ describe('prepareTemplateWasm', () => {
     rmSync(tmpDir, { recursive: true, force: true })
   })
 
+  // `wasm-opt -O4` over a real 77 KB module takes seconds on its own, and these
+  // two run it back to back while the rest of the suite competes for the same
+  // cores. The default 5 s budget was being cleared by a margin that vanished
+  // once the suite grew.
   it.skipIf(!canRun)('produces a template that retains the input\'s contents', (ctx) => {
     if (!inputReady) return ctx.skip()
     const out = join(tmpDir, 'template.wasm')
     prepareTemplateWasm(input, out)
     expect(readFileSync(out).length).toBeGreaterThan(readFileSync(input).length / 2)
-  })
+  }, 60_000)
 
   it.skipIf(!canRun)('writes no stray file into the working directory', (ctx) => {
     if (!inputReady) return ctx.skip()
@@ -512,7 +516,7 @@ describe('prepareTemplateWasm', () => {
     // an untracked binary into the repo root on every keygen run.
     prepareTemplateWasm(input, join(tmpDir, 'template.wasm'))
     expect(existsSync(join(tmpDir, '-'))).toBe(false)
-  })
+  }, 60_000)
 })
 
 describe('getTrackedInputPaths', () => {
