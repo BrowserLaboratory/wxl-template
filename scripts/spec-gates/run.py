@@ -7,15 +7,23 @@ that repeatedly survives multi-round review is the complement: prose and spec
 sentences that were true, were not edited, and became false because the code
 they describe changed. These checks cover that complement.
 
+Three gates remain after the reduction (design.md, Implementation Contract):
+
+- G1 claim-parity: the per-change gates.yaml is mandatory; its absence is the
+  one thing G1 FAILs on. Declared phrases with unhedged hits are REVIEW.
+- G2 invariance: REVIEW-only — "X is unchanged" claims naming a file the diff
+  touched are listed for a human, never blocked on.
+- G7 archive trace-parity: diff-based, aligned per requirement between the base
+  ref and the working tree. A requirement on both sides that lost a @trace
+  `source:` is FAIL; a requirement that vanishes from HEAD is REVIEW.
+
 Verdicts are PASS / REVIEW / FAIL. Only FAIL affects the exit code — the review
-tier exists because several of these checks legitimately surface hits a human
-must adjudicate (section headings, code identifiers, deliberate removals), and
-a gate that blocks on those is a gate people learn to bypass.
+tier exists because these checks legitimately surface hits a human must
+adjudicate, and a gate that blocks on those is a gate people learn to bypass.
 
 Usage:
     run.py <change-id> [--base REF] [--json]
-    run.py --snapshot <change-id> [--out PATH]
-    run.py --verify-archive <change-id> [--snapshot-file PATH]
+    run.py --trace-parity-only [--base REF] [--json]
     run.py --resolve-change [--base REF]
 """
 from __future__ import annotations
@@ -30,6 +38,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 EXCLUDE_ARCHIVE = ":!openspec/changes/archive"
+# The repository-wide hedge_markers fallback. A module constant rather than an
+# expression inside load_config so a test can point the lookup at a file it
+# controls without editing the one this repository ships.
+GLOBAL_CONFIG = Path(__file__).resolve().parent / "config.yaml"
 DEFAULT_HEDGES = [
     "where the challenge", "only on challenges", "unless", "assumes", "when granted",
     "grants", "granted", "offers it", "may be absent",
@@ -52,9 +64,9 @@ def sh(*args: str, ok=(0,)) -> str:
     """stdout of a command, refusing to let a failure look like empty output.
 
     `git grep` exits 1 for "no match" and 128 for an error, and both were being
-    returned as an empty string. G3 asks whether a deleted literal survives
-    anywhere, so a grep that errored read as "it survives nowhere" and the gate
-    passed silently. Callers that have a benign non-zero code declare it in `ok`.
+    returned as an empty string. G1 asks where a declared phrase occurs, so a
+    grep that errored read as "no occurrences" and the gate passed silently.
+    Callers that have a benign non-zero code declare it in `ok`.
     """
     try:
         proc = subprocess.run(args, capture_output=True, text=True)
@@ -73,13 +85,15 @@ def gate_claim_parity(phrases, hedges, grep) -> Verdict:
     """Every occurrence of a phrase whose truth conditions the change altered must
     be hedged, sit under a stated premise, or be recorded as unaffected.
 
-    `grep(phrase)` yields (path, line_no, text). Never FAILs: deciding whether an
-    occurrence is a claim at all needs a reader.
+    `grep(phrase)` yields (path, line_no, text). This function never FAILs:
+    deciding whether an occurrence is a claim at all needs a reader. The one G1
+    FAIL — a missing per-change gates.yaml — is issued by `run_gates`, because
+    it is about the declaration file, not about any phrase.
     """
     if not phrases:
         return Verdict("G1 claim-parity", "PASS",
-                       {"note": "no phrases declared — set claim_phrases in gates.yaml "
-                                "if this change altered the truth conditions of any claim"})
+                       {"note": "claim_phrases is an empty list — the author deliberately "
+                                "declared that this change alters no claim's truth conditions"})
     hits, uncovered = [], []
     for phrase in phrases:
         for path, line_no, text in grep(phrase):
@@ -94,11 +108,11 @@ def gate_claim_parity(phrases, hedges, grep) -> Verdict:
 
 _INVARIANCE = re.compile(
     r"不變|不改|無異動|unchanged|not affected|no\s+\w*\s*changes?\b", re.IGNORECASE)
-# A qualified claim names *which aspect* is unchanged, so it can hold even when
-# the file itself was edited elsewhere. The marker is a bold span placed after
-# the file reference -- the convention CONTRIBUTE.md documents. Bare words such
-# as "rules" or a bold label opening the line are not scope markers: accepting
-# them let a blanket claim reach REVIEW without saying what it had scoped.
+# A qualified claim names *which aspect* is unchanged — the convention
+# CONTRIBUTE.md documents is a bold span placed after the file reference. The
+# split is kept purely as an annotation in the detail: three audit rounds
+# showed the bare/qualified distinction misfires in both directions, so it no
+# longer decides anything, and neither shape blocks CI.
 _QUALIFIED = re.compile(r"\*\*[^*]+\*\*")
 # Backticked spans first, then bare path-shaped tokens.
 _PATH_REF = re.compile(r"`([^`]+)`|((?:[\w.-]+/)*[\w-]+\.[A-Za-z0-9]+)")
@@ -117,10 +131,21 @@ def _references(text: str):
 def gate_invariance(lines, changed_files) -> Verdict:
     """`X is unchanged` in a change artifact, where X is a file the diff touched.
 
+    `lines` is (artifact, line_no, text) — the artifact being the change
+    document the line was read from. A hit reports both, under keys that must
+    not be confused: `artifact` is where the claim is written, `names` is the
+    changed file the claim asserts is unchanged. A line number alone does not
+    locate anything, because every change ships at least a proposal.md and a
+    design.md and the caller numbers each from 1; a report of `line: 47` sent
+    the reader to compare quoted text against two files to learn which to open.
+
+    REVIEW-only: any hit — bare or qualified — is listed for a human, and no
+    input makes this gate FAIL.
+
     A reference resolves to a changed file only when it is that path or a
     path-boundary suffix of it. Matching on basename alone made a true claim
-    about `scripts/prose-audit/run.py` fail because the diff touched
-    `scripts/spec-gates/run.py` -- and reported the wrong file as the cause.
+    about `scripts/prose-audit/run.py` answer for `scripts/spec-gates/run.py`
+    -- and reported the wrong file as the cause.
     """
     bare, qualified = [], []
     changed = set(changed_files)
@@ -130,10 +155,16 @@ def gate_invariance(lines, changed_files) -> Verdict:
     #
     # The reach opens only for a *lead-in*: a line ending in a colon, whose list
     # follows at a deeper indent. An unconditional window carried the claim onto
-    # sibling bullets, and a bullet merely discussing the word 不變 then failed
+    # sibling bullets, and a bullet merely discussing the word 不變 then flagged
     # the next bullet that named a changed file.
-    lead_indent = None
-    for line_no, text in lines:
+    #
+    # An artifact boundary closes the reach unconditionally: a proposal.md whose
+    # last line is a lead-in has no list under it, and the first bullet of the
+    # design.md that follows in the concatenated input is not that list.
+    lead_indent, cur_artifact = None, None
+    for artifact, line_no, text in lines:
+        if artifact != cur_artifact:
+            cur_artifact, lead_indent = artifact, None
         has_kw = bool(_INVARIANCE.search(text))
         indent = len(text) - len(text.lstrip())
         if lead_indent is not None:
@@ -150,162 +181,345 @@ def gate_invariance(lines, changed_files) -> Verdict:
                         if f == ref or f.endswith("/" + ref)), None)
             if not hit:
                 continue
-            row = {"line": line_no, "names": hit, "text": text.strip()[:160]}
+            row = {"artifact": artifact, "line": line_no, "names": hit,
+                   "text": text.strip()[:160]}
             marker = _QUALIFIED.search(text, end)
             (qualified if marker else bare).append(row)
             break
-    if bare:
-        return Verdict("G2 invariance", "FAIL", {"bare": bare, "qualified": qualified})
-    return Verdict("G2 invariance", "REVIEW" if qualified else "PASS",
-                   {"bare": [], "qualified": qualified})
+    return Verdict("G2 invariance", "REVIEW" if (bare or qualified) else "PASS",
+                   {"bare": bare, "qualified": qualified})
 
 
-# ── G3 deleted-literal ───────────────────────────────────────────────────────
+# ── G7 archive trace-parity ──────────────────────────────────────────────────
 
-_CODE_SHAPED = re.compile(r"[<>{};=]")
+def gate_trace_parity(base, head) -> Verdict:
+    """Diff-based, aligned per requirement. `base` and `head` are shaped
+    {capability: {requirement_title: {trace identity, ...}}}, where an identity
+    is a @trace block's `source:` value (see `_spec_traces`).
 
+    `spectra archive` replaces each MODIFIED requirement block wholesale, which
+    discards the @trace metadata attached to it when the delta does not carry
+    it. That is the FAIL shape: a requirement present on both sides that no
+    longer carries a source it carried at base — losing four of five sources is
+    metadata loss just as surely as losing the last one. A requirement that
+    vanishes from HEAD entirely is REVIEW — a legitimate `## REMOVED` is visible
+    in the same PR's delta, so a human adjudicates. Additions are not hits:
+    whole-file counting would flag a deliberate requirement removal as loss.
 
-_CJK = re.compile(r"[㐀-䶿一-鿿豈-﫿]")
-_LIST_SEP = re.compile(r"[,,、;;/|]")
+    Comparing source sets rather than block counts is what keeps a legitimate
+    consolidation out of the REVIEW list: two blocks naming the same source,
+    rewritten as one block listing both code paths, drops the count from two to
+    one while losing nothing a reader could name. The report names the sources
+    that disappeared, which tells the author which trace to restore — a pair of
+    numbers only told them that one had.
 
-
-def is_prose_literal(s: str) -> bool:
-    """A message a human reads, not an identifier or a markup fragment.
-
-    Parentheses do NOT disqualify: `not specified (default all)` is exactly the
-    kind of user-facing string this gate exists to chase, and an earlier draft of
-    this rule excluded it.
-
-    Two shapes qualify, because one rule cannot serve both scripts. The original
-    rule demanded a 12-character floor, embedded whitespace, and three
-    consecutive ASCII lowercase letters -- all three of which a Chinese message
-    fails on principle rather than by accident. This repository writes its
-    user-facing strings in Chinese, so G3 was switched off for exactly the
-    strings it most needed to see.
+    Nothing here FAILs, and that is the load-bearing decision. Two identities
+    were tried against the same 60 archive commits in this repository: source
+    sets flagged 4 commits / 7 requirements, block counts flagged 1 commit / 3
+    requirements, and *the two hit sets do not intersect at all* — each is a
+    false negative on the other's positive class. Whether those 7 are false
+    positives depends entirely on which definition of "lost" the reader brought:
+    under "the requirement kept its count", all 7 are noise; under "the
+    requirement stopped naming a `code:` path that still exists at HEAD", all 7
+    are real. `@trace` and its `source:` field carry no normative definition
+    anywhere in openspec/specs, and `spectra archive` — which produces them — is
+    a closed binary. A blocking verdict has to be adjudicable, and this one is
+    not adjudicable until somebody writes the definition down. Until then G7
+    reports what it sees and a human decides. See design.md, 決策六.
     """
-    if len(s) > 80 or _CODE_SHAPED.search(s) or s.lstrip().startswith(","):
-        return False
-    cjk = len(_CJK.findall(s))
-    if cjk >= 6:
-        # A delimiter-separated run of short tokens is a list, not a sentence.
-        parts = [p.strip() for p in _LIST_SEP.split(s) if p.strip()]
-        if len(parts) >= 3 and all(len(p) <= 4 for p in parts):
-            return False
-        return True
-    if not 12 <= len(s):
-        return False
-    if " " not in s:
-        return False
-    return bool(re.search(r"[a-z]{3}", s))
+    dropped, vanished = [], []
+    for cap in sorted(base):
+        head_reqs = head.get(cap) or {}
+        for req in sorted(base[cap]):
+            before = base[cap][req]
+            if req not in head_reqs:
+                vanished.append({"capability": cap, "requirement": req,
+                                 "base_traces": len(before),
+                                 "base_sources": sorted(before)})
+                continue
+            lost = before - head_reqs[req]
+            if lost:
+                dropped.append({"capability": cap, "requirement": req,
+                                "lost_sources": sorted(lost),
+                                "before": len(before),
+                                "after": len(head_reqs[req])})
+    status = "REVIEW" if (dropped or vanished) else "PASS"
+    return Verdict("G7 archive trace-parity", status,
+                   {"dropped": dropped, "vanished": vanished})
 
 
-def gate_deleted_literal(removed, added, grep) -> Verdict:
-    """A literal the diff deleted must not survive anywhere. One it reintroduced
-    was reworded, not deleted, so it is out of scope."""
-    survivors = {}
-    candidates = set(removed) - set(added)
-    for lit in sorted(candidates):
-        hits = grep(lit)
-        if hits:
-            survivors[lit] = hits[:5]
-    return Verdict("G3 deleted-literal", "FAIL" if survivors else "PASS",
-                   {"checked": len(candidates), "survivors": survivors})
+def exit_code_for(verdicts) -> int:
+    return 1 if any(v.status == "FAIL" for v in verdicts) else 0
 
 
-# ── G4 scope parity ──────────────────────────────────────────────────────────
+# ── Repository adapters ──────────────────────────────────────────────────────
 
-# The extension must contain a letter. Accepting a purely numeric one made
-# `0.0.8` in "bumps php-wasm to 0.0.8" a declared file, which G4 then reported as
-# listed-but-absent from the diff.
-_FILE_TOKEN = re.compile(r"[\w./-]+\.[A-Za-z0-9]*[A-Za-z][A-Za-z0-9]*")
+def _load_yaml(path: Path):
+    """yaml.safe_load(path), with a parse failure surfaced as GateError.
 
-
-def impact_files(proposal_text: str) -> set:
-    """File paths named in the proposal's Impact section.
-
-    Authors write the list either one path per bullet or inline after
-    `Modified:`, and both shapes occur in this repository's archive. Extract
-    file-looking tokens from the section rather than demanding one layout —
-    an earlier version required per-line bullets and reported a well-formed
-    inline list as ten missing files.
+    A malformed config is "the gates could not be evaluated" (exit 2), not a
+    crash: a bare yaml.YAMLError escapes main() as a traceback whose exit code
+    reads like a gate FAIL.
     """
-    section = proposal_text.split("## Impact", 1)
-    if len(section) < 2:
-        return set()
-    body = re.split(r"(?m)^## ", section[1])[0]
-    out, collecting, marker_indent = set(), False, 0
-    for line in body.splitlines():
-        if not line.strip():
+    import yaml
+    try:
+        return yaml.safe_load(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise GateError(f"cannot parse {path}: {exc}") from exc
+
+
+def _require_list(value, key: str, source) -> list:
+    """`value` as a list, where None means "the key was left empty".
+
+    A scalar in either key is silent sabotage, not a working config: a string
+    hedge marker iterates character by character ('u' is in almost every line,
+    so G1's uncovered list goes permanently empty), and a string claim phrase
+    greps the repository once per character. Refuse loudly, naming the key and
+    the actual type, rather than evaluate a gate the author did not write.
+
+    The None-means-empty reading holds for `hedge_markers` only. `load_config`
+    intercepts a None `claim_phrases` before it reaches here — see the
+    asymmetry argued there.
+    """
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise GateError(
+            f"{source}: `{key}` must be a list, got {type(value).__name__} "
+            f"({value!r})")
+    return value
+
+
+def _require_mapping(path: Path):
+    """The YAML at `path` as a dict, where an empty file is an empty mapping.
+
+    A config file that parses into a list or a scalar is valid YAML, so
+    `_load_yaml` lets it through, and `.get()` on it raises AttributeError —
+    an uncaught traceback whose exit code 1 reads like a gate FAIL. Same
+    reasoning as `_load_yaml`'s: a file that cannot be used is "the gates could
+    not be evaluated", which is exit 2.
+    """
+    data = _load_yaml(path)
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise GateError(
+            f"{path}: must be a YAML mapping of keys to values, got "
+            f"{type(data).__name__}")
+    return data
+
+
+def load_config(change_dir):
+    """The per-change gates.yaml as a dict, or None when the declaration is absent.
+
+    Absence is a signal, not a fallback. The old silent fallback to the global
+    config made "the author forgot to consider claim_phrases" indistinguishable
+    from "the author considered it and deliberately declared none", so the
+    caller turns None into a G1 FAIL. The same signal covers a file that exists
+    but carries no `claim_phrases` key — a zero-byte gates.yaml declares
+    nothing, and reporting it as "deliberately declared none" would put words
+    in the author's mouth. `claim_phrases` comes from the per-change file alone
+    (an empty list is a deliberate declaration); `hedge_markers` may fall back
+    to the global `scripts/spec-gates/config.yaml`, then to the built-in
+    default.
+
+    A `claim_phrases:` key with nothing after it is YAML null, and it is the
+    same absent declaration: the author typed a heading and stopped. Reading it
+    as `[]` would report the deliberate-declaration PASS over an unfinished
+    line — and it is *fewer* characters than the compliant `claim_phrases: []`,
+    so it is exactly the shape a hurried author lands on. `hedge_markers:` left
+    empty keeps its existing meaning, an empty list. The asymmetry is
+    deliberate: for hedge_markers the presence of the key is the declaration and
+    an empty value is the strictest setting available (nothing counts as a
+    hedge), so falling back there would hand the strictest author the loosest
+    config; for claim_phrases the value *is* the declaration, so an empty value
+    declares nothing.
+    """
+    per_change = Path(change_dir) / "gates.yaml"
+    if not per_change.exists():
+        return None
+    data = _load_yaml(per_change)
+    if data is None:
+        data = {}
+    if not isinstance(data, dict) or data.get("claim_phrases") is None:
+        return None
+    phrases = _require_list(data["claim_phrases"], "claim_phrases", per_change)
+    # Presence of the key decides, not truthiness: `hedge_markers: []` is a
+    # deliberate tightening — no wording counts as hedged — and a falsy-based
+    # fallback silently handed exactly that author the loosest setting. Only
+    # an absent key falls back to the global config, then to the built-in
+    # default (the global file documents its own empty list as "use defaults").
+    if "hedge_markers" in data:
+        hedges = _require_list(data["hedge_markers"], "hedge_markers", per_change)
+    else:
+        hedges = []
+        if GLOBAL_CONFIG.exists():
+            hedges = _require_list(
+                _require_mapping(GLOBAL_CONFIG).get("hedge_markers"),
+                "hedge_markers", GLOBAL_CONFIG)
+        if not hedges:
+            hedges = DEFAULT_HEDGES
+    return {"claim_phrases": phrases, "hedge_markers": hedges}
+
+
+def changed_files_from(diff_names: str, status_z: str) -> set:
+    """Union of the committed diff and the working tree.
+
+    Untracked entries count: G2 must see a file the working tree adds or edits
+    even before it is committed. `git status --porcelain` already omits ignored
+    paths, so scratch files that are gitignored do not leak in.
+
+    `status_z` is the raw `git status --porcelain -z -uall` output: NUL-
+    delimited and never quoted, so paths containing spaces or non-ASCII arrive
+    intact — the old `line.split()[-1]` mangled both. A renamed or copied
+    entry is two NUL-separated fields (target path first, then origin); both
+    are files the change touched.
+    """
+    out = set(diff_names.split())
+    tokens = iter(status_z.split("\0"))
+    for entry in tokens:
+        # Porcelain v1: two status characters, a space, then the path.
+        if len(entry) < 4:
             continue
-        indent = len(line) - len(line.lstrip())
-        m = re.match(r"\s*-\s*(Modified|New|Removed|新增|修改|移除)\s*:(.*)$", line)
-        if m:
-            collecting, marker_indent = True, indent
-            out |= {f for f in _FILE_TOKEN.findall(m.group(2)) if not f.startswith("(")}
+        out.add(entry[3:])
+        if entry[0] in "RC":
+            out.add(next(tokens, ""))
+    # `git status --porcelain` collapses an untracked directory into one entry
+    # ending in "/". Callers pass -uall so this should not arise, but a bare
+    # directory must never reach the file set: its basename is "", and "" is a
+    # substring of every line, which made G2 match claims it had no business
+    # matching. The truthiness test drops the empty string a truncated rename
+    # record would contribute.
+    return {f for f in out
+            if f and f != "skills-lock.json" and not f.endswith("/")}
+
+
+def changed_files(base: str) -> set:
+    return changed_files_from(
+        sh("git", "diff", "--name-only", f"{base}...HEAD"),
+        sh("git", "status", "--porcelain", "-z", "-uall"),
+    )
+
+
+def grep_phrase(phrase: str, skip_path: str):
+    # `-e` pins the phrase to the pattern slot: an author-controlled phrase
+    # beginning with `-` would otherwise be parsed as a git option, and real
+    # options (`--cached`, `--no-index`, `--open-files-in-pager=<cmd>`) make
+    # git exit 0 — which ok=(0, 1) accepts as a clean "no match".
+    rows = []
+    for hit in sh("git", "grep", "-n", "-i", "-F", "-e", phrase,
+                  "--", EXCLUDE_ARCHIVE, ok=(0, 1)).splitlines():
+        parts = hit.split(":", 2)
+        if len(parts) != 3:
             continue
-        # Continuation bullets sit deeper than the marker they belong to. Prose
-        # in the Impact section must not contribute paths: an earlier version
-        # read a tool named in a verification note as a declared file.
-        if collecting and indent > marker_indent and line.lstrip().startswith("-"):
-            out |= {f for f in _FILE_TOKEN.findall(line) if not f.startswith("(")}
-        elif indent <= marker_indent:
-            collecting = False
+        # Only the exact path is the change's own task list: a startswith()
+        # on the raw hit line also swallowed tasks.md.bak and tasks.md.orig.
+        if parts[0] == skip_path:
+            continue
+        try:
+            rows.append((parts[0], int(parts[1]), parts[2]))
+        except ValueError:
+            # An unparseable line is reported rather than dropped.
+            rows.append((parts[0], 0, parts[2]))
+    return rows
+
+
+def _spec_traces(text: str) -> dict:
+    """{requirement_title: {trace identity, ...}} for one baseline spec file.
+
+    A `### Requirement:` heading opens a requirement; each `<!-- @trace ... -->`
+    block under it contributes one identity. A trace block before the first
+    requirement belongs to no requirement and is not counted.
+
+    The identity is the block's `source:` value — the change id that wrote the
+    trace — and not the block's position, because a count of blocks is not a
+    measure of the information a requirement carries. Two blocks naming the same
+    source, rewritten as one block listing both code paths, lose nothing; a
+    count reports that as loss. All 215 trace blocks in this repository carry a
+    `source:` line, and the format documented in
+    openspec/specs/ci-quality-gates/spec.md requires one.
+
+    A block with no `source:` is still counted, under the synthetic identity
+    `#n` where n numbers the source-less blocks within that requirement.
+    Dropping such a block silently would make an unlabelled trace free to
+    delete. Numbering them among themselves rather than by block position keeps
+    the identity stable when a sourced block is inserted above one.
+
+    The price of set semantics, accepted deliberately: two blocks in one
+    requirement that name the *same* source collapse to one identity, so
+    deleting one of them is not reported. That is the same equivalence that
+    makes a legitimate consolidation pass, and it cannot be had one way only.
+    """
+    out, cur, anon = {}, None, 0
+    source, in_block = None, False
+
+    def close() -> None:
+        nonlocal anon, source, in_block
+        in_block = False
+        if source:
+            out[cur].add(source)
+        else:
+            anon += 1
+            out[cur].add(f"#{anon}")
+        source = None
+
+    for line in text.splitlines():
+        if not in_block:
+            if line.startswith("### Requirement:"):
+                cur = line.split(":", 1)[1].strip()
+                out.setdefault(cur, set())
+                anon = 0
+                continue
+            at = line.find("<!-- @trace")
+            if at < 0 or cur is None:
+                continue
+            in_block = True
+            rest = line[at + len("<!-- @trace"):]
+        else:
+            rest = line
+        stripped = rest.strip()
+        if source is None and stripped.startswith("source:"):
+            source = stripped.split(":", 1)[1].strip()
+        # A block left unterminated at EOF is closed below rather than dropped.
+        if "-->" in rest:
+            close()
+    if in_block:
+        close()
     return out
 
 
-_SPECS_ENTRY = re.compile(r"^\s*-\s*\**\s*Affected specs\s*\**\s*[:：]", re.IGNORECASE)
-# A capability name need not be hyphenated. Requiring a hyphen here was invisible
-# to both the unit fixtures and the whole-archive replay, because every existing
-# capability in this repository happens to contain one.
-_IDENT = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+def spec_traces_at(ref: str) -> dict:
+    """{capability: {requirement_title: {trace identity, ...}}} for every
+    `openspec/specs/<cap>/spec.md` as committed at `ref`.
 
-
-def named_specs(proposal_text: str, vocabulary):
-    """Capability identifiers the proposal's `Affected specs` entry names.
-
-    Returns ``None`` when the proposal carries no such entry at all. That is
-    not the same as naming none: an absent declaration makes no claim, and a
-    gate whose job is to catch a declaration drifting from reality has nothing
-    to compare. 37 of the 84 archived changes that ship delta specs never write
-    the line.
-
-    Identifiers are resolved against `vocabulary` -- the capability names that
-    actually exist -- rather than by pattern alone. Authors annotate the list
-    in open-ended prose ("new", "（modified delta）", "8 個現有 spec 需更新"),
-    and no stopword list survives contact with it.
+    Enumerated with `git ls-tree` so only files that exist at the ref are read
+    — `git show` on a path the listing produced cannot miss. core.quotePath is
+    forced off: under its default, a non-ASCII capability directory comes back
+    C-quoted ("openspec/specs/\\346\\226\\207/spec.md"), the parts check
+    misses, and the capability silently never enters the base map — this repo
+    writes in Traditional Chinese, so CJK capability names are expected.
     """
-    section = proposal_text.split("## Impact", 1)
-    body = re.split(r"(?m)^## ", section[1])[0] if len(section) > 1 else proposal_text
-    entry, collecting, marker_indent = None, False, 0
-    for line in body.splitlines():
-        m = _SPECS_ENTRY.match(line)
-        if m:
-            entry = ("" if entry is None else entry) + " " + line[m.end():]
-            collecting, marker_indent = True, len(line) - len(line.lstrip())
-            continue
-        if not line.strip():
-            continue
-        indent = len(line) - len(line.lstrip())
-        # Continuation bullets sit deeper than the marker they belong to; a
-        # sibling bullet at the same depth ends the entry. A bullet declaring
-        # what is *unaffected* names specs to exclude -- reading it as a
-        # declaration of scope inverts the author's meaning, and did so on
-        # three archived changes.
-        if collecting and indent > marker_indent:
-            if not _INVARIANCE.search(line):
-                entry += " " + line
-        elif indent <= marker_indent:
-            collecting = False
-    if entry is None:
-        return None
-    # Same inversion inside a parenthetical: "`cap` (no spec change)" mentions
-    # the capability precisely to say it ships no delta.
-    entry = re.sub(r"[（(][^）)]*[）)]",
-                   lambda p: "" if _INVARIANCE.search(p.group(0)) else p.group(0), entry)
-    # A path names its capability in the second-to-last segment.
-    text = re.sub(r"openspec/specs/([a-z0-9-]+)/spec\.md", r" \1 ", entry)
-    return {t for t in _IDENT.findall(text) if t in set(vocabulary)}
+    out = {}
+    for path in sh("git", "-c", "core.quotePath=false", "ls-tree", "-r",
+                   "--name-only", ref, "--", "openspec/specs").splitlines():
+        parts = path.split("/")
+        if len(parts) == 4 and parts[3] == "spec.md":
+            out[parts[2]] = _spec_traces(sh("git", "show", f"{ref}:{path}"))
+    return out
 
+
+def spec_traces_worktree() -> dict:
+    """The same shape read from the working tree — HEAD plus uncommitted edits,
+    because the gate must judge what the PR will actually merge."""
+    out = {}
+    root = Path("openspec/specs")
+    if root.is_dir():
+        for spec in sorted(root.glob("*/spec.md")):
+            out[spec.parent.name] = _spec_traces(spec.read_text(encoding="utf-8"))
+    return out
+
+
+# ── Change-id resolution (--resolve-change) ──────────────────────────────────
 
 def change_ids_from_diff(diff_names: str):
     """Live change directories the diff touches.
@@ -323,333 +537,69 @@ def change_ids_from_diff(diff_names: str):
     return sorted(out)
 
 
-def gate_scope_parity(diff_files, listed_files, disk_specs, named_specs) -> Verdict:
-    detail = {
-        "in_diff_not_listed": sorted(set(diff_files) - set(listed_files)),
-        "listed_not_in_diff": sorted(set(listed_files) - set(diff_files)),
-    }
-    undeclared = named_specs is None
-    if undeclared:
-        detail["specs_not_declared"] = sorted(disk_specs)
-    else:
-        detail["specs_on_disk_not_named"] = sorted(set(disk_specs) - set(named_specs))
-        detail["specs_named_not_on_disk"] = sorted(set(named_specs) - set(disk_specs))
-    if any(detail[k] for k in ("in_diff_not_listed", "listed_not_in_diff")) or (
-        not undeclared and (detail["specs_on_disk_not_named"] or detail["specs_named_not_on_disk"])
-    ):
-        return Verdict("G4 scope parity", "FAIL", detail)
-    return Verdict("G4 scope parity", "REVIEW" if undeclared and disk_specs else "PASS", detail)
-
-
-# ── G5 delta scenario parity ─────────────────────────────────────────────────
-
-_NEGATION = re.compile(
-    r"不予移除|不移除|不刪除|保留|維持|do(?:es)?\s+not\s+remove|without\s+removing|"
-    r"must\s+not\s+be\s+removed|keep|retain",
-    re.IGNORECASE)
-
-
-def _records_removal(scenario: str, tasks_text: str) -> bool:
-    """Does the tasks file record this scenario's removal as deliberate?
-
-    A bare substring test could not tell an affirmation from its negation, so a
-    line promising *not* to remove a scenario counted as a record of removing it
-    -- turning the exemption into a way to name the scenario and be excused.
-    Only the lines that mention it are examined, so a negation elsewhere in the
-    file cannot suppress a genuine record.
-    """
-    mentions = [ln for ln in tasks_text.splitlines() if scenario in ln]
-    return any(not _NEGATION.search(ln) for ln in mentions)
-
-
-def gate_scenario_parity(delta_scenarios, baseline_scenarios, tasks_text) -> Verdict:
-    """A MODIFIED block replaces the baseline requirement wholesale, so a scenario
-    the delta omits is silently deleted from the corpus — unless the removal was
-    deliberate, which the change records by naming the scenario in its tasks."""
-    dropped = []
-    for req, delta_set in delta_scenarios.items():
-        for missing in sorted(baseline_scenarios.get(req, set()) - set(delta_set)):
-            dropped.append({"requirement": req, "scenario": missing,
-                            "recorded_as_deliberate": _records_removal(missing, tasks_text)})
-    unrecorded = [d for d in dropped if not d["recorded_as_deliberate"]]
-    if unrecorded:
-        return Verdict("G5 delta scenario parity", "FAIL", {"dropped": dropped})
-    return Verdict("G5 delta scenario parity", "REVIEW" if dropped else "PASS",
-                   {"dropped": dropped})
-
-
-# ── G6 added-lines trace ─────────────────────────────────────────────────────
-
-_MECHANISM = re.compile(
-    r"\b(does|will|shall|routes|returns|produces|writes|is written)\b|會|將|即可|一律|必定",
-    re.IGNORECASE)
-
-
-_HUNK = re.compile(r"^@@ -\S+ \+(\d+)(?:,\d+)? @@")
-
-
-def added_prose_lines(diff_text: str):
-    """(file, line, text) for every line the diff adds.
-
-    A REVIEW outcome must enumerate its hits by file and line, so G6 cannot be
-    handed bare strings: an author given a sentence but not its location has to
-    grep the diff back by hand.
-    """
-    rows, path, lineno = [], None, 0
-    for line in diff_text.splitlines():
-        if line.startswith("+++ "):
-            ref = line[4:].strip()
-            path = ref[2:] if ref.startswith(("a/", "b/")) else ref
-            continue
-        if line.startswith("---") or line.startswith("diff --git"):
-            continue
-        hunk = _HUNK.match(line)
-        if hunk:
-            lineno = int(hunk.group(1))
-            continue
-        if line.startswith("+") and path and path != "/dev/null":
-            rows.append((path, lineno, line[1:].strip()))
-            lineno += 1
-    return rows
-
-
-def gate_added_lines_trace(added_rows) -> Verdict:
-    """Mechanism assertions among the prose a change adds, for a human to trace to
-    source. The recurring defect is a sentence asserted one step beyond the code
-    the author actually read."""
-    hits = [{"file": f, "line": n, "text": t[:200]}
-            for f, n, t in added_rows if len(t) > 40 and _MECHANISM.search(t)]
-    return Verdict("G6 added-lines trace", "REVIEW",
-                   {"added_prose_lines": len(added_rows), "mechanism_sentences": hits})
-
-
-# ── G7 archive trace-parity ──────────────────────────────────────────────────
-
-def gate_trace_parity(snapshot, current) -> Verdict:
-    """`spectra archive` replaces each MODIFIED requirement block wholesale, which
-    discards the @trace metadata attached to it when the delta does not carry it."""
-    dropped = []
-    for cap, before in snapshot.items():
-        after = current.get(cap, {"requirements": 0, "traces": 0})
-        for key in ("requirements", "traces"):
-            if after.get(key, 0) < before.get(key, 0):
-                dropped.append({"capability": cap, "field": key,
-                                "before": before.get(key, 0), "after": after.get(key, 0)})
-    return Verdict("G7 archive trace-parity", "FAIL" if dropped else "PASS",
-                   {"dropped": dropped})
-
-
-def exit_code_for(verdicts) -> int:
-    return 1 if any(v.status == "FAIL" for v in verdicts) else 0
-
-
-# ── Repository adapters ──────────────────────────────────────────────────────
-
-def spec_counts(paths) -> dict:
-    out = {}
-    for cap, path in paths.items():
-        p = Path(path)
-        text = p.read_text(encoding="utf-8") if p.exists() else ""
-        out[cap] = {"requirements": len(re.findall(r"(?m)^### Requirement:", text)),
-                    "traces": text.count("<!-- @trace")}
-    return out
-
-
-_DELTA_SECTION = re.compile(r"^## (ADDED|MODIFIED|REMOVED|RENAMED|NEW) Requirements\s*$")
-
-
-def delta_sections(text: str) -> dict:
-    """{section: {requirement: {scenario, ...}}} for a delta spec.
-
-    G5 is scoped to MODIFIED blocks, because those replace the baseline
-    requirement wholesale. Collecting every `### Requirement:` regardless of its
-    block made a correctly declared REMOVED requirement look like a MODIFIED one
-    whose scenarios had all vanished, and G5 failed the change for declaring a
-    removal properly.
-    """
-    out, section, cur = {}, None, None
-    for line in text.splitlines():
-        m = _DELTA_SECTION.match(line)
-        if m:
-            section, cur = m.group(1), None
-            out.setdefault(section, {})
-            continue
-        if line.startswith("## "):  # any other block ends the delta section
-            section, cur = None, None
-            continue
-        if section is None:
-            continue
-        if line.startswith("### Requirement:"):
-            cur = line.split(":", 1)[1].strip()
-            out[section][cur] = set()
-        elif line.startswith("#### Scenario:") and cur:
-            out[section][cur].add(line.split(":", 1)[1].strip())
-    return out
-
-
-def scenarios_of(path) -> dict:
-    """{requirement: {scenario, ...}} across a whole file, block-agnostic.
-
-    Used for baseline specs, whose requirements sit under a plain
-    `## Requirements`. Delta specs go through `delta_sections` instead.
-    """
-    out, cur = {}, None
-    p = Path(path)
-    if not p.exists():
-        return out
-    for line in p.read_text(encoding="utf-8").splitlines():
-        if line.startswith("### Requirement:"):
-            cur = line.split(":", 1)[1].strip()
-            out[cur] = set()
-        elif line.startswith("#### Scenario:") and cur:
-            out[cur].add(line.split(":", 1)[1].strip())
-    return out
-
-
-def load_config(change_dir: Path) -> dict:
-    import yaml
-    per_change = change_dir / "gates.yaml"
-    default = Path(__file__).resolve().parent / "config.yaml"
-    src = per_change if per_change.exists() else default
-    data = (yaml.safe_load(src.read_text(encoding="utf-8")) or {}) if src.exists() else {}
-    return {"claim_phrases": data.get("claim_phrases") or [],
-            "hedge_markers": data.get("hedge_markers") or DEFAULT_HEDGES}
-
-
-def changed_files_from(diff_names: str, status_lines) -> set:
-    """Union of the committed diff and the working tree.
-
-    Untracked entries count: a change that ADDS files would otherwise be told
-    its proposal lists files that are not in the diff — which is exactly what
-    this gate reported against its own change before this was fixed. `git
-    status --porcelain` already omits ignored paths, so scratch files that are
-    gitignored do not leak in.
-    """
-    out = set(diff_names.split())
-    for line in status_lines:
-        if line.strip():
-            out.add(line.split()[-1])
-    # `git status --porcelain` collapses an untracked directory into one entry
-    # ending in "/". Callers pass -uall so this should not arise, but a bare
-    # directory must never reach the file set: its basename is "", and "" is a
-    # substring of every line, which made G2 match claims it had no business
-    # matching.
-    return {f for f in out if f != "skills-lock.json" and not f.endswith("/")}
-
-
-def changed_files(base: str) -> set:
-    return changed_files_from(
-        sh("git", "diff", "--name-only", f"{base}...HEAD"),
-        sh("git", "status", "--porcelain", "-uall").splitlines(),
-    )
-
-
-def _grep_lines(pattern: str, skip_prefix: str, fixed=True):
-    args = ["git", "grep", "-n"] + (["-F"] if fixed else []) + [pattern, "--", EXCLUDE_ARCHIVE]
-    return [h for h in sh(*args, ok=(0, 1)).splitlines() if not h.startswith(skip_prefix)]
-
-
-def grep_phrase(phrase: str, skip_prefix: str):
-    rows = []
-    for hit in [h for h in sh("git", "grep", "-n", "-i", "-F", phrase, "--",
-                              EXCLUDE_ARCHIVE, ok=(0, 1)).splitlines()
-                if not h.startswith(skip_prefix)]:
-        parts = hit.split(":", 2)
-        if len(parts) != 3:
-            continue
-        try:
-            rows.append((parts[0], int(parts[1]), parts[2]))
-        except ValueError:
-            # An unparseable line is reported rather than dropped.
-            rows.append((parts[0], 0, parts[2]))
-    return rows
-
-
-def diff_literals(base: str):
-    removed, added = set(), set()
-    for line in sh("git", "diff", "-U0", f"{base}...HEAD").splitlines():
-        if line.startswith(("---", "+++")):
-            continue
-        found = {m for m in re.findall(r"['\"]([^'\"]{12,80})['\"]", line) if is_prose_literal(m)}
-        if line.startswith("-"):
-            removed |= found
-        elif line.startswith("+"):
-            added |= found
-    return removed, added
-
+# ── run_gates(): assembly ────────────────────────────────────────────────────
 
 def run_gates(change_id: str, base: str):
+    """The three reduced gates, in order: G1, G2, G7."""
+    # A change id is a directory name, never a path: a separator, or a `..`
+    # standing alone, would make `Path("openspec/changes") / change_id` read
+    # files outside the changes directory. Refused before anything touches the
+    # filesystem or git.
+    #
+    # The test is on path segments, not on substrings. `".." in change_id`
+    # also refused `v1..v2` — an ordinary directory name with no separator in
+    # it, which `Path` concatenation cannot make escape anything, whatever its
+    # dots. Since a separator is refused outright, the id is a single segment
+    # and only that segment can be `..`. `.` is refused with it: it resolves to
+    # the changes directory itself, which is not a change, and no directory can
+    # be named that.
+    if (not change_id or "/" in change_id or os.sep in change_id
+            or change_id in ("..", ".")):
+        raise GateError(
+            f"invalid change id {change_id!r}: must be a bare directory name "
+            "under openspec/changes/ (no separator, and not '.' or '..')")
     change_dir = Path("openspec/changes") / change_id
     cfg = load_config(change_dir)
     skip = f"{change_dir}/tasks.md"
     diff = changed_files(base)
 
-    verdicts = [gate_claim_parity(cfg["claim_phrases"], cfg["hedge_markers"],
-                                  lambda p: grep_phrase(p, skip))]
+    if cfg is None:
+        # load_config signals both causes as None; the fix differs, so the
+        # detail names which one this is: create the file, or add the key.
+        gates_file = change_dir / "gates.yaml"
+        if gates_file.exists():
+            g1 = Verdict("G1 claim-parity", "FAIL", {
+                "file": str(gates_file),
+                "missing_key": "claim_phrases",
+                "note": "gates.yaml exists but declares no claim_phrases — the "
+                        "key is absent, or present with nothing after it (a bare "
+                        "`claim_phrases:` is YAML null, not an empty list); write "
+                        "`claim_phrases: []` to declare that this change alters "
+                        "no claim's truth conditions"})
+        else:
+            g1 = Verdict("G1 claim-parity", "FAIL", {
+                "missing": str(gates_file),
+                "note": "the per-change gates.yaml is mandatory; "
+                        "declare `claim_phrases: []` to state that none apply"})
+    else:
+        g1 = gate_claim_parity(cfg["claim_phrases"], cfg["hedge_markers"],
+                               lambda p: grep_phrase(p, skip))
 
+    # Each artifact is numbered from its own line 1, so the file has to travel
+    # with the number: the two are one coordinate, and G2 reports both.
     lines = []
     for art in ("proposal.md", "design.md"):
         p = change_dir / art
         if p.exists():
-            lines += list(enumerate(p.read_text(encoding="utf-8").splitlines(), 1))
-    verdicts.append(gate_invariance(lines, diff))
+            lines += [(str(p), n, text) for n, text
+                      in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)]
 
-    removed, added = diff_literals(base)
-    verdicts.append(gate_deleted_literal(removed, added,
-                                         lambda lit: _grep_lines(lit, skip)))
-
-    prop_path = change_dir / "proposal.md"
-    prop = prop_path.read_text(encoding="utf-8") if prop_path.exists() else ""
-    listed = impact_files(prop)
-    specs_dir = change_dir / "specs"
-    disk = set(os.listdir(specs_dir)) if specs_dir.is_dir() else set()
-    baseline = set(os.listdir("openspec/specs")) if Path("openspec/specs").is_dir() else set()
-    named = named_specs(prop, disk | baseline)
-    verdicts.append(gate_scope_parity(
-        {f for f in diff if not f.startswith("openspec/changes/")}, listed, disk, named))
-
-    tasks_path = change_dir / "tasks.md"
-    tasks_text = tasks_path.read_text(encoding="utf-8") if tasks_path.exists() else ""
-    merged = {}
-    for cap in sorted(disk):
-        delta_path = specs_dir / cap / "spec.md"
-        text = delta_path.read_text(encoding="utf-8") if delta_path.exists() else ""
-        # MODIFIED only: ADDED has no baseline counterpart, and REMOVED declares
-        # the requirement's departure rather than losing scenarios by accident.
-        d = delta_sections(text).get("MODIFIED", {})
-        b = scenarios_of(Path("openspec/specs") / cap / "spec.md")
-        for row in gate_scenario_parity(d, b, tasks_text).detail["dropped"]:
-            merged[f"{cap}/{row['scenario']}"] = {"capability": cap, **row}
-    unrecorded = [r for r in merged.values() if not r["recorded_as_deliberate"]]
-    verdicts.append(Verdict("G5 delta scenario parity",
-                            "FAIL" if unrecorded else ("REVIEW" if merged else "PASS"),
-                            {"dropped": list(merged.values())}))
-
-    # Every markdown file the change adds prose to, not a hardcoded three. The
-    # earlier scope excluded openspec/ entirely, so a change's own spec and
-    # design -- where its normative sentences live, and the densest source of
-    # mechanism assertions in this repository -- were never traced.
-    verdicts.append(gate_added_lines_trace(added_prose_lines(
-        sh("git", "diff", "-U0", f"{base}...HEAD", "--", "*.md", EXCLUDE_ARCHIVE))))
-    return verdicts
+    return [g1,
+            gate_invariance(lines, diff),
+            gate_trace_parity(spec_traces_at(base), spec_traces_worktree())]
 
 
-# Snapshots live under .git/, which is outside the working tree. Writing them to
-# the repository root left an untracked file that the spec forbids ("SHALL NOT
-# modify any file in the repository") and that the next G4 run then counted as an
-# undeclared changed file, failing the following change for no reason.
-SNAPSHOT_DIR = ".git/spec-gates"
-
-
-def snapshot_path(change_id: str) -> Path:
-    return Path(SNAPSHOT_DIR) / f"{change_id}.json"
-
-
-def affected_specs(change_id: str) -> dict:
-    specs_dir = Path("openspec/changes") / change_id / "specs"
-    caps = sorted(os.listdir(specs_dir)) if specs_dir.is_dir() else []
-    return {c: str(Path("openspec/specs") / c / "spec.md") for c in caps}
-
+# ── Output & CLI ─────────────────────────────────────────────────────────────
 
 def _print(verdicts, as_json: bool) -> None:
     if as_json:
@@ -683,21 +633,18 @@ def _print(verdicts, as_json: bool) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(
-        prog="run.py", description="Spec-drift gates (G1-G7).",
-        epilog="Modes: default check; --snapshot before archiving; "
-               "--verify-archive after archiving; --resolve-change to list the "
-               "change ids a diff touches.")
+        prog="run.py",
+        description="Spec-drift gates: G1 claim-parity, G2 invariance, "
+                    "G7 archive trace-parity.",
+        epilog="Three invocations: `run.py <change-id>` runs the three gates for "
+               "one change against --base; `run.py --trace-parity-only` runs G7 "
+               "alone, which needs no change id; `run.py --resolve-change` prints "
+               "the change ids the diff against --base touches, one per line.")
     ap.add_argument("change_id", nargs="?", help="change id under openspec/changes/")
     ap.add_argument("--base", default="main", help="base ref for the diff (default: main)")
     ap.add_argument("--json", action="store_true", help="machine-readable output")
-    ap.add_argument("--snapshot", metavar="CHANGE_ID",
-                    help="record requirement/@trace counts before archiving")
-    ap.add_argument("--verify-archive", metavar="CHANGE_ID",
-                    help="compare counts against a snapshot after archiving")
-    ap.add_argument("--out", metavar="PATH",
-                    help=f"snapshot output path (with --snapshot; default {SNAPSHOT_DIR}/<id>.json)")
-    ap.add_argument("--snapshot-file", metavar="PATH",
-                    help="snapshot input path (with --verify-archive)")
+    ap.add_argument("--trace-parity-only", action="store_true",
+                    help="run G7 alone against --base; takes no change id")
     ap.add_argument("--resolve-change", action="store_true",
                     help="print the change ids the diff against --base touches, one per line")
     args = ap.parse_args()
@@ -707,40 +654,27 @@ def main() -> int:
             print(cid)
         return 0
 
-    if args.snapshot and args.verify_archive:
-        # --snapshot takes a CHANGE_ID and was tested first, so this combination
-        # silently ran snapshot mode against whatever path was supplied. The
-        # published contract used to name --snapshot here; it means --snapshot-file.
-        print("error: --snapshot and --verify-archive are separate modes; "
-              "to supply a snapshot to --verify-archive use --snapshot-file",
-              file=sys.stderr)
-        return 2
-
-    if args.snapshot:
-        counts = spec_counts(affected_specs(args.snapshot))
-        if not counts:
-            print(f"error: no delta specs found for change '{args.snapshot}'", file=sys.stderr)
+    if args.trace_parity_only:
+        # G7 compares every capability spec between two refs, so it is the one
+        # gate that needs no change id — and the one CI must run on every pull
+        # request. A PR that edits openspec/specs/ without touching
+        # openspec/changes/ resolves no id at all, and neither does an archive
+        # PR: git records the directory move as a rename, so the pre-archive
+        # path never appears in `--name-only`. Without this mode the only way
+        # to reach G7 in those runs is to fabricate a change directory, which
+        # makes CI's verdict depend on how G1 and G2 treat a directory nobody
+        # wrote.
+        if args.change_id:
+            print("error: --trace-parity-only takes no change id; it compares "
+                  "every capability spec between --base and HEAD",
+                  file=sys.stderr)
             return 2
-        out = Path(args.out) if args.out else snapshot_path(args.snapshot)
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(json.dumps(counts, indent=2), encoding="utf-8")
-        print(f"snapshot written to {out} ({len(counts)} capabilities)")
-        return 0
-
-    if args.verify_archive:
-        snap = Path(args.snapshot_file) if args.snapshot_file \
-            else snapshot_path(args.verify_archive)
-        if not snap.exists():
-            print(f"error: snapshot not found at {snap}", file=sys.stderr)
+        if not sh("git", "rev-parse", "--git-dir", ok=(0, 128)).strip():
+            print("error: not a git repository, or git is unavailable", file=sys.stderr)
             return 2
-        snapshot = json.loads(snap.read_text(encoding="utf-8"))
-        current = spec_counts({c: str(Path("openspec/specs") / c / "spec.md") for c in snapshot})
-        v = gate_trace_parity(snapshot, current)
-        print(f"{v.status:<7} {v.gate}")
-        for row in v.detail["dropped"]:
-            print(f"        {row['capability']}: {row['field']} "
-                  f"{row['before']} -> {row['after']}")
-        return exit_code_for([v])
+        verdicts = [gate_trace_parity(spec_traces_at(args.base), spec_traces_worktree())]
+        _print(verdicts, args.json)
+        return exit_code_for(verdicts)
 
     if not args.change_id:
         ap.print_help()

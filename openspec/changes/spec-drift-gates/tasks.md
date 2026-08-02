@@ -1,5 +1,7 @@
 ## 1. TDD:閘門判定邏輯的失敗測試
 
+> **封存註記(2026-08-02)**:本群組的 `[x]` 記錄的是七道閘門版本當下的完成狀態,**其中數項的產物已於群組 8 的縮編中移除**,勾選狀態不代表現行程式碼仍有該物件。具體:1.2(G3)、1.3(G5)、1.4(G4)所建立的測試連同各自的閘門一併刪除,`test_run.py` 對 `gate_deleted_literal`、`gate_scope_parity`、`gate_scenario_parity`、`gate_added_lines_trace` 的 grep 命中為 0;1.7 記載的 G7 驗收(「`@trace` 數減少 → FAIL」、「以合成的快照 JSON 為輸入」)兩項皆已不成立——G7 現以 `source:` 集合判定、不設 FAIL 層(design.md 決策八),snapshot 模式整組移除。保留原文不改寫,是為了讓縮編前後的落差可追溯;要看現行狀態請以群組 8 與 design.md 為準。
+
 專案 `.spectra.yaml` 設定 `tdd: true`。本群組先建立測試骨架與紅燈,實作在群組 2。測試沿用 `scripts/prose-audit/test_run.py` 的既有形狀:與被測腳本同目錄、**獨立執行不需 pytest**、以 `python scripts/spec-gates/test_run.py` 呼叫,全通過退出碼 0、有失敗退出碼 1。
 
 - [x] 1.1 建立 `scripts/spec-gates/test_run.py` 與最小的 `run.py` 骨架(僅 CLI 解析與空的閘門函式),使 `python scripts/spec-gates/test_run.py` 可執行並因斷言不符而回報 FAIL。完成判準:失敗來自斷言而非 ImportError 或 SyntaxError。驗證:執行該檔並檢視每則的 PASS／FAIL 標記。
@@ -49,3 +51,13 @@
 - [x] 7.1 驗收 requirement「Mechanical spec-drift gates run on every pull request」:三個 Scenario(無 drift 通過、存活的已刪除字面值阻斷、REVIEW 不阻斷)各指出對應測試;並確認腳本不修改 repo 中任何檔案。完成判準:三個 Scenario 皆有具名測試,且以 `git status` 確認執行前後工作區無變化。驗證:Scenario 與測試名稱對照表。
 - [x] 7.2 驗收 requirement「Gates cover claim parity, scope parity, and delta completeness」:七道閘門的定義與四個 Scenario(識別字不誤判、刻意移除降為 REVIEW、範圍列舉漂移 FAIL、未宣告短語需可見)各指出對應實作行與測試。完成判準:G1 與 G6 永不 FAIL 一事有測試斷言。驗證:逐閘門對照 design.md 的 FAIL 條件表。
 - [x] 7.3 驗收 requirement「Archive metadata loss is detected」:兩個 Scenario 各指出對應測試,並確認 CONTRIBUTE.md 確實記載兩段式步驟。完成判準:文件步驟可照著執行且與 CLI 實際介面一致。驗證:照文件對一個既有 capability 實跑 snapshot 與 verify。
+
+## 8. 縮編為三道閘門(G1/G2/G7)— 2026-08-02 RCA 決議
+
+> 群組 1–7 建成的是七道閘門的初版;本群組依 RCA 決議縮編(證據:`.spectra/analysis/spec-drift-gates-audit/`)。設計契約見 design.md「Implementation Contract(縮編後)」。
+
+- [x] 8.1 紅燈:更新 `scripts/spec-gates/test_run.py`——刪除 G3/G4/G5/G6 的測試區塊與 snapshot/verify-archive 的整段測試區塊(以 `# ──` 區塊註解定位邊界,後者含寫死 `_CHANGE = "spec-drift-gates"` 的定時炸彈);新增縮編語意的失敗測試:G1 在 gates.yaml 不存在 → FAIL、存在且 `claim_phrases: []` → PASS 且輸出載明刻意宣告;G2 裸宣稱點名 diff 中檔案 → REVIEW(不再 FAIL);G7 diff-based 三路徑——兩邊皆有的 requirement 遺失 `@trace` → FAIL 並點名 capability/requirement/前後計數、requirement 於 HEAD 消失 → REVIEW、無變化 → PASS。完成判準:新測試因功能未實作而紅燈,且紅燈全部來自斷言而非 ImportError;被刪除的測試無孤兒殘留(執行 `python scripts/spec-gates/test_run.py` 無 NameError)。驗證:執行該檔並逐則檢視 PASS/FAIL 標記。
+- [x] 8.2 綠燈:縮編 `scripts/spec-gates/run.py`——刪除 `gate_deleted_literal`、`gate_scope_parity`、`gate_scenario_parity`、`gate_added_lines_trace` 及其專屬輔助函式與常數;`load_config` 改為 per-change gates.yaml 缺席時回傳缺席訊號,`run_gates` 據以產生 G1 FAIL;`gate_invariance` 的 FAIL 路徑降為 REVIEW;實作 diff-based `gate_trace_parity`(依 design 決策六的逐 requirement 對齊)接進 `run_gates`;刪除 `--snapshot`/`--verify-archive`/`--snapshot-file`/`--out` 旗標、`SNAPSHOT_DIR` 與 `snapshot_path`。完成後 run.py 即滿足 delta spec 的 requirement「Gates cover claim parity, invariance claims, and archive trace parity」。完成判準:8.1 的新測試轉綠、保留的既有測試全綠、design 驗收條件的 grep 零命中。驗證:`python scripts/spec-gates/test_run.py` 退出碼 0 + 該 grep。
+- [x] 8.3 [P] 改寫 `CONTRIBUTE.md` 的 `## Spec-drift gates` 一節(以標題界定範圍:該節起至 `## Adding a new challenge` 之前):閘門表格縮為 G1/G2/G7 三列並反映新判定條件、刪除 snapshot/verify-archive 的 archive 自檢步驟、新增「每個 change 目錄必須帶 gates.yaml(空清單即刻意宣告)」的契約說明、修正「three files named run.py」的計數錯誤(實為兩個)。完成判準:該節不再提及 G3–G6 與 snapshot 模式,讀者不需讀原始碼即可照做。驗證:`grep -n "G3\|G4\|G5\|G6\|snapshot\|verify-archive" CONTRIBUTE.md` 在該節範圍內零命中。
+- [x] 8.4 [P] 修正 `.github/workflows/quality-gates.yml` 的 `spec-gates` job:change id 改由 PR diff 推導(`openspec/changes/` 下被觸及的目錄、排除 `archive`,經 `env:` 傳入而非 `${{ }}` 直接插值以維持 CWE-78 防護),多個 change 逐一執行,未觸及任何 change 時跳過;並於 `openspec/changes/spec-drift-gates/gates.yaml` 新增本 change 自己的宣告檔(`claim_phrases: []`)。完成判準:job 的 `run:` 區塊無 `${{ }}` 直接插值於 shell 字串;gates.yaml 存在且含 claim_phrases 鍵。驗證:逐行檢視 job diff + `python -c "import yaml; yaml.safe_load(open('openspec/changes/spec-drift-gates/gates.yaml'))"`。
+- [x] 8.5 全面複驗:`python scripts/spec-gates/test_run.py` 退出碼 0;`pnpm test --run` 全綠;dogfooding——對本 change 執行 `python scripts/spec-gates/run.py spec-drift-gates --base origin/main` 零 FAIL 且逐項判定 REVIEW;把本 change 目錄以 scratch 副本模擬封存後測試套件仍退出碼 0(定時炸彈驗收);對更動的 Markdown 執行 repo prose gate 0 blocking;`spectra validate` 與 `spectra analyze` 無 Critical/Warning。完成判準:六項全過。驗證:記錄各項退出碼與判定表。

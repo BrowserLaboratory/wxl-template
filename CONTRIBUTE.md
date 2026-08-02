@@ -126,39 +126,48 @@ Every other check in `quality-gates.yml` looks at what a change *edited*. `scrip
 Run it locally before pushing:
 
 ```bash
-python scripts/spec-gates/run.py <change-id>          # human-readable
-python scripts/spec-gates/run.py <change-id> --json   # machine-readable
+python scripts/spec-gates/run.py <change-id> [--base <ref>] [--json]
+python scripts/spec-gates/run.py --trace-parity-only [--base <ref>] [--json]
+python scripts/spec-gates/run.py --resolve-change --base <ref>
 ```
 
-Each gate reports `PASS`, `REVIEW`, or `FAIL`. **Only `FAIL` blocks CI.** `REVIEW` means the gate found something a person has to judge — a section heading, a code identifier, a deliberate removal — and listing those is the point, not blocking on them.
+The first form runs all three gates for one change (`--base` defaults to `main`; `--json` switches to machine-readable output). The second runs G7 alone: it compares `@trace` metadata across the whole of `openspec/specs/` and therefore takes no change id — passing one is refused with exit 2. The third prints the change ids the diff against `<ref>` touches; it is a local convenience for finding the id to pass to the first form. CI does not call it — the workflow derives the same set inline with `git diff --name-only | awk` in the `spec-gates` job.
 
-| Gate | What it checks | Blocks |
+Each gate reports `PASS`, `REVIEW`, or `FAIL`. **Only `FAIL` blocks CI.** `REVIEW` means the gate found something a person has to judge, and listing those is the point, not blocking on them.
+
+Every hit is printed on its own line and the list is never truncated, but what identifies a hit differs by gate — do not expect a file and a line number from all three. G1 gives you the file path, the line number, and the matched text. G2 gives you the artifact the claim is written in, the line number within it, the matched text, and the changed file the claim names — the artifact and that last file are different things, and the line number means nothing without knowing which artifact it counts from. G7 works requirement by requirement and has no line number to give, so it names the capability and the requirement title instead, along with the `@trace` sources involved.
+
+| Gate | `FAIL` when | `REVIEW` when |
 |---|---|---|
-| G1 claim-parity | Every occurrence of a phrase whose truth conditions you changed is hedged, sits under a stated premise, or is recorded as unaffected | no |
-| G2 invariance | A claim that a file is unchanged, where the diff touched it | yes, when the claim is unqualified |
-| G3 deleted-literal | A user-facing string the diff deleted still occurs somewhere | yes |
-| G4 scope parity | The proposal's Impact list matches the actual diff and the delta specs on disk | yes, unless the proposal declares no affected specs at all |
-| G5 delta scenario parity | A `## MODIFIED` block drops a baseline scenario, silently deleting it from the corpus | yes, unless the tasks file names the scenario |
-| G6 added-lines trace | Mechanism assertions in added prose, for you to trace to source | no |
-| G7 archive trace-parity | `@trace` metadata lost while archiving | yes |
+| G1 claim-parity | `openspec/changes/<id>/gates.yaml` does not exist, **or** it exists without a `claim_phrases` key | an occurrence of a declared phrase reads as unconditional (an uncovered hit) |
+| G2 invariance | never | an "X is unchanged" claim names a file the diff touched — bare and qualified claims alike |
+| G7 archive trace-parity | never — see below | a requirement present on both sides lost an `@trace` `source:` that the base ref carried, or a requirement present in base disappeared entirely from the compared side |
 
-### Writing a qualified unchanged-claim (G2)
+A third G1 outcome is neither `FAIL` nor a verdict at all: if `gates.yaml` is not parseable YAML, or `claim_phrases`/`hedge_markers` is present but is not a list, the run stops with exit 2 and a message naming the file and the key. Exit 2 always means "the gates could not be evaluated", and it is deliberately distinct from exit 1, "a gate reported `FAIL`". The full list of causes: no change id at all and no mode flag that runs without one, which prints the usage help rather than an error; an unknown change id; a change id that is not a bare single directory name — empty, containing a path separator, or a bare `.` or `..` (refused before anything reads the filesystem — the id is joined onto `openspec/changes/`, and a traversing one would reach outside it); an unusable `git`; a declaration file the script refuses to guess at, whether unparseable or wrongly typed; and `--trace-parity-only` given a change id.
 
-G2 blocks on `X is unchanged` when the diff touched `X`. Often the claim is true because only one aspect of the file is unchanged — say the validation rules but not the output strings. Mark that aspect in bold so the gate can tell a scoped claim from a blanket one:
+G2 resolves a reference to a changed file by full path or by a path-boundary suffix, so `` `config.yaml` `` matches `scripts/spec-gates/config.yaml`. Files that merely share a name never implicate each other — this repository has two files named `run.py` (`scripts/prose-audit/run.py` and `scripts/spec-gates/run.py`), and a claim naming one is not resolved to the other; write enough of the path to be unambiguous.
 
-```markdown
-- 不改 `scripts/challenge-validate.ts` 對 tools 值的**合法性驗證規則**。
+G7 is diff-based, and the two sides it compares are the base ref and your **working tree** — not the base ref and `HEAD`. The base side is read from the capability specs as committed at `--base`; the other side is read from `openspec/specs/*/spec.md` as they sit on disk, uncommitted edits and all. That is worth knowing when you run it locally: delete an `@trace` block and G7 reports it on the very next run, before you have committed anything. In CI it makes no difference, because the job runs on a fresh checkout whose working tree is `HEAD` — so what you see locally after committing is what CI will see.
+
+Within each `openspec/specs/<cap>/spec.md` present on both sides, G7 aligns requirements by title and compares the **set of `source:` values** their `@trace` blocks carry, not how many blocks there are. So a hit names the exact sources that went missing, and swapping one source for another does not slip past on an unchanged total. G7 never reports `FAIL`: `@trace` and `source:` have no normative definition in `openspec/specs`, and three candidate rules produced non-overlapping hit sets against this repository's own archive history, so whether a hit is spurious depends on a definition nobody has written down yet. It reports; you decide. New capabilities, new requirements, and newly added `source:` values are not reported.
+
+G7 runs on **every** pull request, in its own workflow step that carries no condition and needs no change id. The id-scoped step — the one that runs G1 and G2 — runs only for the change directories the PR actually touches, and skipping it leaves no gap in G7 for two reasons worth knowing about. A PR that never touches `openspec/changes/` resolves no change id at all, yet it can still delete `@trace` blocks from `openspec/specs/**/spec.md` directly. And an archive PR moves the change directory under `openspec/changes/archive/`, which git records as a rename listing only the archive-side path, so it too resolves no id — meaning the id-scoped step alone would never gate the one operation G7 was written for. So the archive commit is compared automatically when it lands in a PR, and there is no manual pre- or post-archive step to run around `spectra archive`.
+
+### Naming a change directory
+
+The CI job derives its change ids from PR-controlled file paths, so it checks every id against `^[a-z0-9-]+$` before using it. **Name live directories under `openspec/changes/` with lowercase letters, digits, and hyphens only.** An id outside that set is not gated and not skipped either: the job stops with exit 2 and an error naming the id, on the principle that "never checked" must not look like "checked and clean". `spectra` already produces conforming ids, so this bites only a hand-made directory.
+
+When a PR touches several change directories, the job gates each of them and exits with the most severe code it saw: a 2 from any id wins over a 1 from any other, and a 1 wins over 0. The distinction is the same one the script draws — a 2 means someone has to fix an environment or a declaration file before the gates can say anything, while a 1 means the gates ran and a gate has something to tell you.
+
+### Declaring claim phrases (`gates.yaml`)
+
+Every change directory must carry an `openspec/changes/<change-id>/gates.yaml` with a `claim_phrases` key — G1 fails the change if the file is missing, and fails it the same way if the file is there but the key is not, because an empty file declares nothing. The two causes are named separately in the `FAIL` output, since one asks you to create a file and the other to add a key. An empty list is the deliberate declaration that this change alters no phrase's truth conditions; G1 then passes and says so in its output, rather than passing silently. Minimal file:
+
+```yaml
+claim_phrases: []
 ```
 
-The bold span must come *after* the file reference — that is what distinguishes a scope marker from a bold label opening the sentence. Without a marker the gate reads the claim as covering the whole file and fails.
-
-The gate does not check whether the aspect you marked is genuinely unchanged; it only routes the claim to `REVIEW` so a person reads it. Marking a blanket claim in bold will get it past the `FAIL`, and the reviewer, not the gate, is what stops that.
-
-G2 resolves a reference to a changed file by full path or by a path-boundary suffix, so `` `config.yaml` `` matches `scripts/spec-gates/config.yaml`. Write enough of the path to be unambiguous when a filename occurs in more than one directory — `scripts/prose-audit/` and `scripts/spec-gates/` each hold a `run.py` and a `test_run.py`.
-
-### Declaring claim phrases for G1
-
-G1 cannot guess which wording your change made conditional, so declare it. Create `openspec/changes/<change-id>/gates.yaml`:
+When your change does make some wording conditional, declare the phrases instead:
 
 ```yaml
 claim_phrases:
@@ -166,21 +175,9 @@ claim_phrases:
   - Terminal tab
 ```
 
-The gate then enumerates every occurrence of each phrase and reports the ones that read as unconditional. Record your adjudication of each hit in the tasks file. Leaving `claim_phrases` empty is allowed — G1 passes and says so in its output, rather than passing silently.
+The gate then enumerates every occurrence of each phrase and reports the ones that read as unconditional. Record your adjudication of each hit in the tasks file.
 
-### Archive check (G7)
-
-`spectra archive` replaces each MODIFIED requirement block wholesale. When the delta does not carry the `@trace` metadata that was attached to that requirement, archiving discards it. This has happened twice in this repository, three blocks each time. CI cannot catch it because archiving runs on your machine, so take a snapshot first:
-
-```bash
-python scripts/spec-gates/run.py --snapshot <change-id>
-spectra archive <change-id>
-python scripts/spec-gates/run.py --verify-archive <change-id>
-```
-
-The verify step exits non-zero if any capability lost a requirement or a `@trace` block. Restore what was dropped from git before committing the archive.
-
-The snapshot goes to `.git/spec-gates/<change-id>.json`, outside the working tree, so it leaves nothing for you to clean up and nothing for the next gate run to trip over. Pass `--out` to put it elsewhere, and `--snapshot-file` to point the verify step at a snapshot that is not in the default location. The two modes are mutually exclusive: giving both is an error rather than a silent choice of one.
+What counts as "conditional" comes from `hedge_markers`, an optional second key. Leave it out and the gate falls back to `scripts/spec-gates/config.yaml`, then to the English and Traditional Chinese defaults built into `run.py`. The fallback keys off whether you wrote the key, not off what you wrote in it: `hedge_markers: []` is a valid and deliberate setting meaning **no** wording counts as hedged, so every occurrence becomes an uncovered hit. Write the key only when you mean to override the defaults. Both keys must be lists — a bare string is refused with exit 2 rather than iterated character by character.
 
 ## Adding a new challenge
 
