@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides a build-time data loader and globally registered Vue component that collects all challenge frontmatter and renders a browsable, filterable challenge list page within the VitePress default layout.
+Covers the per-locale `createContentLoader` data files under `docs/shared/` that collect challenge frontmatter at build time, and the globally registered `ChallengeList` Vue component that renders that data — searchable, filterable, sortable — on the `/challenges` and `/zh-TW/challenges` pages. Also covers the invariant that a challenge's technical frontmatter stays identical across the two locale trees while only `title` and `description` are translated, and the date formatting that follows the active vue-i18n locale.
 
 ## Requirements
 
@@ -35,143 +35,19 @@ code:
 ---
 ### Requirement: Challenge list page uses a globally registered Vue component embedded in markdown
 
-The challenge list display logic SHALL be implemented as a Vue component (`theme/components/ChallengeList.vue`) globally registered in `enhanceApp` via `app.component('ChallengeList', ChallengeList)`. The `docs/challenges.md` page SHALL use the VitePress default layout and embed `<ChallengeList />` directly in the markdown body. The `challenge-list` layout registration in `theme/index.ts` SHALL be removed, and `ChallengeListLayout.vue` SHALL be deleted.
+The challenge list display logic SHALL be implemented as a Vue component (`.vitepress/theme/components/ChallengeList.vue`) globally registered in `enhanceApp` via `app.component('ChallengeList', ChallengeList)`. The `docs/challenges.md` and `docs/zh-TW/challenges.md` pages SHALL declare `layout: page` in frontmatter — a layout name resolved by the VitePress default theme, whose `VPContent.vue` dispatches `frontmatter.layout === 'page'` to its `VPPage` component — and SHALL NOT name a layout component registered by this project's theme. Each page SHALL embed the component with an explicit dataset: a `<script setup>` block SHALL import `data` from that locale's loader (`./shared/challenges.data.ts` for the root English page, `../shared/challenges.zh-TW.data.ts` for the Traditional Chinese page) and the markdown body SHALL contain `<ChallengeList :challenges="data" />`. The `challenges` prop is declared non-optional via `defineProps<{ challenges: ChallengeData[] }>()`, so a bare `<ChallengeList />` SHALL NOT be a supported usage. `.vitepress/theme/index.ts` SHALL NOT register a layout named `challenge-list`, and `.vitepress/theme/layouts/ChallengeListLayout.vue` SHALL NOT exist.
 
-#### Scenario: Challenge list page renders without layout frontmatter
+#### Scenario: Challenge list page renders through the default theme page layout
 
 - **WHEN** the user navigates to `/challenges`
-- **THEN** VitePress SHALL apply the default layout and the `<ChallengeList />` component SHALL render all available challenges
+- **THEN** VitePress SHALL render the page through the default theme's `page` layout, selected by the `layout: page` frontmatter key
+- **AND** the `<ChallengeList :challenges="data" />` element SHALL render every entry of the dataset imported from `./shared/challenges.data.ts`, because no search, difficulty, or category filter is active on first render
 
-#### Scenario: ChallengeList can be embedded in any markdown page
+#### Scenario: ChallengeList can be embedded in any markdown page that supplies the challenges prop
 
-- **WHEN** any `.md` file includes `<ChallengeList />` in its body
-- **THEN** the component SHALL render the full challenge list without requiring `layout: challenge-list` in frontmatter
-
-
-<!-- @trace
-source: vitepress-structure-refactor
-updated: 2026-03-15
--->
-
-
-<!-- @trace
-source: vitepress-structure-refactor
-updated: 2026-03-15
-code:
-  - .vitepress/theme/index.ts
-  - .vitepress/theme/Layout.vue
-  - .vitepress/workers/router.ts
-  - .vitepress/sw/router.ts
-  - docs/challenges/index.md
-  - vitest.config.ts
-  - .vitepress/theme/components/ChallengeList.vue
-  - package.json
-  - .vitepress/theme/layouts/ChallengeListLayout.vue
-  - .vitepress/theme/components/ChallengeLayout.vue
-tests:
-  - .vitepress/theme/layouts/ChallengeLayout.test.ts
-  - tests/unit/challenge/plugin-obfuscation.test.ts
-  - tests/unit/challenge/flag-verifier.test.ts
-  - tests/unit/layouts/ChallengeLayout.test.ts
-  - tests/unit/composables/usePhpRuntime-post.test.ts
-  - tests/unit/challenge/config.test.ts
-  - tests/unit/components/ChallengeList.test.ts
-  - tests/unit/composables/usePythonRuntime-request.test.ts
-  - tests/unit/components/SourceViewer.test.ts
-  - .vitepress/theme/composables/usePhpRuntime-singleton.test.ts
-  - .vitepress/sw/router.test.ts
-  - tests/e2e/php-demo.test.ts
-  - tests/unit/components/FlagSubmit.test.ts
-  - tests/unit/composables/usePhpRuntime.test.ts
-  - tests/e2e/flask-sqli.test.ts
-  - tests/unit/components/TerminalPanel.test.ts
-  - .vitepress/theme/layouts/ChallengeListLayout.test.ts
-  - .vitepress/challenge/flag-verifier-global.test.ts
-  - .vitepress/theme/composables/usePhpRuntime-fs.test.ts
-  - tests/unit/composables/usePhpRuntime-headers.test.ts
-  - .vitepress/theme/composables/usePhpRuntime-post.test.ts
-  - .vitepress/theme/composables/usePythonRuntime.test.ts
-  - tests/unit/challenge/plugin.test.ts
-  - .vitepress/theme/components/SourceViewer.test.ts
-  - .vitepress/theme/components/FlagSubmit.test.ts
-  - tests/unit/challenge/flag-verifier-global.test.ts
-  - .vitepress/challenge/plugin-obfuscation.test.ts
-  - .vitepress/theme/composables/usePythonRuntime-request.test.ts
-  - .vitepress/theme/components/RepeatPanel.test.ts
-  - tests/unit/composables/usePhpRuntime-fs.test.ts
-  - .vitepress/theme/components/TerminalPanel.test.ts
-  - .vitepress/theme/components/ChallengeLayout.test.ts
-  - tests/unit/composables/usePythonRuntime.test.ts
-  - .vitepress/challenge/plugin.test.ts
-  - tests/unit/components/RepeatPanel.test.ts
-  - .vitepress/theme/components/BrowserPanel.test.ts
-  - .vitepress/challenge/config.test.ts
-  - tests/unit/composables/usePythonRuntime-fs.test.ts
-  - .vitepress/theme/composables/usePhpRuntime-headers.test.ts
-  - .vitepress/theme/composables/usePythonRuntime-fs.test.ts
-  - tests/unit/composables/usePhpRuntime-singleton.test.ts
-  - .vitepress/challenge/flag-verifier.test.ts
-  - tests/unit/components/BrowserPanel.test.ts
-  - tests/unit/workers/router.test.ts
-  - .vitepress/theme/composables/usePhpRuntime.test.ts
--->
-
----
-### Requirement: Challenge list displays each challenge as a card with metadata and a link
-
-The challenge list layout SHALL render each challenge as a card showing: the challenge `id` as a zero-padded three-digit number (e.g., `#001`), the challenge title, a difficulty badge with semantic color coding, a category badge, a description excerpt (limited to 2-3 lines via CSS line-clamp), tag pills for each tag, a formatted date, and a link to the challenge page. Clicking the card SHALL navigate to the individual challenge page. Difficulty badges SHALL use the following semantic colors: `easy` = green tones, `medium` = yellow/amber tones, `hard` = red tones, `mystery` = purple tones. The card SHALL display a top-edge accent line using the `--ch-accent` color on hover.
-
-#### Scenario: Challenge card displays full metadata including description, tags, and date
-
-- **WHEN** the list page renders a challenge with `id: 1`, `title: "SQL Injection"`, `difficulty: "easy"`, `category: "web"`, `description: "Learn SQL injection..."`, `tags: ["sql", "injection"]`, `date: "2025-03-01T10:30:00.000Z"`
-- **THEN** the card SHALL display `#001`, the title, a green-toned easy badge, a web category badge, the description clamped to 2-3 lines, tag pills for each tag, and a formatted date
-
-#### Scenario: Difficulty badge uses semantic color coding
-
-- **WHEN** a challenge has `difficulty: "hard"`
-- **THEN** its badge SHALL use red tones (dark: red-transparent bg, red fg; light: red-light bg, dark-red fg)
-
-#### Scenario: Card hover shows accent top-edge line
-
-- **WHEN** the user hovers over a challenge card
-- **THEN** a top-edge line using the `--ch-accent` color SHALL become visible and the card border SHALL change to `--ch-border-hover`
-
-#### Scenario: Clicking a challenge card navigates to the challenge
-
-- **WHEN** the user clicks a challenge card
-- **THEN** the browser SHALL navigate to the corresponding challenge page
-
-
-<!-- @trace
-source: challenge-list-redesign
-updated: 2026-03-25
-code:
-  - docs/index.md
-  - .vitepress/theme/style.css
-  - .vitepress/theme/components/HomeContent.vue
-  - docs/public/icons/browser.svg
-  - docs/public/icons/terminal.svg
-  - .vitepress/theme/Layout.vue
-  - .vitepress/challenge/config.ts
-  - .vitepress/config.mts
-  - uno.config.ts
-  - docs/public/icons/code.svg
-  - docs/public/icons/repeater.svg
-  - .vitepress/theme/index.ts
-  - docs/public/icons/network.svg
-  - docs/guide/python.md
-  - .vitepress/theme/components/ChallengeList.vue
-  - .vitepress/theme/layouts/ChallengeLayout.vue
-  - docs/shared/challenges.data.ts
-  - docs/guide/index.md
-  - docs/guide/network.md
-  - docs/public/icons/notes.svg
-  - docs/guide/terminal.md
-  - scripts/create-challenge.ts
-tests:
-  - tests/unit/scripts/create-challenge.test.ts
-  - tests/unit/components/HomeContent.test.ts
--->
+- **WHEN** any `.md` file adds a `<script setup>` block importing `data` from a challenges data loader and embeds `<ChallengeList :challenges="data" />` in its body
+- **THEN** the component SHALL render the imported challenge entries without requiring `layout: challenge-list` in frontmatter and without requiring any project-defined theme layout component
+- **AND** embedding `<ChallengeList />` without the `challenges` prop SHALL NOT be a supported usage — the `challenges` prop is declared non-optional, and mounting the component without it SHALL NOT render the list
 
 ---
 ### Requirement: Challenge list provides debounced text search across title, description, and tags
@@ -493,7 +369,7 @@ tests:
 ---
 ### Requirement: Challenge data loader is locale-aware via per-locale data files sharing one ChallengeData type
 
-The challenge data loading layer SHALL expose one VitePress `createContentLoader` per active locale. For the root English locale, `docs/shared/challenges.data.ts` SHALL glob `challenge/*/index.md` and export `default` plus a named `data: ChallengeData[]`. For the Traditional Chinese locale, `docs/shared/challenges.zh-TW.data.ts` SHALL glob `zh-TW/challenge/*/index.md` and export the same shape. The `ChallengeData` TypeScript interface SHALL be defined exactly once in `docs/shared/challenges.data.ts` and re-imported via `import type { ChallengeData } from './challenges.data'` by `docs/shared/challenges.zh-TW.data.ts`. Both loaders SHALL preserve the closed difficulty union `'easy' | 'medium' | 'hard' | 'mystery'` established by the prior `fix-project-config` change. Markdown pages SHALL select the appropriate loader by import path: `docs/index.md` and `docs/challenges.md` SHALL import from `./shared/challenges.data.ts`; `docs/zh-TW/index.md` and `docs/zh-TW/challenges.md` SHALL import from `../shared/challenges.zh-TW.data.ts`. Vue components (`HomeContent.vue`, `ChallengeList.vue`) SHALL remain locale-agnostic and SHALL receive the active dataset exclusively via the `challenges` prop.
+The challenge data loading layer SHALL expose one VitePress `createContentLoader` per active locale. For the root English locale, `docs/shared/challenges.data.ts` SHALL glob `challenge/*/index.md` and export `default` plus a named `data: ChallengeData[]`. For the Traditional Chinese locale, `docs/shared/challenges.zh-TW.data.ts` SHALL glob `zh-TW/challenge/*/index.md` and export the same shape. The `ChallengeData` TypeScript interface SHALL be defined exactly once in `docs/shared/challenges.data.ts` and re-imported via `import type { ChallengeData } from './challenges.data'` by `docs/shared/challenges.zh-TW.data.ts`. Both loaders SHALL preserve the closed difficulty union `'easy' | 'medium' | 'hard' | 'mystery'` established by the prior `fix-project-config` change. Markdown pages SHALL select the appropriate loader by import path: `docs/index.md` and `docs/challenges.md` SHALL import from `./shared/challenges.data.ts`; `docs/zh-TW/index.md` and `docs/zh-TW/challenges.md` SHALL import from `../shared/challenges.zh-TW.data.ts`. Vue components (`HomeContent.vue`, `ChallengeList.vue`) SHALL remain locale-agnostic and SHALL receive the active dataset exclusively via the `challenges` prop. Those components SHALL NOT contain a value import of any `.data.ts` module. A type-only import of the `ChallengeData` interface SHALL be permitted in those components: an `import type` declaration is erased by the TypeScript compiler and emits no runtime import, so it carries no challenge data into the component and does not bind it to a locale.
 
 #### Scenario: English root pages load English challenge data
 
@@ -522,11 +398,12 @@ The challenge data loading layer SHALL expose one VitePress `createContentLoader
 - **THEN** the TypeScript compiler SHALL report a type error
 - **AND** the `'easy' | 'medium' | 'hard' | 'mystery'` union SHALL remain the only accepted set of values
 
-#### Scenario: Vue components do not import data modules directly
+#### Scenario: Vue components import the ChallengeData type but never the data value
 
 - **WHEN** a developer inspects `HomeContent.vue` and `ChallengeList.vue` source
-- **THEN** neither component SHALL contain `import { data } from '...challenges.data'` or any similar direct import of a `.data.ts` module
+- **THEN** neither component SHALL contain a value import from a `.data.ts` module, such as `import { data } from '...challenges.data'`
 - **AND** both components SHALL receive challenge entries only through the `challenges: ChallengeData[]` prop declared via `defineProps`
+- **AND** the type-only line `import type { ChallengeData } from '../../../docs/shared/challenges.data'` present in both components SHALL remain permitted, because it is erased at compile time and imports no value
 
 ##### Example: locale-to-loader mapping
 
@@ -551,7 +428,7 @@ For every challenge slug that exists in both `docs/challenge/<slug>/index.md` an
 #### Scenario: ChallengeList sorting is consistent across locales
 
 - **WHEN** a user opens `/challenges` and `/zh-TW/challenges` and applies the same sort option (e.g., sort by date descending)
-- **THEN** the displayed challenge cards SHALL appear in the same order on both pages
+- **THEN** the displayed challenge entries SHALL appear in the same order on both pages
 - **AND** only the rendered `title` and `description` text SHALL differ between the two pages
 
 ---
@@ -577,3 +454,46 @@ The challenge date formatting helper used by `HomeContent.vue` and `ChallengeLis
 - **AND** the user clicks LocaleSwitcher to switch to `'zh-TW'`
 - **THEN** the displayed date strings SHALL update to Traditional Chinese format reactively
 - **AND** no full page reload SHALL be required for the date format to update
+
+---
+### Requirement: Challenge list renders each challenge as a list row by default and as a card in grid view
+
+`.vitepress/theme/components/ChallengeList.vue` SHALL render the challenge entries it receives through the `challenges` prop, subject to the active search, filter, and sort state, and no component under `.vitepress/theme/layouts/` SHALL render the challenge list. The component's `viewMode` ref SHALL default to `'list'`, so the default rendering SHALL be one row per rendered challenge; when grid view is active the same entries SHALL be rendered as cards.
+
+In both views each entry SHALL show: the challenge `id` rendered by the `paddedId` helper (a `#` prefix followed by the number left-padded with zeroes to a minimum of three digits, e.g. `#001`), the challenge title, a difficulty badge with semantic color coding when the entry has a `difficulty` value, a category badge when it has a `category` value, a description excerpt when it has a `description` value, one tag pill per entry in `tags`, a formatted date when it has a `date` value, and a link to the challenge page. The description excerpt SHALL be clamped to two lines in grid view (`line-clamp-2`) and truncated to a single line in list view (`truncate`). Each rendered entry SHALL be an anchor element whose `href` is `withBase(url)`, so activating a card or a row SHALL navigate to that challenge's page.
+
+Difficulty badges SHALL use the following semantic colors, supplied through the `--ch-*` custom properties behind the `ch-badge-*` shortcuts: `easy` = green tones, `medium` = yellow/amber tones, `hard` = red tones, `mystery` = purple tones.
+
+Hover feedback SHALL differ by view. In grid view the `ch-card` shortcut SHALL change the border color to `--ch-border-hover`, translate the card upward, and add a box shadow; it SHALL NOT draw a top-edge accent line. In list view the `ch-list-row` shortcut SHALL change the row background to `--ch-bg-soft` and change its left border from transparent to `--ch-accent`.
+
+#### Scenario: Grid view card displays full metadata including description, tags, and date
+
+- **WHEN** grid view is active and the list page renders a challenge with `id: 1`, `title: "SQL Injection"`, `difficulty: "easy"`, `category: "web"`, `description: "Learn SQL injection..."`, `tags: ["sql", "injection"]`, `date: "2025-03-01T10:30:00.000Z"`
+- **THEN** the card SHALL display `#001`, the title, a green-toned easy badge, a web category badge, the description clamped to 2 lines, a tag pill for each tag, and a formatted date
+
+#### Scenario: List view row displays full metadata with a single-line description
+
+- **WHEN** list view is active — the default — and the list page renders the same challenge
+- **THEN** the row SHALL display `#001`, the title, a green-toned easy badge, a web category badge, a formatted date, the description truncated to a single line, and a tag pill for each tag
+
+#### Scenario: Difficulty badge uses semantic color coding
+
+- **WHEN** a challenge has `difficulty: "hard"`
+- **THEN** its badge SHALL use red tones (dark: red-transparent bg, red fg; light: red-light bg, dark-red fg)
+
+#### Scenario: Grid card hover changes border, lifts the card, and adds a shadow
+
+- **WHEN** the user hovers over a challenge card in grid view
+- **THEN** the card border SHALL change to `--ch-border-hover`, the card SHALL translate upward, and a box shadow SHALL be applied
+- **AND** no top-edge accent line SHALL appear
+
+#### Scenario: List row hover highlights the row and reveals a left accent border
+
+- **WHEN** the user hovers over a challenge row in list view
+- **THEN** the row background SHALL change to `--ch-bg-soft`
+- **AND** its left border SHALL change from transparent to `--ch-accent`
+
+#### Scenario: Clicking a challenge entry navigates to the challenge
+
+- **WHEN** the user clicks a challenge card in grid view or a challenge row in list view
+- **THEN** the browser SHALL navigate to `withBase(url)` of that challenge, which is the individual challenge page

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'split-wxl-creator-skills'. Update Purpose after archive.
+Covers the `wxl-mutate` skill, which changes an already-created challenge's `backend`, `difficulty`, `tags`, or `category` exclusively through `pnpm challenge:retype` instead of hand-editing `index.md` frontmatter or renaming application files, then hands off to `wxl-verify` by running `pnpm challenge:verify <slug>`. Cross-language backend swaps that `challenge:retype` rejects as requiring manual work (exit code 2) are surfaced and aborted, not retried.
 
 ## Requirements
 

@@ -1,10 +1,4 @@
-# spec-drift-gates Specification
-
-## Purpose
-
-Covers the mechanical spec-drift gates: the `scripts/spec-gates/run.py` script, the `pull_request` job that runs it in `.github/workflows/quality-gates.yml`, and the per-change `openspec/changes/<id>/gates.yaml` declaration the gates read. The three checks are G1 claim-parity, G2 invariance, and G7 archive trace-parity; G1's absent or keyless declaration file reports `FAIL`; G2 hits go to a human as `REVIEW` and leave the exit code alone.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Mechanical spec-drift gates run on every pull request
 
@@ -84,7 +78,6 @@ The script SHALL NOT create or modify any file in the working tree.
 - **THEN** the script SHALL exit zero
 - **AND** every hit SHALL be listed, each carrying the identifying information its own gate reports
 
----
 ### Requirement: Gates cover claim parity, invariance claims, and archive trace parity
 
 The gate script SHALL implement exactly three checks. `FAIL` SHALL originate only from exact judgements — a per-change declaration file that is absent, or that carries no `claim_phrases` key — never from a heuristic classification.

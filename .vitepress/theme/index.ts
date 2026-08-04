@@ -127,7 +127,9 @@ export default {
     // SourceViewer is used in challenge pages via markdown
     app.component('SourceViewer', SourceViewer)
 
-    // ChallengeList is used in docs/challenges/index.md via <ChallengeList />
+    // ChallengeList requires a `challenges: ChallengeData[]` prop; each locale's
+    // challenges page (docs/challenges.md, docs/zh-TW/challenges.md) passes it
+    // via <ChallengeList :challenges="data" /> after loading its own data file.
     app.component('ChallengeList', ChallengeList)
 
     // HomeContent is used in docs/index.md via <HomeContent />

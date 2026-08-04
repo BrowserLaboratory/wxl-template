@@ -15,7 +15,8 @@ Three gates remain after the reduction (design.md, Implementation Contract):
   touched are listed for a human, never blocked on.
 - G7 archive trace-parity: diff-based, aligned per requirement between the base
   ref and the working tree. A requirement on both sides that lost a @trace
-  `source:` is FAIL; a requirement that vanishes from HEAD is REVIEW.
+  `source:`, and a requirement that vanishes from the working tree, are both
+  REVIEW — this gate never FAILs (see its docstring for why).
 
 Verdicts are PASS / REVIEW / FAIL. Only FAIL affects the exit code — the review
 tier exists because these checks legitimately surface hits a human must
@@ -108,11 +109,13 @@ def gate_claim_parity(phrases, hedges, grep) -> Verdict:
 
 _INVARIANCE = re.compile(
     r"不變|不改|無異動|unchanged|not affected|no\s+\w*\s*changes?\b", re.IGNORECASE)
-# A qualified claim names *which aspect* is unchanged — the convention
-# CONTRIBUTE.md documents is a bold span placed after the file reference. The
-# split is kept purely as an annotation in the detail: three audit rounds
-# showed the bare/qualified distinction misfires in both directions, so it no
-# longer decides anything, and neither shape blocks CI.
+# A qualified claim names *which aspect* is unchanged, conventionally by a
+# bold span placed after the file reference — a convention this codebase
+# follows but that CONTRIBUTE.md does not itself formally define; it only
+# documents that bare and qualified claims are treated alike. The split is
+# kept purely as an annotation in the detail: three audit rounds showed the
+# bare/qualified distinction misfires in both directions, so it no longer
+# decides anything, and neither shape blocks CI.
 _QUALIFIED = re.compile(r"\*\*[^*]+\*\*")
 # Backticked spans first, then bare path-shaped tokens.
 _PATH_REF = re.compile(r"`([^`]+)`|((?:[\w.-]+/)*[\w-]+\.[A-Za-z0-9]+)")
@@ -199,12 +202,14 @@ def gate_trace_parity(base, head) -> Verdict:
 
     `spectra archive` replaces each MODIFIED requirement block wholesale, which
     discards the @trace metadata attached to it when the delta does not carry
-    it. That is the FAIL shape: a requirement present on both sides that no
+    it. That is the `dropped` shape: a requirement present on both sides that no
     longer carries a source it carried at base — losing four of five sources is
     metadata loss just as surely as losing the last one. A requirement that
-    vanishes from HEAD entirely is REVIEW — a legitimate `## REMOVED` is visible
-    in the same PR's delta, so a human adjudicates. Additions are not hits:
-    whole-file counting would flag a deliberate requirement removal as loss.
+    vanishes from HEAD entirely is reported separately, as `vanished` — a
+    legitimate `## REMOVED` is visible in the same PR's delta, so a human
+    adjudicates either shape, and both surface as REVIEW, never FAIL. Additions
+    are not hits: whole-file counting would flag a deliberate requirement
+    removal as loss.
 
     Comparing source sets rather than block counts is what keeps a legitimate
     consolidation out of the REVIEW list: two blocks naming the same source,
@@ -225,7 +230,8 @@ def gate_trace_parity(base, head) -> Verdict:
     anywhere in openspec/specs, and `spectra archive` — which produces them — is
     a closed binary. A blocking verdict has to be adjudicable, and this one is
     not adjudicable until somebody writes the definition down. Until then G7
-    reports what it sees and a human decides. See design.md, 決策六.
+    reports what it sees and a human decides. See design.md, 決策六 (the
+    diff-based, set-identity mechanism) and 決策八 (why no FAIL tier).
     """
     dropped, vanished = [], []
     for cap in sorted(base):
@@ -435,9 +441,12 @@ def _spec_traces(text: str) -> dict:
     trace — and not the block's position, because a count of blocks is not a
     measure of the information a requirement carries. Two blocks naming the same
     source, rewritten as one block listing both code paths, lose nothing; a
-    count reports that as loss. All 215 trace blocks in this repository carry a
-    `source:` line, and the format documented in
-    openspec/specs/ci-quality-gates/spec.md requires one.
+    count reports that as loss. All 215 trace blocks in this repository happen
+    to carry a `source:` line today, but no file under openspec/specs
+    normatively requires one — openspec/specs/ci-quality-gates/spec.md, for
+    instance, contains three `@trace` blocks that follow the convention
+    without documenting it. That is exactly why the block below still handles
+    one that omits it.
 
     A block with no `source:` is still counted, under the synthetic identity
     `#n` where n numbers the source-less blocks within that requirement.
@@ -539,25 +548,38 @@ def change_ids_from_diff(diff_names: str):
 
 # ── run_gates(): assembly ────────────────────────────────────────────────────
 
-def run_gates(change_id: str, base: str):
-    """The three reduced gates, in order: G1, G2, G7."""
-    # A change id is a directory name, never a path: a separator, or a `..`
-    # standing alone, would make `Path("openspec/changes") / change_id` read
-    # files outside the changes directory. Refused before anything touches the
-    # filesystem or git.
-    #
-    # The test is on path segments, not on substrings. `".." in change_id`
-    # also refused `v1..v2` — an ordinary directory name with no separator in
-    # it, which `Path` concatenation cannot make escape anything, whatever its
-    # dots. Since a separator is refused outright, the id is a single segment
-    # and only that segment can be `..`. `.` is refused with it: it resolves to
-    # the changes directory itself, which is not a change, and no directory can
-    # be named that.
+def validate_change_id(change_id: str) -> None:
+    """Refuse a change id that is not a bare directory name.
+
+    A change id is a directory name, never a path: a separator, or a `..`
+    standing alone, would make `Path("openspec/changes") / change_id` read
+    files outside the changes directory.
+
+    This lives in its own function because *when* it runs is part of the
+    contract, not an implementation detail. The spec and CONTRIBUTE.md both
+    promise the id is refused before anything reads the filesystem or invokes
+    git on it, so `main` calls this before its own directory lookup. Calling it
+    again from `run_gates` costs nothing and keeps that entry point safe for
+    callers — the tests reach it directly.
+
+    The test is on path segments, not on substrings. `".." in change_id`
+    also refused `v1..v2` — an ordinary directory name with no separator in
+    it, which `Path` concatenation cannot make escape anything, whatever its
+    dots. Since a separator is refused outright, the id is a single segment
+    and only that segment can be `..`. `.` is refused with it: it resolves to
+    the changes directory itself, which is not a change, and no directory can
+    be named that.
+    """
     if (not change_id or "/" in change_id or os.sep in change_id
             or change_id in ("..", ".")):
         raise GateError(
             f"invalid change id {change_id!r}: must be a bare directory name "
             "under openspec/changes/ (no separator, and not '.' or '..')")
+
+
+def run_gates(change_id: str, base: str):
+    """The three reduced gates, in order: G1, G2, G7."""
+    validate_change_id(change_id)
     change_dir = Path("openspec/changes") / change_id
     cfg = load_config(change_dir)
     skip = f"{change_dir}/tasks.md"
@@ -659,8 +681,9 @@ def main() -> int:
         # gate that needs no change id — and the one CI must run on every pull
         # request. A PR that edits openspec/specs/ without touching
         # openspec/changes/ resolves no id at all, and neither does an archive
-        # PR: git records the directory move as a rename, so the pre-archive
-        # path never appears in `--name-only`. Without this mode the only way
+        # PR: git records the directory move either as a rename or as a
+        # plain addition under the archive prefix, and the pre-archive path
+        # appears in `--name-only` under neither. Without this mode the only way
         # to reach G7 in those runs is to fabricate a change directory, which
         # makes CI's verdict depend on how G1 and G2 treat a directory nobody
         # wrote.
@@ -679,6 +702,9 @@ def main() -> int:
     if not args.change_id:
         ap.print_help()
         return 2
+    # Before the directory lookup, not after: the id is joined onto
+    # `openspec/changes/`, so a traversing id must never reach the filesystem.
+    validate_change_id(args.change_id)
     if not (Path("openspec/changes") / args.change_id).is_dir():
         print(f"error: no change directory at openspec/changes/{args.change_id}", file=sys.stderr)
         return 2

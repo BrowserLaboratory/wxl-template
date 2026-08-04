@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'split-wxl-creator-skills'. Update Purpose after archive.
+Covers the `wxl-create` skill's authoring flow for a brand-new challenge: a design-convergence interview, plain-text parameter rounds, `pnpm create:challenge` scaffolding, generation of the vulnerable app code (modeled on the canonical `docs/challenge/door-is-open/` reference plus any capability reference pack matched by the vuln type) and its Playwright exploit spec, and a best-effort browser self-test. The flow ends by running `pnpm challenge:verify <slug>` and handing the outcome to `wxl-verify`; the gate's branching and repair loop live in `wxl-verify-skill`, and the L4 blind-solve gate in `wxl-crosscheck-skill`.
 
 ## Requirements
 

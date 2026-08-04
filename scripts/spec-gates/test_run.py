@@ -16,9 +16,10 @@ Reduced semantics under test (design.md, Implementation Contract):
   present with `claim_phrases: []` -> PASS, reported as a deliberate declaration.
 - G2 invariance: REVIEW-only. Bare and qualified claims are both listed; the
   gate never blocks CI.
-- G7 archive trace-parity: diff-based, aligned per requirement between base and
-  HEAD. A requirement present on both sides whose @trace count decreased ->
-  FAIL; a requirement that vanishes from HEAD -> REVIEW; additions -> PASS.
+- G7 archive trace-parity: diff-based, aligned per requirement between the
+  base ref and the working tree. A requirement present on both sides that
+  lost a @trace `source:` value -> REVIEW; a requirement that vanishes from
+  the working tree -> REVIEW; additions -> PASS. Nothing here FAILs.
 """
 from __future__ import annotations
 
@@ -858,7 +859,7 @@ check(
 )
 
 
-def _g7_fail():
+def _g7_full_loss():
     return gates.gate_trace_parity(
         {"widget": {"Widget renders": {"alpha", "beta"}, "Widget hides": {"gamma"}}},
         {"widget": {"Widget renders": set(), "Widget hides": {"gamma"}}},
@@ -866,21 +867,21 @@ def _g7_fail():
 
 
 check(
-    lambda: _g7_fail().status == "REVIEW" and len(_g7_fail().detail["dropped"]) == 1,
+    lambda: _g7_full_loss().status == "REVIEW" and len(_g7_full_loss().detail["dropped"]) == 1,
     "G7: a requirement present on both sides that loses its @trace -> REVIEW, recorded",
 )
 check(
     lambda: any(
         "widget" in str(row) and "Widget renders" in str(row)
         and "alpha" in str(row) and "beta" in str(row)
-        for row in (_g7_fail().detail.get("dropped") or [])
+        for row in (_g7_full_loss().detail.get("dropped") or [])
     ),
-    "G7: the FAIL names the capability, the requirement, and every lost source",
+    "G7: the REVIEW hit names the capability, the requirement, and every lost source",
 )
 check(
     lambda: any(row.get("before") == 2 and row.get("after") == 0
-                for row in (_g7_fail().detail.get("dropped") or [])),
-    "G7: the FAIL still carries the before and after counts",
+                for row in (_g7_full_loss().detail.get("dropped") or [])),
+    "G7: the REVIEW hit still carries the before and after counts",
 )
 
 
@@ -927,7 +928,7 @@ check(
         and "widget" in str(row) and "Widget renders" in str(row)
         for row in (_g7_partial().detail.get("dropped") or [])
     ),
-    "G7: the partial-loss FAIL names capability, requirement, counts and lost sources",
+    "G7: the partial-loss REVIEW hit names capability, requirement, counts and lost sources",
 )
 
 
@@ -1604,8 +1605,9 @@ check(
 # G7 compares every openspec/specs/**/spec.md between two refs; it needs no
 # change id. CI must run it on every pull request, including the two shapes
 # where no id resolves at all: a PR that never touches openspec/changes/, and
-# an archive PR (git records the move as a rename, so the pre-archive path
-# never appears in --name-only and the id set comes out empty). Without a
+# an archive PR (git records the move either as a rename or as a plain
+# addition under the archive prefix; the pre-archive path appears in
+# --name-only under neither, so the id set comes out empty). Without a
 # G7-only mode, the only way to reach the gate is to fabricate a change
 # directory, which puts CI's correctness at the mercy of G1's and G2's
 # behaviour on a directory nobody wrote.
@@ -1771,6 +1773,32 @@ check(
                 for form in ("<change-id>", "--trace-parity-only", "--resolve-change")),
     "docs: the Usage block lists every invocation --help's epilog describes",
 )
+
+# ── Change-id validation happens before any filesystem access ───────────────
+#
+# The spec (spec-drift-gates, "Exit code 2 SHALL mean the gates could not be
+# evaluated at all") and CONTRIBUTE.md both promise the id is rejected *before*
+# anything reads the filesystem or invokes git on it, because the id is joined
+# onto `openspec/changes/` and a traversing id would reach files outside that
+# directory. main() used to test `(Path("openspec/changes") / id).is_dir()`
+# first, so a traversing id was reported by the directory lookup -- the guard
+# in run_gates never ran, and the message named a path instead of the id rule.
+# The distinction is observable in stderr, so assert on which message wins.
+
+
+def _traversal_cli():
+    return run_cli(["../../etc"])
+
+
+check(lambda: _traversal_cli().returncode == 2,
+      "CLI: a traversing change id exits 2")
+check(lambda: "no change directory at" not in _traversal_cli().stderr,
+      "CLI: a traversing change id is refused by the id rule, not by a directory lookup")
+check(lambda: "invalid change id" in _traversal_cli().stderr,
+      "CLI: the refusal names the id rule that rejected it")
+check(lambda: "Traceback" not in _traversal_cli().stderr,
+      "CLI: the refusal is a message, not a traceback")
+
 
 # ── Summary ──────────────────────────────────────────────────────────────────
 

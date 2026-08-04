@@ -149,9 +149,9 @@ G2 resolves a reference to a changed file by full path or by a path-boundary suf
 
 G7 is diff-based, and the two sides it compares are the base ref and your **working tree** — not the base ref and `HEAD`. The base side is read from the capability specs as committed at `--base`; the other side is read from `openspec/specs/*/spec.md` as they sit on disk, uncommitted edits and all. That is worth knowing when you run it locally: delete an `@trace` block and G7 reports it on the very next run, before you have committed anything. In CI it makes no difference, because the job runs on a fresh checkout whose working tree is `HEAD` — so what you see locally after committing is what CI will see.
 
-Within each `openspec/specs/<cap>/spec.md` present on both sides, G7 aligns requirements by title and compares the **set of `source:` values** their `@trace` blocks carry, not how many blocks there are. So a hit names the exact sources that went missing, and swapping one source for another does not slip past on an unchanged total. G7 never reports `FAIL`: `@trace` and `source:` have no normative definition in `openspec/specs`, and three candidate rules produced non-overlapping hit sets against this repository's own archive history, so whether a hit is spurious depends on a definition nobody has written down yet. It reports; you decide. New capabilities, new requirements, and newly added `source:` values are not reported.
+Within each `openspec/specs/<cap>/spec.md` present on both sides, G7 aligns requirements by title and compares the **set of `source:` values** their `@trace` blocks carry, not how many blocks there are. So a hit names the exact sources that went missing, and swapping one source for another does not slip past on an unchanged total. G7 never reports `FAIL`: what counts as a **lost** trace has no normative definition in `openspec/specs` — the `spec-drift-gates` capability describes how G7 identifies a trace and when it reports one missing, but not which of those reports names a defect rather than a legitimate rewrite — and two candidate identities produced non-overlapping hit sets against this repository's own archive history, so whether a hit is spurious depends on a definition nobody has written down yet. It reports; you decide. New capabilities, new requirements, and newly added `source:` values are not reported.
 
-G7 runs on **every** pull request, in its own workflow step that carries no condition and needs no change id. The id-scoped step — the one that runs G1 and G2 — runs only for the change directories the PR actually touches, and skipping it leaves no gap in G7 for two reasons worth knowing about. A PR that never touches `openspec/changes/` resolves no change id at all, yet it can still delete `@trace` blocks from `openspec/specs/**/spec.md` directly. And an archive PR moves the change directory under `openspec/changes/archive/`, which git records as a rename listing only the archive-side path, so it too resolves no id — meaning the id-scoped step alone would never gate the one operation G7 was written for. So the archive commit is compared automatically when it lands in a PR, and there is no manual pre- or post-archive step to run around `spectra archive`.
+G7 runs on **every** pull request, in its own workflow step that carries no condition and needs no change id. The id-scoped step — the one that runs G1 and G2 — runs only for the change directories the PR actually touches, and skipping it leaves no gap in G7 for two reasons worth knowing about. A PR that never touches `openspec/changes/` resolves no change id at all, yet it can still delete `@trace` blocks from `openspec/specs/**/spec.md` directly. And an archive PR moves the change directory under `openspec/changes/archive/`, which git records either as a rename listing only the archive-side path or as a plain addition under the archive prefix — both recordings occur in this repository's history — so it too resolves no id — meaning the id-scoped step alone would never gate the one operation G7 was written for. So the archive commit is compared automatically when it lands in a PR, and there is no manual pre- or post-archive step to run around `spectra archive`.
 
 ### Naming a change directory
 
@@ -175,7 +175,7 @@ claim_phrases:
   - Terminal tab
 ```
 
-The gate then enumerates every occurrence of each phrase and reports the ones that read as unconditional. Record your adjudication of each hit in the tasks file.
+The gate then enumerates every occurrence of each phrase, except in two places it excludes: `openspec/changes/archive/` (archived changes are historical records, not live claims) and this change's own `tasks.md` (where you record the adjudication, which would otherwise match every phrase it adjudicates). It reports the ones that read as unconditional. Record your adjudication of each hit in the tasks file.
 
 What counts as "conditional" comes from `hedge_markers`, an optional second key. Leave it out and the gate falls back to `scripts/spec-gates/config.yaml`, then to the English and Traditional Chinese defaults built into `run.py`. The fallback keys off whether you wrote the key, not off what you wrote in it: `hedge_markers: []` is a valid and deliberate setting meaning **no** wording counts as hedged, so every occurrence becomes an uncovered hit. Write the key only when you mean to override the defaults. Both keys must be lists — a bare string is refused with exit 2 rather than iterated character by character.
 
@@ -512,7 +512,7 @@ JSON
 
 #### Optional: require pull-request approvals (multi-reviewer teams)
 
-The default payload above does **not** require any approving review — solo maintainers can self-merge once `test` / `build` are green. If the team has multiple reviewers and you want to require at least one approval **in addition to** the existing required status checks, replace the `pull_request` rule entry above with:
+The default payload above does **not** require any approving review — solo maintainers can self-merge once every required status check is green. If the team has multiple reviewers and you want to require at least one approval **in addition to** the existing required status checks, replace the `pull_request` rule entry above with:
 
 ```json
 {
@@ -528,7 +528,7 @@ The default payload above does **not** require any approving review — solo mai
 }
 ```
 
-The `required_status_checks` rule entry stays untouched — approvals are layered **on top of** the existing `test` / `build` gate, not as a replacement.
+The `required_status_checks` rule entry stays untouched — approvals are layered **on top of** the existing required-status-check gate, not as a replacement.
 
 #### Verify the ruleset
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'skill-agent-usability-audit'. Update Purpose after archive.
+Covers whether a host agent can actually follow an authoring skill end to end: every repository path and `pnpm <script>` the canonical prose under `.agent/skills/<skill-name>/` tells the agent to read or run has to exist, each entry-point file's frontmatter has to parse with a kebab-case `name` equal to the skill directory and a description saying when the skill applies, and the `.claude` / `.codex` / `.gemini` thin pointers have to carry that same `name` and send the agent back to the canonical `SKILL.md`. It complements `authoring-skill-pattern`, which governs skill layout and prose conventions rather than whether the references inside them resolve.
 
 ## Requirements
 

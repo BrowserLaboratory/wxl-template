@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'prose-audit-outward-docs'. Update Purpose after archive.
+Covers the `humane-prose-audit` gate run at the `technical-doc` profile over the outward-facing documents only — the five repository-root developer files (`README.md`, `CONTRIBUTE.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`) plus every `*.md` under `docs/`, with `openspec/`, `AUDIT.md`, and the hidden tooling directories out of scope — where a `PASS` verdict (zero Critical and zero High findings) is required before a release tag, and any Critical or High finding blocks the change that surfaced it from merging. Medium findings are advisory instead: they are carried into dedicated polish changes that edit descriptive prose only (never wxlsh command names, syntax, or example blocks), leave locale mirrors that report the rule cleanly untouched, and may not increase any rule's finding count.
 
 ## Requirements
 

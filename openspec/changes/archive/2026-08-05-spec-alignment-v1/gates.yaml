@@ -1,0 +1,8 @@
+# G1 claim-parity 的宣告檔。
+#
+# 本 change 校正 live spec 中已為假的陳述。下列名詞短語的真值條件被本次變更改動
+# ——它們在 repo 各處仍可能以陳舊語意出現,G1 會窮舉出來由人逐筆裁決。
+claim_phrases:
+  - "VitePress default layout"
+  - "exactly two"
+  - "required status checks"

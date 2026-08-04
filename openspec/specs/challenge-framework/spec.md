@@ -1,3 +1,7 @@
+## Purpose
+
+Covers the build-time contract between a challenge's Markdown page and the WASM payload generated from it: the frontmatter schema (required `title`/`backend`/`app`, optional metadata, deprecated `fs`, build-injected `wasmModule`), and the secrecy rules for build output — the plaintext flag appears nowhere, black-box app source is not readable, and encrypted FS blobs, key material, and the flag verifier stay out of page hydration data. It also covers flag checking through the WASM export `wasm_verify_flag` (PBKDF2-HMAC-SHA256 salted with the challenge slug), and the build script's encryption of the `app` file into the payload's FS entries under the reserved `__app__` key.
+
 ## MODIFIED Requirements
 
 ### Requirement: Frontmatter schema defines challenge metadata

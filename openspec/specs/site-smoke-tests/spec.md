@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'playwright-site-smoke'. Update Purpose after archive.
+Covers the Playwright suite (`pnpm test:smoke`, `playwright.site.config.ts`) that serves the already-built site through `pnpm docs:preview` on port 4173 and checks that the homepage hero and feature cards render with no uncaught page error, and that the `door-is-open` challenge page mounts its layout shell. It stays deliberately separate from the challenge-verify suite in `playwright.config.ts`, which runs `tests/challenges` against the dev server on port 5173; neither suite executes the other's specs.
 
 ## Requirements
 
