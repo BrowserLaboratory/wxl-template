@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'spec-drift-gates'. Update Purpose after archive.
+Covers the mechanical spec-drift gates: the `scripts/spec-gates/run.py` script, the `pull_request` job that runs it in `.github/workflows/quality-gates.yml`, and the per-change `openspec/changes/<id>/gates.yaml` declaration the gates read. The three checks are G1 claim-parity, G2 invariance, and G7 archive trace-parity; G1's absent or keyless declaration file reports `FAIL`; G2 hits go to a human as `REVIEW` and leave the exit code alone.
 
 ## Requirements
 

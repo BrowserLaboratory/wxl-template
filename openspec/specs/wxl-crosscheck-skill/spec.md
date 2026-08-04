@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'split-wxl-creator-skills'. Update Purpose after archive.
+Covers the maintainer-only `wxl-crosscheck` skill under `.agent/skills/wxl-crosscheck/`: a thin wrapper that runs `pnpm challenge:verify <slug> --blind` (optionally `--agents <list>`) and surfaces the CLI's verdict and cross-agent divergence report. Orchestration and verdict aggregation belong to `l4-multi-agent-cross-check`; what is settled here is the skill's own obligations — not reimplementing that orchestration, refusing to report a pass when a requested runtime CLI is missing, documenting that L4 needs the runtimes installed locally and is not run in CI, and keeping its prose free of host-agent-specific tool names.
 
 ## Requirements
 

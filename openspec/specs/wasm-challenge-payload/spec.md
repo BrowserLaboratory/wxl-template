@@ -1,3 +1,7 @@
+## Purpose
+
+Covers the per-challenge `runtime.wasm` emitted by the `scripts/challenge-keygen.ts` build script: AES-GCM-encrypted challenge files, XOR-masked key material, and a PBKDF2 flag verifier packed into a `CHWD`-magic `chall-data` custom section appended to a copy of the template module, which the pipeline then mutates with a per-challenge seed. Also covers the module's `wasm_verify_flag` export, which checks a submitted flag inside WASM so the verifier hash never reaches JavaScript, and the input-freshness conditions under which keygen rebuilds or skips a challenge.
+
 ## ADDED Requirements
 
 <!-- Build script produces per-challenge WASM binary with embedded payload — moved to canonical location below -->

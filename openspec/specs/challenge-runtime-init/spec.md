@@ -1,3 +1,7 @@
+## Purpose
+
+Covers what ChallengeLayout does when a challenge page mounts: fetching the per-challenge WASM binary named by `wasmModule`, calling `wasm_fs_init` with the slug, discovering FS entry paths through `wasm_fs_list` (falling back to the frontmatter `fs` field on legacy binaries that lack the export), writing every entry except `__app__` into the runtime filesystem, and executing the decrypted `__app__` bytes as the app code in the Python or PHP runtime. It also covers the readiness rules around that sequence — initialization happening once per page lifecycle, the loading state that disables the Send button, the four ways the `swReady` Service Worker gate can unlock, and the unmount/remount cycle that re-initializes the store on challenge-to-challenge navigation instead of an explicit `wasm_fs_reset`.
+
 ## MODIFIED Requirements
 
 ### Requirement: Challenge page initializes WASM runtime on mount

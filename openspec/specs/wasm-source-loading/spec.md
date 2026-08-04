@@ -1,3 +1,7 @@
+## Purpose
+
+Covers where wasm-pack output lands and how pages import it: the generated JS glue (`virtual_fs.js`, `asgi_bridge.js`) is built into `.vitepress/wasm/` inside the Vite source tree rather than `docs/public/`, so Vite can resolve it through the module graph as an ES module. Consumers such as `ChallengeLayout.vue` therefore import the glue by relative path instead of an absolute `/wasm/` URL, which is what keeps `pnpm dev` free of `Cannot import non-asset file` errors.
+
 ## Requirements
 
 ### Requirement: WASM glue files SHALL reside in Vite source tree

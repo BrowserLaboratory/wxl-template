@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'split-wxl-creator-skills'. Update Purpose after archive.
+Covers the `wxl-verify` skill, which runs `pnpm challenge:verify <slug>` (L1 frontmatter and structure lint, L2 content analysis plus keygen and `wasm-tools validate`, L3 Playwright e2e) as the release-blocking gate for a challenge — invoked directly or handed over from `wxl-create` / `wxl-mutate` — and counts L1/L2 warnings on a zero exit as non-clean. It also covers the follow-up auto-fix loop: parse the output, propose a diff, wait for a plain-text `apply` / `skip` reply, re-verify, bounded by a configurable attempt limit; the L4 blind-solve gate is out of scope here.
 
 ## Requirements
 

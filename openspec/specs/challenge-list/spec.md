@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Provides a build-time data loader and globally registered Vue component that collects all challenge frontmatter and renders a browsable, filterable challenge list page within the VitePress default layout.
+Covers the per-locale `createContentLoader` data files under `docs/shared/` that collect challenge frontmatter at build time, and the globally registered `ChallengeList` Vue component that renders that data — searchable, filterable, sortable — on the `/challenges` and `/zh-TW/challenges` pages. Also covers the invariant that a challenge's technical frontmatter stays identical across the two locale trees while only `title` and `description` are translated, and the date formatting that follows the active vue-i18n locale.
 
 ## Requirements
 

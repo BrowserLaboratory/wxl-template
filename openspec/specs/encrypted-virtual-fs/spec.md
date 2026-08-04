@@ -1,3 +1,7 @@
+## Purpose
+
+Covers the Rust `virtual-fs` WASM module that holds a challenge's files: initialization parses the `chall-data` custom section payload, checks its magic header, recovers the AES-256 key internally by re-applying the XOR chain of compile-time masks, and fills an in-memory `FsStore` whose entries stay AES-GCM-256 encrypted under a fresh random 12-byte IV per write. It also covers the rest of that module's surface — decrypt-on-read, write, path listing (including `__app__`), and reset — plus the rule that no key is ever passed in from JavaScript and the consequence that an in-memory store re-initializes from the payload on every page load.
+
 ## MODIFIED Requirements
 
 ### Requirement: Rust WASM module encrypts and stores FS content in IndexedDB

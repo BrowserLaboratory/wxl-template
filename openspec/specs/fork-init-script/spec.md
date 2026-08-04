@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'scriptify-wxl-fork-init'. Update Purpose after archive.
+Covers the `pnpm fork:init` CLI (`scripts/fork-init.ts`) a new fork runs to replace upstream identity — `package.json` fields, the VitePress `base`, and the `BrowserLaboratory/wxl-template` slug across every active file found by scanning — to install the deploy workflow, and, under the opt-in `--rebrand` pass, to rename only provably brand-only tokens while listing every remaining `wxl` as an unmasked residual instead of blind-substituting. The `wxl-fork-init` skill drives this CLI rather than hand-editing files, and no GitHub remote operation (repo creation, push, ruleset changes) belongs to it.
 
 ## Requirements
 

@@ -2,7 +2,7 @@
 
 ## Purpose
 
-TBD - created by archiving change 'wxl-creator-v2-cross-agent-pipeline'. Update Purpose after archive.
+Covers the L4 blind-solve gate, in which a spawned agent CLI attempts a challenge from a minimal-context package that deliberately withholds the challenge's `src/`: the two files built under `tmp/wxl-verify/<slug>/player-package/` (a stripped `description.md` and a `META.yaml`), the `WXL_VERIFY_RUNTIME` selection and per-runtime argv for claude, codex, and gemini, the prompt's `FINAL_FLAG=` output contract, the byte-comparison against `docs/challenge/<slug>/src/flag.txt` that yields the pass / fail / inconclusive verdict and exit code, and the cleanup of the ephemeral directory afterwards. Running several runtimes in one invocation, and aggregating across them, is specified by `l4-multi-agent-cross-check`.
 
 ## Requirements
 
